@@ -248,14 +248,28 @@ pub fn copy_handler_table_to_cage(
 /// there is always permission). The only thing that needs to be distinguished is that `exit()` cannot be called. If a 
 /// cage/grate wants to execute `exit()` to themselves, they need to call `trigger_harsh_exit()` to mark them as `EXITING` status
 /// 
-/// TODO: confirm the return type 
+/// To distinguish whether the call is from a grate or a cage, we utilize the feature of different number of arguments
+/// If the call is from a cage:
+///     - only
+/// If the call is from a grate:
+///     - 
+///     - additional arguments will be args corresponding with different 
+/// 
+/// TODO: 
+/// - confirm the return type 
+/// - Do we need to pass self_syscallnum?? -if not how to perform permission check? -only perform syscall filter per cage
 #[instrument]
 pub fn make_syscall(
     self_cageid: u64, 
-    self_syscallnum: u64,
     syscall_num: u64, 
     target_cageid: u64, 
-    arg1: u64, arg2: u64, arg3: u64, arg4: u64, arg5: u64, arg6: u64,
+    start_address: u64,
+    arg1: u64, arg1cage: u64,
+    arg2: u64, arg2cage: u64,
+    arg3: u64, arg3cage: u64,
+    arg4: u64, arg4cage: u64,
+    arg5: u64, arg5cage: u64,
+    arg6: u64, arg6cage: u64,
 ) -> i32 {
     info!("Executed make_syscall");
 
@@ -436,6 +450,7 @@ pub fn testing_remove_all() {
     let mut handler_table = HANDLERTABLE.lock().unwrap();
     handler_table.clear();
 }
+
 // ---- CODE BELOW WILL BE TESTED WITH VMMAP ----
 /***************************** copy_data_between_cages *****************************/
 // Validate the memory range for both source (`srcaddr -> srcaddr + srclen`) and destination (`destaddr -> destaddr + destlen`) 

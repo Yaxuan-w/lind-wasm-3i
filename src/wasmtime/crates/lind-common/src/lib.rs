@@ -1,7 +1,7 @@
 #![allow(dead_code)]
 
 use anyhow::Result;
-use rawposix::safeposix::dispatcher::lind_syscall_api;
+use rawposix::threei::threei::make_syscall;
 use wasmtime_lind_multi_process::{get_memory_base, LindHost, clone_constants::CloneArgStruct};
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
@@ -54,19 +54,22 @@ impl LindCommonCtx {
             30 => {
                 wasmtime_lind_multi_process::exit_syscall(caller, arg1 as i32)
             }
-            // other syscalls goes into rawposix
+            // other syscalls goes into 3i
             _ => {
-                lind_syscall_api(
+                // TODO:
+                // - Add mechanism that replaces target_cageid with grates' cage id 
+                make_syscall(
                     self.pid as u64,
                     call_number,
                     call_name,
+                    self.pid as u64, // Set target_cageid same with self_cageid by defualt 
                     start_address,
-                    arg1,
-                    arg2,
-                    arg3,
-                    arg4,
-                    arg5,
-                    arg6,
+                    arg1, self.pid as u64,
+                    arg2, self.pid as u64,
+                    arg3, self.pid as u64,
+                    arg4, self.pid as u64,
+                    arg5, self.pid as u64,
+                    arg6, self.pid as u64,
                 )
             }
         }

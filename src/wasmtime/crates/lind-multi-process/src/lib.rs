@@ -284,6 +284,22 @@ impl<T: Clone + Send + 'static + std::marker::Sync, U: Clone + Send + 'static + 
             0,
         );
 
+        // AW:
+        // TODO:
+        // need to change parameters 
+        pub fn make_syscall(
+            cloned_pid as u64, 
+            , // syscall num for fork 
+            cloned_pid as u64, 
+            start_address: u64,
+            0, 0,
+            0, 0,
+            0, 0,
+            0, 0,
+            0, 0,
+            0, 0,
+        )
+
         // use the same engine for parent and child
         let engine = self.module.engine().clone();
 
@@ -797,9 +813,23 @@ impl<T: Clone + Send + 'static + std::marker::Sync, U: Clone + Send + 'static + 
             // unwind finished and we need to stop the unwind
             let _res = asyncify_stop_unwind_func.call(&mut store, ());
 
-            // to-do: exec should not change the process id/cage id, however, the exec call from rustposix takes an
+            // to-do: `exec` should not change the process id/cage id, however, the exec call from rawposix takes an
             // argument to change the process id. If we pass the same cageid, it would cause some error
-            // lind_exec(cloned_pid as u64, cloned_pid as u64);
+            //
+            // AW:
+            // Replace by directly calling for execve 
+            pub fn make_syscall(
+                cloned_pid as u64, 
+                , // syscall num for exec 
+                cloned_pid as u64, 
+                start_address: u64,
+                0, 0,
+                0, 0,
+                0, 0,
+                0, 0,
+                0, 0,
+                0, 0,
+            )
             let ret = exec_call(&cloned_run_command, &real_path_str, &args, cloned_pid, &cloned_next_cageid, &cloned_lind_manager, &environs);
 
             return Ok(OnCalledAction::Finish(ret.expect("exec-ed module error")));
@@ -813,6 +843,9 @@ impl<T: Clone + Send + 'static + std::marker::Sync, U: Clone + Send + 'static + 
     // technically this is pthread_exit syscall
     // actual exit syscall that would kill other threads is not supported yet
     // TODO: exit_call should be switched to epoch interrupt method later
+
+    // AW:
+    // We didn't enter rawposix for exit_call, so we should handle the case separately
     pub fn exit_call(&self, mut caller: &mut Caller<'_, T>, code: i32) {
         // get the base address of the memory
         let handle = caller.as_context().0.instance(InstanceId::from_index(0));

@@ -2,6 +2,10 @@ use crate::cage::*;
 use std::sync::atomic::Ordering::*;
 use crate::fdtables;
 
+pub fn fork_syscall(cageid: u64, _arg1: u64, _arg2: u64, _arg3: u64, _arg4: u64, _arg5: u64, _arg6: u64) -> i32 {
+
+}
+
 pub fn exit_syscall(cageid: u64, status_arg: u64, _arg2: u64, _arg3: u64, _arg4: u64, _arg5: u64, _arg6: u64) -> i32 {
     let status = status_arg as i32;
     let _ = fdtables::remove_cage_from_fdtable(cageid);
@@ -22,4 +26,8 @@ pub fn exit_syscall(cageid: u64, status_arg: u64, _arg2: u64, _arg3: u64, _arg4:
 
     println!("exit from cageid = {:?}", cageid);
     status
+}
+
+pub fn exec_syscall(cageid: u64, pathname: u64, _arg2: u64, _arg3: u64, _arg4: u64, _arg5: u64, _arg6: u64) -> i32 {
+
 }
