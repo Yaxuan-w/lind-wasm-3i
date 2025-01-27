@@ -277,14 +277,14 @@ impl<T: Clone + Send + 'static + std::marker::Sync, U: Clone + Send + 'static + 
             self.pid as u64, 
             171, // syscall num for fork 
             self.pid as u64, 
-            start_address: u64,
+            0,
             child_cageid as u64, 
             0,
             0,
             0,
             0,
             0,
-        )
+        );
 
         // use the same engine for parent and child
         let engine = self.module.engine().clone();
