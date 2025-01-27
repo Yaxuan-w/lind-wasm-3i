@@ -809,7 +809,7 @@ impl<T: Clone + Send + 'static + std::marker::Sync, U: Clone + Send + 'static + 
                 30, // syscall num for exec 
                 cloned_pid as u64, 
                 0, // start addr (TODO: need)
-                cloned_next_cageid as u64,
+                &cloned_next_cageid as u64,
                 0,
                 0,
                 0,
