@@ -402,7 +402,7 @@ impl<T: Clone + Send + 'static + std::marker::Sync, U: Clone + Send + 'static + 
                             // exit the cage with the exit code
                             make_syscall(
                                 child_cageid,
-                                EXIT_SYSCALL,
+                                EXIT_SYSCALL as u64,
                                 child_cageid,
                                 0,
                                 *val as u64,
@@ -411,7 +411,7 @@ impl<T: Clone + Send + 'static + std::marker::Sync, U: Clone + Send + 'static + 
                                 0,
                                 0,
                                 0,
-                            )
+                            );
                             // let _ = on_child_exit(*val);
                         },
                         _ => {
@@ -804,7 +804,7 @@ impl<T: Clone + Send + 'static + std::marker::Sync, U: Clone + Send + 'static + 
             //
             // AW:
             // Replace by directly calling for execve 
-            pub fn make_syscall(
+            make_syscall(
                 cloned_pid as u64, 
                 30, // syscall num for exec 
                 cloned_pid as u64, 
