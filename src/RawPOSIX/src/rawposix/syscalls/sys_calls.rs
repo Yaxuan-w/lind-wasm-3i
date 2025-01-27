@@ -66,6 +66,6 @@ pub fn exit_syscall(cageid: u64, status_arg: u64, _arg2: u64, _arg3: u64, _arg4:
     status
 }
 
-pub fn exec_syscall(cageid: u64, child_cageid: u64, _arg2: u64, _arg3: u64, _arg4: u64, _arg5: u64, _arg6: u64) -> i32 {
+pub fn exec_syscall(cageid: u64, _arg1: u64, _arg2: u64, _arg3: u64, _arg4: u64, _arg5: u64, _arg6: u64) -> i32 {
     0
 }
