@@ -400,10 +400,10 @@ impl<T: Clone + Send + 'static + std::marker::Sync, U: Clone + Send + 'static + 
                     match exit_code {
                         Val::I32(val) => {
                             // exit the cage with the exit code
-                            lind_syscall_api(
+                            make_syscall(
                                 child_cageid,
-                                EXIT_SYSCALL as u32,
-                                0,
+                                EXIT_SYSCALL,
+                                child_cageid,
                                 0,
                                 *val as u64,
                                 0,
@@ -411,7 +411,7 @@ impl<T: Clone + Send + 'static + std::marker::Sync, U: Clone + Send + 'static + 
                                 0,
                                 0,
                                 0,
-                            );
+                            )
                             // let _ = on_child_exit(*val);
                         },
                         _ => {
@@ -808,7 +808,7 @@ impl<T: Clone + Send + 'static + std::marker::Sync, U: Clone + Send + 'static + 
                 cloned_pid as u64, 
                 30, // syscall num for exec 
                 cloned_pid as u64, 
-                start_address: u64,
+                0, // start addr (TODO: need)
                 cloned_next_cageid as u64,
                 0,
                 0,
