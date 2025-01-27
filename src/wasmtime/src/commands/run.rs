@@ -205,19 +205,21 @@ impl RunCommand {
         // Load the main wasm module.
         match result {
             Ok(_) => {
+
+                //AW:
                 // exit the cage
-                lind_syscall_api(
+                make_syscall(
+                    1 as u64,
+                    EXIT_SYSCALL as u64,
                     1,
-                    EXIT_SYSCALL as u32,
+                    0, // start addr should be 0
                     0,
                     0,
                     0,
                     0,
                     0,
                     0,
-                    0,
-                    0,
-                );
+                )
                 
                 // main cage exits
                 lind_manager.decrement();
