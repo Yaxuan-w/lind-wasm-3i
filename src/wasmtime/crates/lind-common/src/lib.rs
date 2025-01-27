@@ -60,8 +60,7 @@ impl LindCommonCtx {
                 // - Add mechanism that replaces target_cageid with grates' cage id 
                 make_syscall(
                     self.pid as u64,
-                    call_number,
-                    call_name,
+                    call_number as u64,
                     self.pid as u64, // Set target_cageid same with self_cageid by defualt 
                     start_address,
                     arg1, 
