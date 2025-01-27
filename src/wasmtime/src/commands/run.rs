@@ -179,8 +179,11 @@ impl RunCommand {
             }
         }
 
+        //AW:
+        // TODO - adding lindrustinit
+
         // Initialize Lind here
-        rawposix::safeposix::dispatcher::lindrustinit(0);
+        // rawposix::safeposix::dispatcher::lindrustinit(0);
         // new cage is created
         lind_manager.increment();
 
@@ -219,14 +222,17 @@ impl RunCommand {
                     0,
                     0,
                     0,
-                )
+                );
                 
                 // main cage exits
                 lind_manager.decrement();
                 // we wait until all other cage exits
                 lind_manager.wait();
+
+                //AW:
+                // TODO - adding lindrustfinalize
                 // after all cage exits, finalize the lind
-                rawposix::safeposix::dispatcher::lindrustfinalize();
+                // rawposix::safeposix::dispatcher::lindrustfinalize();
             },
             Err(e) => {
                 // Exit the process if Wasmtime understands the error;
