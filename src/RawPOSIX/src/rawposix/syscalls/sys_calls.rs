@@ -32,10 +32,11 @@ pub fn fork_syscall(cageid: u64, child_cageid: u64, _arg2: u64, _arg3: u64, _arg
     };
     
     // increment child counter for parent
-    self.child_num.fetch_add(1, Ordering::SeqCst);
+    child_num.fetch_add(1, Ordering::SeqCst);
 
     let mut map = CAGE_MAP.write();
-    map.insert(child_cageid, cageobj);
+    let cageobj_locked = Arc::new(cageobj);
+    map.insert(child_cageid, cageobj_locked);
     0
 }
 
