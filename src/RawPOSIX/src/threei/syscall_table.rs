@@ -6,7 +6,7 @@ use crate::threei::threei::CallFunc;
 pub const SYSCALL_TABLE: &[(u64, CallFunc)] = &[
     (1, hello_syscall), // ONLY for testing purpose 
     (2, write_syscall),
-    (3, exit_syscall),
-    (4, fork_syscall),
-    (5, exec_syscall),
+    (30, exit_syscall),
+    (171, fork_syscall),
+    (69, exec_syscall),
 ];

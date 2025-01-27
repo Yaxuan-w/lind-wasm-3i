@@ -6,7 +6,7 @@ use dashmap::DashSet;
 use once_cell::sync::Lazy;
 use std::sync::{Arc, Mutex};
 
-use tracing::{info, instrument};
+const exit_syscallnum: u64 = 30; // Develop purpose only
 
 /// HANDLERTABLE:
 /// <self_cageid, <callnum, (addr, dest_cageid)>
@@ -258,30 +258,27 @@ pub fn copy_handler_table_to_cage(
 /// TODO: 
 /// - confirm the return type 
 /// - Do we need to pass self_syscallnum?? -if not how to perform permission check? -only perform syscall filter per cage
-#[instrument]
 pub fn make_syscall(
     self_cageid: u64, 
     syscall_num: u64, 
     target_cageid: u64, 
     start_address: u64,
-    arg1: u64, arg1cage: u64,
-    arg2: u64, arg2cage: u64,
-    arg3: u64, arg3cage: u64,
-    arg4: u64, arg4cage: u64,
-    arg5: u64, arg5cage: u64,
-    arg6: u64, arg6cage: u64,
+    arg1: u64, 
+    arg2: u64, 
+    arg3: u64, 
+    arg4: u64, 
+    arg5: u64,
+    arg6: u64, 
 ) -> i32 {
-    info!("Executed make_syscall");
-
     // Return error if the target cage/grate is exiting. We need to add this check beforehead, because make_syscall will also 
     // contain cases that can directly redirect a syscall when self_cageid == target_id, which will bypass the handlertable check
     // TODO: replace 3 with actual exit callnum
-    if EXITING_TABLE.contains(&target_cageid) && syscall_num != 3 {
+    if EXITING_TABLE.contains(&target_cageid) && syscall_num != exit_syscallnum {
         return threeiconstant::ELINDESRCH as i32;
     }
 
     // TODO: replace 3 with actual exit callnum
-    if self_cageid == target_cageid || syscall_num == 3 {
+    if self_cageid == target_cageid || syscall_num == exit_syscallnum {
         // println!("syscall num in make_syscall: {:?}", syscall_num);
         if let Some(&(_, syscall_func)) = SYSCALL_TABLE.iter().find(|&&(num, _)| num == syscall_num) {
             return syscall_func(
@@ -294,12 +291,15 @@ pub fn make_syscall(
         }
     }
 
+    //TODO: 
+    // redesign when grate involves in 
+
     let table_lock = HANDLERTABLE.lock().unwrap(); 
     // If selfcageid != targetcageid --> check the syscall handler table (since here's the cage of grate / dependencies)
     // Find the HashMap corresponding to `self_cageid`.
     if let Some(call_map) = table_lock.get(&self_cageid) {
-        // Find the Arc<Mutex<CageCallTable>> corresponding to `self_syscallnum`.
-        if let Some(cage_call_table_arc) = call_map.get(&self_syscallnum) {
+        // Find the Arc<Mutex<CageCallTable>> corresponding to `syscall_num`.
+        if let Some(cage_call_table_arc) = call_map.get(&syscall_num) {
             let cage_call_table = cage_call_table_arc.lock().unwrap(); // Lock the CageCallTable
             // Find the CallFunc for `target_cageid` in `thiscalltable`.
             // TODO:
@@ -318,7 +318,6 @@ pub fn make_syscall(
             return threeiconstant::ELINDAPIABORTED as i32;
         }
     } else {
-        info!("Arrive the end of make_syscall");
         eprintln!("Permission denied! No syscalls alllowed for self cage {}", self_cageid);
         return threeiconstant::ELINDAPIABORTED as i32;
     }
@@ -334,13 +333,10 @@ pub fn make_syscall(
 /// We want: This function cannot be called directly by user mode to ensure that it is only triggered by the 
 /// system kernel or trusted modules
 /// Question: How we check the call is only called from trusted mode..?
-#[instrument]
 pub fn trigger_harsh_cage_exit(
     targetcage: u64, 
     exittype: u64,
 ) {
-    info!("Executed trigger_harsh_cage_exit");
-
     // Use {} to specific the lock usage to avoid dead lock
     {
         let mut handler_table = HANDLERTABLE.lock().unwrap();
@@ -357,7 +353,7 @@ pub fn trigger_harsh_cage_exit(
 
     // TODO: replace call num with real exit_syscall num
     harsh_cage_exit(
-        3, // exit_syscall
+        exit_syscallnum, // exit_syscall
         targetcage, 
         exittype, 
         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -389,10 +385,8 @@ pub fn trigger_harsh_cage_exit(
         });
     }
     
-    info!("Arrive the end of trigger_harsh_cage_exit");
 }
 
-#[instrument]
 pub fn harsh_cage_exit(
     callnum:u64,    // System call number (can be used if called as syscall)
     targetcage:u64, // Cage to cleanup
@@ -409,8 +403,6 @@ pub fn harsh_cage_exit(
     _arg6:u64, 
     _arg6cage:u64, 
 ) -> u64 {
-    info!("Executed harsh_cage_exit");
-
     // Directly execute 
     let result = make_syscall(
         targetcage,
@@ -432,7 +424,6 @@ pub fn harsh_cage_exit(
         // println!("Added targetcage {} to EXITING_TABLE", targetcage);
     }
 
-    info!("Arrive the end of harsh_cage_exit");
     0
 }
 

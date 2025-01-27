@@ -2,8 +2,41 @@ use crate::cage::*;
 use std::sync::atomic::Ordering::*;
 use crate::fdtables;
 
-pub fn fork_syscall(cageid: u64, _arg1: u64, _arg2: u64, _arg3: u64, _arg4: u64, _arg5: u64, _arg6: u64) -> i32 {
+pub fn fork_syscall(cageid: u64, child_cageid: u64, _arg2: u64, _arg3: u64, _arg4: u64, _arg5: u64, _arg6: u64) -> i32 {
+    // Modify the fdtable manually 
+    fdtables::copy_fdtable_for_cage(self.cageid, child_cageid).unwrap();
 
+    let parent_vmmap = self.vmmap.read();
+    let new_vmmap = parent_vmmap.clone();
+
+    let cageobj = Cage {
+        cageid: child_cageid,
+        cwd: RwLock::new(self.cwd.read().clone()),
+        parent: self.cageid,
+        getgid: AtomicI32::new(
+            self.getgid.load(AtomicOrdering::Relaxed),
+        ),
+        getuid: AtomicI32::new(
+            self.getuid.load(AtomicOrdering::Relaxed),
+        ),
+        getegid: AtomicI32::new(
+            self.getegid.load(RustAtomicOrdering::Relaxed),
+        ),
+        geteuid: AtomicI32::new(
+            self.geteuid.load(RustAtomicOrdering::Relaxed),
+        ),
+        main_threadid: AtomicU64::new(0),
+        zombies: RustLock::new(vec![]),
+        child_num: AtomicU64::new(0),
+        vmmap: interface::RustLock::new(new_vmmap),
+    };
+    
+    // increment child counter for parent
+    self.child_num.fetch_add(1, RustAtomicOrdering::SeqCst);
+
+    let mut map = CAGE_MAP.write().unwrap();
+    map.insert(child_cageid, cageobj);
+    0
 }
 
 pub fn exit_syscall(cageid: u64, status_arg: u64, _arg2: u64, _arg3: u64, _arg4: u64, _arg5: u64, _arg6: u64) -> i32 {
