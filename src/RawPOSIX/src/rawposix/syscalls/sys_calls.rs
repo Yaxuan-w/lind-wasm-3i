@@ -1,5 +1,5 @@
 use crate::cage::*;
-use std::sync::atomic::Ordering::*;
+use std::sync::atomic::Ordering;
 use crate::fdtables;
 
 pub fn fork_syscall(cageid: u64, child_cageid: u64, _arg2: u64, _arg3: u64, _arg4: u64, _arg5: u64, _arg6: u64) -> i32 {
@@ -13,22 +13,22 @@ pub fn fork_syscall(cageid: u64, child_cageid: u64, _arg2: u64, _arg3: u64, _arg
         cageid: child_cageid,
         cwd: RwLock::new(self.cwd.read().clone()),
         parent: self.cageid,
-        getgid: AtomicI32::new(
-            self.getgid.load(Ordering::Relaxed),
+        gid: AtomicI32::new(
+            self.gid.load(Ordering::Relaxed),
         ),
-        getuid: AtomicI32::new(
-            self.getuid.load(Ordering::Relaxed),
+        uid: AtomicI32::new(
+            self.uid.load(Ordering::Relaxed),
         ),
-        getegid: AtomicI32::new(
-            self.getegid.load(Ordering::Relaxed),
+        egid: AtomicI32::new(
+            self.egid.load(Ordering::Relaxed),
         ),
-        geteuid: AtomicI32::new(
-            self.geteuid.load(Ordering::Relaxed),
+        euid: AtomicI32::new(
+            self.euid.load(Ordering::Relaxed),
         ),
         main_threadid: AtomicU64::new(0),
-        zombies: RustLock::new(vec![]),
+        zombies: RwLock::new(vec![]),
         child_num: AtomicU64::new(0),
-        vmmap: interface::RustLock::new(new_vmmap),
+        vmmap: interface::RwLock::new(new_vmmap),
     };
     
     // increment child counter for parent
