@@ -1,5 +1,5 @@
 use crate::rawposix::syscalls::fs_calls::{hello_syscall, write_syscall};
-use crate::rawposix::syscalls::sys_calls::exit_syscall;
+use crate::rawposix::syscalls::sys_calls::{exit_syscall, exec_syscall, fork_syscall};
 use crate::threei::threei::CallFunc;
 
 /// Will replace syscall number with Linux Standard after confirming the refactoring details 

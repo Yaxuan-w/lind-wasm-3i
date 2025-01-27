@@ -28,13 +28,13 @@ pub fn fork_syscall(cageid: u64, child_cageid: u64, _arg2: u64, _arg3: u64, _arg
         main_threadid: AtomicU64::new(0),
         zombies: RwLock::new(vec![]),
         child_num: AtomicU64::new(0),
-        vmmap: interface::RwLock::new(new_vmmap),
+        vmmap: RwLock::new(new_vmmap),
     };
     
     // increment child counter for parent
     self.child_num.fetch_add(1, Ordering::SeqCst);
 
-    let mut map = CAGE_MAP.write().unwrap();
+    let mut map = CAGE_MAP.write();
     map.insert(child_cageid, cageobj);
     0
 }
@@ -62,5 +62,5 @@ pub fn exit_syscall(cageid: u64, status_arg: u64, _arg2: u64, _arg3: u64, _arg4:
 }
 
 pub fn exec_syscall(cageid: u64, pathname: u64, _arg2: u64, _arg3: u64, _arg4: u64, _arg5: u64, _arg6: u64) -> i32 {
-
+    0
 }
