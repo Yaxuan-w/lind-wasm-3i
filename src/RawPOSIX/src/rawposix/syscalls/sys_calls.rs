@@ -14,16 +14,16 @@ pub fn fork_syscall(cageid: u64, child_cageid: u64, _arg2: u64, _arg3: u64, _arg
         cwd: RwLock::new(self.cwd.read().clone()),
         parent: self.cageid,
         getgid: AtomicI32::new(
-            self.getgid.load(AtomicOrdering::Relaxed),
+            self.getgid.load(Ordering::Relaxed),
         ),
         getuid: AtomicI32::new(
-            self.getuid.load(AtomicOrdering::Relaxed),
+            self.getuid.load(Ordering::Relaxed),
         ),
         getegid: AtomicI32::new(
-            self.getegid.load(RustAtomicOrdering::Relaxed),
+            self.getegid.load(Ordering::Relaxed),
         ),
         geteuid: AtomicI32::new(
-            self.geteuid.load(RustAtomicOrdering::Relaxed),
+            self.geteuid.load(Ordering::Relaxed),
         ),
         main_threadid: AtomicU64::new(0),
         zombies: RustLock::new(vec![]),
@@ -32,7 +32,7 @@ pub fn fork_syscall(cageid: u64, child_cageid: u64, _arg2: u64, _arg3: u64, _arg
     };
     
     // increment child counter for parent
-    self.child_num.fetch_add(1, RustAtomicOrdering::SeqCst);
+    self.child_num.fetch_add(1, Ordering::SeqCst);
 
     let mut map = CAGE_MAP.write().unwrap();
     map.insert(child_cageid, cageobj);
