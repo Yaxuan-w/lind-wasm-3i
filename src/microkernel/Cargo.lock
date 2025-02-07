@@ -447,6 +447,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "rawposix"
+version = "0.1.0"
+dependencies = [
+ "criterion",
+ "dashmap",
+ "lazy_static",
+ "libc",
+ "nodit",
+ "once_cell",
+ "parking_lot",
+ "tracing",
+ "tracing-subscriber",
+]
+
+[[package]]
 name = "rayon"
 version = "1.10.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -603,21 +618,6 @@ checksum = "8b9ef9bad013ada3808854ceac7b46812a6465ba368859a37e2100283d2d719c"
 dependencies = [
  "cfg-if",
  "once_cell",
-]
-
-[[package]]
-name = "threei"
-version = "0.1.0"
-dependencies = [
- "criterion",
- "dashmap",
- "lazy_static",
- "libc",
- "nodit",
- "once_cell",
- "parking_lot",
- "tracing",
- "tracing-subscriber",
 ]
 
 [[package]]

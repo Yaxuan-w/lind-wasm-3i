@@ -1,13 +1,16 @@
-//! File System Constants Module
-//! These constants define file system-related flags and parameters
-//! 
-//! Primary Source References:
-//! - Linux kernel v6.5: include/uapi/asm-generic/fcntl.h
-//! - Linux kernel v6.5: include/uapi/linux/stat.h
-//! - POSIX.1-2017 (IEEE Std 1003.1-2017)
-
 #![allow(dead_code)]
 #![allow(unused_variables)]
+
+// ===== Lind File System Root =====
+pub const LIND_ROOT: &str = "/home/lind-wasm/src/RawPOSIX/tmp";
+
+// ===== Lind specific 
+pub const FDKIND_KERNEL: u32 = 0;
+
+// ===== Standard File Descriptors =====
+pub const STDIN_FILENO: i32 = 0;    // File descriptor for standard input
+pub const STDOUT_FILENO: i32 = 1;   // File descriptor for standard output
+pub const STDERR_FILENO: i32 = 2;   // File descriptor for standard error
 
 // ===== File Descriptor Constants =====
 pub const DT_UNKNOWN: u8 = 0;

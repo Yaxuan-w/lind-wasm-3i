@@ -1,11 +1,13 @@
 /// This file is used for path conversion related functions 
 use std::path::Component;
-use crate::cage::*;
+use crate::cage;
 pub use std::ffi::{CString, CStr};
 pub use std::{ptr, mem};
 pub use libc::*;
+use std::path::PathBuf;
 
-static LIND_ROOT: &str = "/home/lind-wasm/src/RawPOSIX/tmp";
+pub use crate::constants::fs_constants;
+// static LIND_ROOT: &str = "/home/lind-wasm/src/RawPOSIX/tmp";
 
 pub fn convpath(cpath: &str) ->
     PathBuf {
@@ -13,8 +15,7 @@ pub fn convpath(cpath: &str) ->
 }
 
 pub fn normpath(origp: PathBuf, cageid: u64) -> PathBuf {
-    let map = CAGE_MAP.read();
-    let cage = map.get(&cageid).cloned().unwrap();
+    let cage = cage::get_cage(cageid).unwrap();
     //If path is relative, prefix it with the current working directory, otherwise populate it with rootdir
     let mut newp = if origp.is_relative() {
         (**cage.cwd.read()).clone()
@@ -45,7 +46,7 @@ pub fn add_lind_root(cageid: u64, path: &str) -> CString {
     // Convert data type from &str into *const i8
     let relpath = normpath(convpath(path), cageid);
     let relative_path = relpath.to_str().unwrap();
-    let full_path = format!("{}{}", LIND_ROOT, relative_path);
+    let full_path = format!("{}{}", fs_constants::LIND_ROOT, relative_path);
     let c_path = CString::new(full_path).unwrap();
     c_path
 }

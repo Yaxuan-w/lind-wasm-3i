@@ -1,4 +1,4 @@
-use crate::rawposix::constants::fs_constants::{
+use crate::constants::fs_constants::{
     PAGESHIFT, PROT_EXEC, PROT_NONE, PROT_READ, PROT_WRITE
 };
 use std::io;

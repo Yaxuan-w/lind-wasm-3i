@@ -262,7 +262,7 @@ pub fn make_syscall(
     self_cageid: u64, 
     syscall_num: u64, 
     target_cageid: u64, 
-    start_address: u64,
+    _start_address: u64,
     arg1: u64, 
     arg2: u64, 
     arg3: u64, 

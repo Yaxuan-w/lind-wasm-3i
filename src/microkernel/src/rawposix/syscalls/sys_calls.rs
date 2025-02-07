@@ -1,19 +1,23 @@
-use crate::cage::*;
 use std::sync::atomic::Ordering;
 use std::sync::atomic::Ordering::*;
 use crate::fdtables;
+// use std::sync::Arc;
+// use parking_lot::RwLock;
+// use std::sync::atomic::{AtomicI32, AtomicU64};
+use crate::cage::*;
+use crate::cage;
 
 pub fn fork_syscall(cageid: u64, child_cageid: u64, _arg2: u64, _arg3: u64, _arg4: u64, _arg5: u64, _arg6: u64) -> i32 {
     // Modify the fdtable manually 
     fdtables::copy_fdtable_for_cage(cageid, child_cageid).unwrap();
 
     // Get the self cage
-    let selfcage = get_cage(cageid).unwrap();
+    let selfcage = cage::get_cage(cageid).unwrap();
 
     let parent_vmmap = selfcage.vmmap.read();
     let new_vmmap = parent_vmmap.clone();
 
-    let cageobj = Cage {
+    let cageobj = cage::Cage {
         cageid: child_cageid,
         cwd: RwLock::new(selfcage.cwd.read().clone()),
         parent: cageid,
@@ -38,9 +42,7 @@ pub fn fork_syscall(cageid: u64, child_cageid: u64, _arg2: u64, _arg3: u64, _arg
     // increment child counter for parent
     selfcage.child_num.fetch_add(1, Ordering::SeqCst);
 
-    let mut map = CAGE_MAP.write();
-    let cageobj_locked = Arc::new(cageobj);
-    map.insert(child_cageid, cageobj_locked);
+    add_cage(child_cageid, cageobj);
     0
 }
 
@@ -49,13 +51,13 @@ pub fn exit_syscall(cageid: u64, status_arg: u64, _arg2: u64, _arg3: u64, _arg4:
     let _ = fdtables::remove_cage_from_fdtable(cageid);
 
     // Get the self cage
-    let selfcage = get_cage(cageid).unwrap();
+    let selfcage = cage::get_cage(cageid).unwrap();
     if selfcage.parent != cageid {
-        let parent_cage = get_cage(selfcage.parent);
+        let parent_cage = cage::get_cage(selfcage.parent);
         if let Some(parent) = parent_cage {
             parent.child_num.fetch_sub(1, SeqCst);
             let mut zombie_vec = parent.zombies.write();
-            zombie_vec.push(Zombie {cageid: cageid, exit_code: status });
+            zombie_vec.push(cage::Zombie {cageid, exit_code: status });
         } else {
             // if parent already exited
             // BUG: we currently do not handle the situation where a parent has exited already

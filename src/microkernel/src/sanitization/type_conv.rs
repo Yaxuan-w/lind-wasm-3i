@@ -6,9 +6,10 @@ pub use std::str::Utf8Error;
 pub use std::cmp::{max, min};
 pub use libc::*;
 pub use std::time::Duration;
-use crate::rawposix::constants::fs_constants::{PAGESHIFT, PAGESIZE};
-use crate::cage::*;
+use crate::constants::fs_constants::{PAGESHIFT, PAGESIZE};
+use crate::cage;
 use crate::rawposix::vmmap::*;
+use libc::c_void;
 
 const SIZEOF_SOCKADDR: u32 = 16;
 
@@ -846,7 +847,14 @@ pub fn get_iovecstruct(generic_argument: u64) -> Result<*const IovecStruct, i32>
 /// - Ensuring addresses are properly aligned to pages
 /// - Validating all pages in the region are mapped with correct permissions
 /// - Preventing access outside of allocated memory regions
-pub fn check_and_convert_addr_ext(cage: &Cage, arg: u64, length: usize, prot: i32) -> Result<u64, Errno> {
+/// 
+/// TODO:
+///     Change the cage to search from global table
+pub fn check_and_convert_addr_ext(cageid: u64, arg: u64, length: usize, prot: i32) -> Result<u64, Errno> {
+    // TODO:
+    // search from the table and get the item from 
+    let cage = cage::get_cage(cageid).unwrap();
+
     // Get read lock on virtual memory map
     let mut vmmap = cage.vmmap.write();
     
