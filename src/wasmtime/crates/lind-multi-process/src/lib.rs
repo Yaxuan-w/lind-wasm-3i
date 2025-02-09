@@ -2,7 +2,7 @@
 
 use anyhow::{anyhow, Result};
 use rawposix::threei::threei::make_syscall;
-use wasmtime_lind_utils::lind_syscall_numbers::{EXIT_SYSCALL, FORK_SYSCALL};
+use wasmtime_lind_utils::lind_syscall_numbers::{EXIT_SYSCALL, FORK_SYSCALL, EXEC_SYSCALL};
 use wasmtime_lind_utils::{parse_env_var, LindCageManager};
 
 use std::ffi::CStr;
@@ -275,7 +275,7 @@ impl<T: Clone + Send + 'static + std::marker::Sync, U: Clone + Send + 'static + 
         // need to change parameters 
         make_syscall(
             self.pid as u64, 
-            171, // syscall num for fork 
+            FORK_SYSCALL, // syscall num for fork 
             self.pid as u64, 
             0,
             child_cageid as u64, 
@@ -806,7 +806,7 @@ impl<T: Clone + Send + 'static + std::marker::Sync, U: Clone + Send + 'static + 
             // Replace by directly calling for execve 
             make_syscall(
                 cloned_pid as u64, 
-                30, // syscall num for exec 
+                EXEC_SYSCALL, // syscall num for exec 
                 cloned_pid as u64, 
                 0, // start addr (TODO: need)
                 0,

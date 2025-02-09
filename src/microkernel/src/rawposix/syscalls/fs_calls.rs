@@ -80,7 +80,7 @@ pub fn write_syscall(cageid: u64, virtual_fd: u64, buf_arg: u64, count_arg: u64,
         return 0;
     }
     let ret = unsafe {
-        libc::write(kernel_fd, buf, count) as i32
+        libc::write(kernel_fd, buf as *const c_void, count) as i32
     };
 
     if ret < 0 {
