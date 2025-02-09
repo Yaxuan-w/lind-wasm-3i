@@ -77,52 +77,6 @@ pub fn fork_vmmap(parent_vmmap: &Vmmap, child_vmmap: &Vmmap) {
     }
 }
 
-/// Handler of the `munmap_syscall`, interacting with the `vmmap` structure.
-///
-/// This function processes the `munmap_syscall` by updating the `vmmap` entries and managing
-/// the unmap operation. Instead of invoking the actual `munmap` syscall, the unmap operation
-/// is simulated by setting the specified region to `PROT_NONE`. The memory remains valid but
-/// becomes inaccessible due to the `PROT_NONE` setting.
-///
-/// # Arguments
-/// * `cageid` - Identifier of the cage that calls the `munmap`
-/// * `addr` - Starting address of the region to unmap
-/// * `length` - Length of the region to unmap
-/// 
-/// # Returns
-/// * `i32` - 0 for success and -1 for failure
-pub fn munmap_handler(cageid: u64, addr: *mut u8, len: usize) -> i32 {
-    let cage = get_cage(cageid).unwrap();
-
-    // check if the provided address is multiple of pages
-    let rounded_addr = round_up_page(addr as u64) as usize;
-    if rounded_addr != addr as usize {
-        return syscall_error(Errno::EINVAL, "mmap", "address it not aligned");
-    }
-
-    let vmmap = cage.vmmap.read();
-    let sysaddr = vmmap.user_to_sys(rounded_addr as u32);
-    drop(vmmap);
-
-    let rounded_length = round_up_page(len as u64) as usize;
-
-    // we are replacing munmap with mmap because we do not want to really deallocate the memory region
-    // we just want to set the prot of the memory region back to PROT_NONE
-    // Directly call libc::mmap to improve performance
-    let result = unsafe {
-        libc::mmap(sysaddr as *mut c_void, rounded_length, PROT_NONE, (MAP_PRIVATE | MAP_ANONYMOUS | MAP_FIXED) as i32, -1, 0) as usize
-    };
-    if result != sysaddr {
-        panic!("MAP_FIXED not fixed");
-    }
-
-    let mut vmmap = cage.vmmap.write();
-
-    vmmap.remove_entry(rounded_addr as u32 >> PAGESHIFT, len as u32 >> PAGESHIFT);
-
-    0
-}
-
 // set the wasm linear memory base address to vmmap
 pub fn init_vmmap_helper(cageid: u64, base_address: usize, program_break: Option<u32>) {
     println!("Cageid: {}", cageid);
