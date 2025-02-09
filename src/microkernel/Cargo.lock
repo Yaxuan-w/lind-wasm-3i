@@ -500,6 +500,7 @@ dependencies = [
  "once_cell",
  "parking_lot",
  "quick_cache",
+ "syscall_adapter",
  "tracing",
  "tracing-subscriber",
 ]
@@ -645,6 +646,15 @@ dependencies = [
  "proc-macro2",
  "quote",
  "unicode-ident",
+]
+
+[[package]]
+name = "syscall_adapter"
+version = "0.1.0"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn",
 ]
 
 [[package]]
