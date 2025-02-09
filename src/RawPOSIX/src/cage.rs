@@ -184,9 +184,9 @@ pub fn lindrustinit(verbosity: isize) {
 
     //init cage is its own parent
     let initcage = Cage {
-        cageid: 0,
+        cageid: 1,
         cwd: RwLock::new(Arc::new(PathBuf::from("/"))),
-        parent: 0,
+        parent: 1,
         gid: AtomicI32::new(-1),
         uid: AtomicI32::new(-1),
         egid: AtomicI32::new(-1),
@@ -199,7 +199,7 @@ pub fn lindrustinit(verbosity: isize) {
 
     // Add cage to cagetable
     add_cage(
-        0, // cageid
+        1, // cageid
         initcage,
     );
 
