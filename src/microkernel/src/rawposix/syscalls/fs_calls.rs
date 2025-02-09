@@ -10,6 +10,9 @@ use crate::cage::get_cage;
 use libc::c_void;
 use crate::rawposix::vmmap::{VmmapOps, *};
 use crate::sanitization::mem_conv::*;
+use crate::syscall_handler;
+use paste::paste;
+use std::ffi::CString;
 
 pub fn hello_syscall(_cageid: u64, _arg1: u64, _arg2: u64, _arg3: u64, _arg4: u64, _arg5: u64, _arg6: u64) -> i32 {
     // println!("hello from cageid = {:?}", cageid);
@@ -22,9 +25,7 @@ pub fn kernel_close(fdentry: fdtables::FDTableEntry, _count: u64) {
     };
 }
 
-pub fn open_syscall(cageid: u64, path_arg: u64, oflag_arg: u64, mode_arg: u64, _arg4: u64, _arg5: u64, _arg6: u64) -> i32 {
-    let path = convert_path_lind2host(cageid, path_arg);
-
+syscall_handler!(open_syscall, [1 => convert_path_lind2host], (|cageid, path: CString, oflag_arg, mode_arg, _arg4, _arg5, _arg6| {
     let oflag = oflag_arg as i32;
     let mode = mode_arg as u32;
     let kernel_fd = unsafe { libc::open(path.as_ptr(), oflag, mode) };
@@ -39,11 +40,9 @@ pub fn open_syscall(cageid: u64, path_arg: u64, oflag_arg: u64, mode_arg: u64, _
         Ok(virtual_fd) => virtual_fd as i32,
         Err(_) => syscall_error(Errno::EMFILE, "open_syscall", "Too many files opened")
     }
-}
+}));
 
-pub fn mkdir_syscall(cageid: u64, path_arg: u64, mode_arg: u64, _arg3: u64, _arg4: u64, _arg5: u64, _arg6: u64) -> i32 {
-    let path = convert_path_lind2host(cageid, path_arg);
-
+syscall_handler!(mkdir_syscall, [1 => convert_path_lind2host], (|cageid, path: CString, mode_arg, _arg3, _arg4, _arg5, _arg6| {
     let ret = unsafe {
         libc::mkdir(path.as_ptr(), mode_arg as u32)
     };
@@ -52,35 +51,16 @@ pub fn mkdir_syscall(cageid: u64, path_arg: u64, mode_arg: u64, _arg3: u64, _arg
         return handle_errno(errno, "mkdir");
     }
     ret
-}
+}));
 
-// syscall_handler!(write_syscall, [1 => convert_fd, 2 => convert_buf], |cageid, kernel_fd, buf, count_arg, _arg4, _arg5, _arg6| {
-//     // early return
-//     let count = count_arg as usize;
-//     if count == 0 {
-//         return 0;
-//     }
-//     let ret = unsafe {
-//         libc::write(kernel_fd, buf, count) as i32
-//     };
-
-//     if ret < 0 {
-//         let errno = get_errno();
-//         return handle_errno(errno, "write");
-//     }
-//     return ret;
-// });
-
-pub fn write_syscall(cageid: u64, virtual_fd: u64, buf_arg: u64, count_arg: u64, _arg4: u64, _arg5: u64, _arg6: u64) -> i32 {
-    let kernel_fd = convert_fd(cageid, virtual_fd);
-    let buf = convert_buf(cageid, buf_arg);;
-
+syscall_handler!(write_syscall, [1 => convert_fd, 2 => convert_buf], (|cageid, kernel_fd, buf: *const u8, count_arg, _arg4, _arg5, _arg6| {
+    // early return
     let count = count_arg as usize;
     if count == 0 {
         return 0;
     }
     let ret = unsafe {
-        libc::write(kernel_fd, buf, count) as i32
+        libc::write(kernel_fd, buf as *const c_void, count) as i32
     };
 
     if ret < 0 {
@@ -88,7 +68,26 @@ pub fn write_syscall(cageid: u64, virtual_fd: u64, buf_arg: u64, count_arg: u64,
         return handle_errno(errno, "write");
     }
     return ret;
-}
+}));
+
+// pub fn write_syscall(cageid: u64, virtual_fd: u64, buf_arg: u64, count_arg: u64, _arg4: u64, _arg5: u64, _arg6: u64) -> i32 {
+//     let kernel_fd = convert_fd(cageid, virtual_fd);
+//     let buf = convert_buf(cageid, buf_arg);
+
+//     let count = count_arg as usize;
+//     if count == 0 {
+//         return 0;
+//     }
+//     let ret = unsafe {
+//         libc::write(kernel_fd, buf as *const c_void, count) as i32
+//     };
+
+//     if ret < 0 {
+//         let errno = get_errno();
+//         return handle_errno(errno, "write");
+//     }
+//     return ret;
+// }
 
 /// Handles the `mmap_syscall`, interacting with the `vmmap` structure.
 ///
@@ -250,7 +249,7 @@ pub fn mmap_inner(
         match fdtables::translate_virtual_fd(cageid, virtual_fd as u64) {
             Ok(kernel_fd) => {
                 let ret = unsafe {
-                    (libc::mmap(addr as *mut c_void, len, prot, flags, kernel_fd.underfd as i32, off) as i64)
+                    libc::mmap(addr as *mut c_void, len, prot, flags, kernel_fd.underfd as i32, off) as i64
                 };
 
                 // Check if mmap failed and return the appropriate error if so
