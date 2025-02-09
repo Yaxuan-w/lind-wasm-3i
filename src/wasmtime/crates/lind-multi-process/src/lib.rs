@@ -388,7 +388,6 @@ impl<T: Clone + Send + 'static + std::marker::Sync, U: Clone + Send + 'static + 
                                 child_cageid,
                                 EXIT_SYSCALL,
                                 child_cageid,
-                                0,
                                 *val as u64,
                                 0,
                                 0,
@@ -789,7 +788,6 @@ impl<T: Clone + Send + 'static + std::marker::Sync, U: Clone + Send + 'static + 
                 cloned_pid as u64, 
                 EXEC_SYSCALL, // syscall num for exec 
                 cloned_pid as u64, 
-                0,
                 0,
                 0,
                 0,
