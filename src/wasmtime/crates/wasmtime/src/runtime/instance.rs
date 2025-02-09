@@ -11,7 +11,7 @@ use crate::{
     StoreContext, StoreContextMut, Table, TypedFunc,
 };
 use alloc::sync::Arc;
-use rawposix::constants::{MAP_ANONYMOUS, MAP_FIXED, MAP_PRIVATE, PAGESHIFT, PROT_READ, PROT_WRITE};
+use rawposix::constants::fs_constants::{MAP_ANONYMOUS, MAP_FIXED, MAP_PRIVATE, PAGESHIFT, PROT_READ, PROT_WRITE};
 use rawposix::threei::threei::make_syscall;
 use wasmtime_lind_utils::lind_syscall_numbers::MMAP_SYSCALL;
 use core::ptr::NonNull;
@@ -264,7 +264,7 @@ impl Instance {
                     // and rust does not directly allow things like -1 as u64, so we end up with this weird thing
                     (0 - 1) as u64,
                     0,
-                )
+                );
             },
             // InstantiateChild: this is the child wasm instance forked by parent
             InstantiateType::InstantiateChild { parent_pid, child_pid } => {
