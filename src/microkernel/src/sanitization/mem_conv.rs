@@ -60,7 +60,7 @@ pub fn fork_vmmap(parent_vmmap: &Vmmap, child_vmmap: &Vmmap) {
             // for shared memory, we are using mremap to fork shared memory
             // See "man 2 mremap" for description of what MREMAP_MAYMOVE does with old_size=0
             // when old_address points to a shared mapping
-            let result = unsafe { libc::mremap(parent_st as *mut libc::c_void, 0, addr_len, MREMAP_MAYMOVE | MREMAP_FIXED, child_st as *mut libc::c_void) };
+            let result = unsafe { libc::mremap(parent_st as *mut libc::c_void, 0, addr_len, (MREMAP_MAYMOVE | MREMAP_FIXED) as i32, child_st as *mut libc::c_void) };
         } else {
             unsafe {
                 // temporarily enable write on child's memory region to write parent data
