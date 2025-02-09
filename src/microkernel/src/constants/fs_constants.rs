@@ -47,9 +47,7 @@ pub const O_NOCTTY: i32 = 0o400;     // Don't assign controlling terminal
 pub const O_TRUNC: i32 = 0o1000;     // Truncate file to zero length
 pub const O_APPEND: i32 = 0o2000;    // Append mode - writes always at end
 pub const O_NONBLOCK: i32 = 0o4000;  // Non-blocking mode
-// O_NDELAY=O_NONBLOCK
 pub const O_SYNC: i32 = 0o10000;     // Synchronous writes
-// O_FSYNC=O_SYNC
 pub const O_ASYNC: i32 = 0o20000;    // Signal-driven I/O
 pub const O_CLOEXEC: i32 = 0o2000000; // Close on exec
 
@@ -188,5 +186,4 @@ pub const MREMAP_FIXED: u32 = 0x02;    // New address is specified exactly
 
 // ===== File Access Modes =====
 // Source: include/uapi/asm-generic/fcntl.h
-// NOTE: These should probably be moved to fs_constants.rs
 pub const O_ACCMODE: i32 = 0o003;  // Mask for file access modes

@@ -96,6 +96,7 @@ pub fn remove_cage(cageid: u64) {
 }
 
 /// Get the cage's `Arc` reference via `cageid`
+/// Error handling (when `Cage` is None) happens when calling
 pub fn get_cage(cageid: u64) -> Option<Arc<Cage>> {
     let list = CAGE_MAP.read();
     if (cageid as usize) < MAX_CAGEID {

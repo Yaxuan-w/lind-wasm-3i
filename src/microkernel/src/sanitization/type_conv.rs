@@ -6,12 +6,10 @@ pub use std::str::Utf8Error;
 pub use std::cmp::{max, min};
 pub use libc::*;
 pub use std::time::Duration;
-use crate::constants::fs_constants::{PAGESHIFT, PAGESIZE};
-use crate::cage;
-use crate::rawposix::vmmap::*;
-use libc::c_void;
 
 const SIZEOF_SOCKADDR: u32 = 16;
+
+
 
 //redefining the FSData struct in this file so that we maintain flow of program
 //derive eq attributes for testing whether the structs equal other fsdata structs from stat/fstat
@@ -823,51 +821,4 @@ pub fn get_iovecstruct(generic_argument: u64) -> Result<*const IovecStruct, i32>
         "dispatcher",
         "input data not valid",
     ));
-}
-
-/// Validates and converts a virtual memory address to a physical address with protection checks
-///
-/// This function performs several critical memory management operations:
-/// 1. Validates that the requested memory region is properly mapped
-/// 2. Checks protection flags match the requested access
-/// 3. Converts virtual addresses to physical addresses
-///
-/// # Arguments
-/// * `cage` - Reference to the memory cage containing the virtual memory map
-/// * `arg` - Virtual memory address to check and convert
-/// * `length` - Length of the memory region being accessed
-/// * `prot` - Protection flags to validate (read/write/execute)
-///
-/// # Returns
-/// * `Ok(u64)` - Physical memory address if validation succeeds
-/// * `Err(Errno)` - EFAULT if memory access would be invalid
-///
-/// # Memory Safety
-/// This is a critical security function that prevents invalid memory accesses by:
-/// - Ensuring addresses are properly aligned to pages
-/// - Validating all pages in the region are mapped with correct permissions
-/// - Preventing access outside of allocated memory regions
-/// 
-/// TODO:
-///     Change the cage to search from global table
-pub fn check_and_convert_addr_ext(cageid: u64, arg: u64, length: usize, prot: i32) -> Result<u64, Errno> {
-    // TODO:
-    // search from the table and get the item from 
-    let cage = cage::get_cage(cageid).unwrap();
-
-    // Get read lock on virtual memory map
-    let mut vmmap = cage.vmmap.write();
-    
-    // Calculate page numbers for start and end of region
-    let page_num = (arg >> PAGESHIFT) as u32;  // Starting page number
-    let end_page = ((arg + length as u64 + PAGESIZE as u64 - 1) >> PAGESHIFT) as u32;  // Ending page number (rounded up)
-    let npages = end_page - page_num;  // Total number of pages spanned
-    
-    // Validate memory mapping and permissions
-    if vmmap.check_addr_mapping(page_num, npages, prot).is_none() {
-        return Err(Errno::EFAULT);  // Return error if mapping invalid
-    }
-
-    // Convert to physical address by adding base address
-    Ok(vmmap.base_address.unwrap() as u64 + arg)
 }

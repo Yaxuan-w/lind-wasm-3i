@@ -6,6 +6,12 @@ use dashmap::DashSet;
 use once_cell::sync::Lazy;
 use std::sync::{Arc, Mutex};
 
+use crate::sanitization::mem_conv::*;
+use crate::sanitization::errno::Errno;
+use crate::constants::fs_constants::*;
+use crate::cage::get_cage;
+use std::io;
+
 const exit_syscallnum: u64 = 30; // Develop purpose only
 
 /// HANDLERTABLE:
@@ -427,22 +433,6 @@ pub fn harsh_cage_exit(
     0
 }
 
-// ---- CODE BELOW IS HELPER FUNCTIONS FOR TESTING ----
-pub fn testing_remove_cage_entry(target_cageid: u64) -> i32 {
-    let mut handler_table = HANDLERTABLE.lock().unwrap();
-    if handler_table.remove(&target_cageid).is_none() {
-        eprintln!("targetcage {:?} entry not found in HANDLERTABLE when triggering harsh cage exit", target_cageid);
-        return -1;
-    }
-    return 0;
-}
-
-pub fn testing_remove_all() {
-    let mut handler_table = HANDLERTABLE.lock().unwrap();
-    handler_table.clear();
-}
-
-// ---- CODE BELOW WILL BE TESTED WITH VMMAP ----
 /***************************** copy_data_between_cages *****************************/
 // Validate the memory range for both source (`srcaddr -> srcaddr + srclen`) and destination (`destaddr -> destaddr + destlen`) 
 // using the corresponding `vmmap` functions in RawPOSIX.
@@ -453,151 +443,54 @@ pub fn testing_remove_all() {
 //  - If the destination range becomes valid and satisfies the required permissions after mapping, proceed to 
 //      perform the copy operation.
 // Otherwise, abort the operation if the mapping fails or permissions are insufficient.
-// pub fn copy_data_between_cages(
-//     callnum:u64, 
-//     targetcage:u64, 
-//     srcaddr:u64, 
-//     srccage:u64,
-//     destaddr:u64, 
-//     destcage:u64,
-//     len:u64, 
-//     _arg3cage:u64,
-//     copytype:u64, 
-//     _arg4cage:u64,
-//     _arg5:u64, 
-//     _arg5cage:u64,
-//     _arg6:u64, 
-//     _arg6cage:u64
-// ) -> u64 {
-//     // Check address validity and permissions 
-//     // Validate source address
-//      if !_validate_addr(srccage, srcaddr, len, PROT_READ as u64).unwrap_or(false) {
-//         eprintln!("Source address is invalid.");
-//         return threeiconstant::ELINDAPIABORTED; // Error: Invalid address
-//     }
+pub fn copy_data_between_cages(
+    callnum:u64, 
+    targetcage:u64, 
+    srcaddr:u64, 
+    srccage:u64,
+    destaddr:u64, 
+    destcage:u64,
+    len:u64, 
+    _arg3cage:u64,
+    copytype:u64, 
+    _arg4cage:u64,
+    _arg5:u64, 
+    _arg5cage:u64,
+    _arg6:u64, 
+    _arg6cage:u64
+) -> u64 {
+    // Check address validity and permissions 
+    // Validate source address
+     if !check_addr(srccage, srcaddr, len as usize, PROT_READ as i32).unwrap_or(false) {
+        eprintln!("Source address is invalid.");
+        return threeiconstant::ELINDAPIABORTED; // Error: Invalid address
+    }
 
-//     // Validate destination address, and we will try to map if we don't the memory region 
-//     // unmapping
-//     if !_validate_addr(destcage, destaddr, len, PROT_WRITE as u64).unwrap_or(false) {
-//         if !_attemp_dest_mapping(destcage, destaddr, len, PROT_WRITE as u64).unwrap_or(false) {
-//             eprintln!("Failed to map destination address.");
-//             return threeiconstant::ELINDAPIABORTED; // Error: Mapping Failed
-//         }
-//     }
+    // Validate destination address, and we will try to map if we don't the memory region 
+    // unmapping
+    if !check_addr(destcage, destaddr, len as usize, PROT_WRITE as i32).unwrap_or(false) {
+        eprintln!("Dest address is invalid.");
+        return threeiconstant::ELINDAPIABORTED; // Error: Invalid address
+    }
 
-//     // TODO:
-//     //  - Do we need to consider the permission relationship between cages..? 
-//     //      ie: only parent cage can perfrom copy..?
-//     // if !_has_permission(srccage, destcage) {
-//     //     eprintln!("Permission denied between cages.");
-//     //     return threeiconstant::ELINDAPIABORTED; // Error: Permission denied
-//     // }
+    // TODO:
+    //  - Do we need to consider the permission relationship between cages..? 
+    //      ie: only parent cage can perfrom copy..?
+    // if !_has_permission(srccage, destcage) {
+    //     eprintln!("Permission denied between cages.");
+    //     return threeiconstant::ELINDAPIABORTED; // Error: Permission denied
+    // }
 
-//     // Perform the data copy
-//     unsafe {
-//         match copytype {
-//             0 => { // Raw memory copy
-//                 let src_ptr = srcaddr as *const u8;
-//                 let dest_ptr = destaddr as *mut u8;
-//                 std::ptr::copy_nonoverlapping(src_ptr, dest_ptr, len as usize);
-//             }
-//             1 => { // Null-terminated string copy
-//                 let src_ptr = srcaddr as *const u8;
-//                 let dest_ptr = destaddr as *mut u8;
-//                 for i in 0..len {
-//                     let byte = *src_ptr.add(i as usize);
-//                     *dest_ptr.add(i as usize) = byte;
-//                     if byte == 0 {
-//                         break;
-//                     }
-//                 }
-//             }
-//             _ => {
-//                 eprintln!("Unsupported copy type: {}", copytype);
-//                 return threeiconstant::ELINDAPIABORTED; // Error: Unsupported copy type
-//             }
-//         }
-//     }
+    // Perform the data copy
+    unsafe {
+        let src_ptr = srcaddr as *const u8;
+        let dest_ptr = destaddr as *mut u8;
+        std::ptr::copy_nonoverlapping(src_ptr, dest_ptr, len as usize);
+    }
 
-//     0
-// }
+    0
+}
 
-// Helper function for copy_data_between_cages 
-// Validates whether the specified memory range is valid, mapped, and meets the required
-// permissions for the given cage. Ensure addr + len does not wrap or exceed bounds
-// Return type as `Result` is used to distinguish whether the operation failed because the logic verification 
-// failed (such as illegal address) or other errors occurred during program operation (such as system call failure)
-// fn _validate_addr(
-//     cage_id: u64,
-//     addr: u64,
-//     len: u64,
-//     required_prot: u64,
-// ) -> Result<bool, io::Error> {
-//     let cage = interface::cagetable_getref(cage_id);
-//     let rawposix_vmmap = cage.vmmap.read(); 
-//     // Get the end address for validation
-//     let end_addr = addr.checked_add(len).expect("Address computation overflowed");
-//     // Get the base address of the cage and compute the cage valide address range
-//     // Memory region per cage = 2**64
-//     // TODO: Add check for unwrap
-//     let baseaddr = rawposix_vmmap.base_address.unwrap() as u64;
-//     let max_addr = baseaddr.checked_add(1 << 64).expect("Address computation overflowed");
-
-//     if addr < baseaddr || end_addr > max_addr {
-//         return Ok(false); // Address exceeds the cage's valid range
-//     }
-
-//     let start_page = addr >> 12;
-//     let end_page = (addr + len - 1) >> 12;
-
-//     let req_prot = required_prot as i32;
-//     for const { page as i32 } in start_page..=end_page {
-//         if let Some(entry) = rawposix_vmmap.find_page(page) {
-//             if entry.cage_id != cage_id || entry.prot & req_prot != req_prot {
-//                 return Ok(false);
-//             }
-//         } else {
-//             return Ok(false); 
-//         }
-//     }
-
-//     Ok(true)
-// }
-
-// fn _attemp_dest_mapping(
-//     cage_id: u64,
-//     addr: u64,
-//     len: u64,
-//     required_prot: u64,
-// ) -> Result<bool, io::Error> {
-//     let cage = interface::cagetable_getref(cage_id);
-//     let mut rawposix_vmmap = cage.vmmap.write(); 
-//     let start_page = addr >> 12;
-//     let end_page = (addr + len - 1) >> 12;
-
-//     // Because we are not sure whether all the pages from destaddr to destaddr+len are mapped, 
-//     // we loop each page to check and try to map them.
-//     for const { page as i32 } in start_page..=end_page {
-//         if rawposix_vmmap.find_page(page).is_none() {
-//             let new_entry = VmmapEntry::new(
-//                 page,
-//                 1,                       
-//                 required_prot as i32,    
-//                 required_prot as i32,    
-//                 MAP_PRIVATE as i32,             
-//                 false,                   // removed = false
-//                 0,                      
-//                 0,                       
-//                 cage_id,                
-//                 MemoryBackingType::Anonymous, 
-//             );
-
-//             rawposix_vmmap.add_entry(new_entry);
-//         }
-//     }
-
-//     Ok(true)
-// }
 
 // -- Check if permissions allow data copying between cages
 // TODO:
@@ -622,3 +515,20 @@ pub fn testing_remove_all() {
 //     }
 //     false
 // }
+
+
+// ---- CODE BELOW IS HELPER FUNCTIONS FOR TESTING ----
+pub fn testing_remove_cage_entry(target_cageid: u64) -> i32 {
+    let mut handler_table = HANDLERTABLE.lock().unwrap();
+    if handler_table.remove(&target_cageid).is_none() {
+        eprintln!("targetcage {:?} entry not found in HANDLERTABLE when triggering harsh cage exit", target_cageid);
+        return -1;
+    }
+    return 0;
+}
+
+pub fn testing_remove_all() {
+    let mut handler_table = HANDLERTABLE.lock().unwrap();
+    handler_table.clear();
+}
+

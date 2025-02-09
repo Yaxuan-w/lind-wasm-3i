@@ -7,7 +7,6 @@ pub use libc::*;
 use std::path::PathBuf;
 
 pub use crate::constants::fs_constants;
-// static LIND_ROOT: &str = "/home/lind-wasm/src/RawPOSIX/tmp";
 
 pub fn convpath(cpath: &str) ->
     PathBuf {
@@ -50,3 +49,4 @@ pub fn add_lind_root(cageid: u64, path: &str) -> CString {
     let c_path = CString::new(full_path).unwrap();
     c_path
 }
+

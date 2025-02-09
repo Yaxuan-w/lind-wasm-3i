@@ -438,3 +438,14 @@ pub fn syscall_error(e: Errno, syscall: &str, message: &str) -> i32 {
 pub fn get_errno() -> i32 {
     (unsafe { *libc::__errno_location() }) as i32
 }
+
+/// Used to search corresponding error name according to input errno
+/// 
+/// Input: error number
+/// Output: error name as String
+fn get_errno_name(errno: i32) -> String {
+    match Errno::from_discriminant(errno) {
+        Ok(err) => format!("{:?}", err), 
+        Err(_) => format!("Unknown error: {}", errno),
+    }
+}
