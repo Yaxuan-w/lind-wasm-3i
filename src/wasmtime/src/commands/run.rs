@@ -10,7 +10,7 @@ use crate::common::{Profile, RunCommon, RunTarget};
 use anyhow::{anyhow, bail, Context as _, Error, Result};
 use clap::Parser;
 use rawposix::constants::{MAP_ANONYMOUS, MAP_FIXED, MAP_PRIVATE, PAGESHIFT, PROT_READ, PROT_WRITE};
-use rawposix::safeposix::dispatcher::lind_syscall_api;
+use rawposix::threei::threei::make_syscall;
 use wasmtime_lind_multi_process::{LindCtx, LindHost};
 use wasmtime_lind_common::LindCommonCtx;
 use wasmtime_lind_utils::lind_syscall_numbers::EXIT_SYSCALL;
@@ -181,7 +181,7 @@ impl RunCommand {
         }
 
         // Initialize Lind here
-        rawposix::safeposix::dispatcher::lindrustinit(0);
+        rawposix::cage::lindrustinit(0);
         // new cage is created
         lind_manager.increment();
 
@@ -212,11 +212,11 @@ impl RunCommand {
                     code = *res;
                 }
                 // exit the cage
-                lind_syscall_api(
+                make_syscall(
                     1,
-                    EXIT_SYSCALL as u32,
-                    0,
-                    code as u64,
+                    EXIT_SYSCALL,
+                    1,
+                    code as u64, // Exit type
                     0,
                     0,
                     0,
@@ -229,7 +229,7 @@ impl RunCommand {
                 // we wait until all other cage exits
                 lind_manager.wait();
                 // after all cage exits, finalize the lind
-                rawposix::safeposix::dispatcher::lindrustfinalize();
+                rawposix::cage::lindrustfinalize();
             },
             Err(e) => {
                 // Exit the process if Wasmtime understands the error;

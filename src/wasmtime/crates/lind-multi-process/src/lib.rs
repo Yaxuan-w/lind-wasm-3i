@@ -1,7 +1,7 @@
 #![allow(dead_code)]
 
 use anyhow::{anyhow, Result};
-use rawposix::safeposix::dispatcher::lind_syscall_api;
+use rawposix::threei::threei::make_syscall;
 use wasmtime_lind_utils::lind_syscall_numbers::{EXIT_SYSCALL, FORK_SYSCALL};
 use wasmtime_lind_utils::{parse_env_var, LindCageManager};
 
@@ -272,11 +272,12 @@ impl<T: Clone + Send + 'static + std::marker::Sync, U: Clone + Send + 'static + 
         let parent_pid = self.pid;
 
         // calling fork in rawposix to fork the cage
-        lind_syscall_api(
-            self.pid as u64,
-            FORK_SYSCALL as u32, // fork syscall
+        make_syscall(
+            self.pid as u64, 
+            FORK_SYSCALL, // syscall num for fork 
+            self.pid as u64, 
             0,
-            child_cageid,
+            child_cageid as u64, 
             0,
             0,
             0,
@@ -384,9 +385,10 @@ impl<T: Clone + Send + 'static + std::marker::Sync, U: Clone + Send + 'static + 
                     match exit_code {
                         Val::I32(val) => {
                             // exit the cage with the exit code
-                            lind_syscall_api(
+                            make_syscall(
                                 child_cageid,
-                                EXIT_SYSCALL as u32,
+                                EXIT_SYSCALL,
+                                child_cageid,
                                 0,
                                 *val as u64,
                                 0,
@@ -784,7 +786,18 @@ impl<T: Clone + Send + 'static + std::marker::Sync, U: Clone + Send + 'static + 
 
             // to-do: exec should not change the process id/cage id, however, the exec call from rustposix takes an
             // argument to change the process id. If we pass the same cageid, it would cause some error
-            // lind_exec(cloned_pid as u64, cloned_pid as u64);
+            make_syscall(
+                cloned_pid as u64, 
+                EXEC_SYSCALL, // syscall num for exec 
+                cloned_pid as u64, 
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0, 
+            );
             let ret = exec_call(&cloned_run_command, &real_path_str, &args, cloned_pid, &cloned_next_cageid, &cloned_lind_manager, &environs);
 
             return Ok(OnCalledAction::Finish(ret.expect("exec-ed module error")));

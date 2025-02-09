@@ -12,7 +12,7 @@ use crate::{
 };
 use alloc::sync::Arc;
 use rawposix::constants::{MAP_ANONYMOUS, MAP_FIXED, MAP_PRIVATE, PAGESHIFT, PROT_READ, PROT_WRITE};
-use rawposix::safeposix::dispatcher::lind_syscall_api;
+use rawposix::threei::threei::make_syscall;
 use wasmtime_lind_utils::lind_syscall_numbers::MMAP_SYSCALL;
 use core::ptr::NonNull;
 use wasmparser::WasmFeatures;
@@ -249,21 +249,22 @@ impl Instance {
                 let handle = store.0.instance(InstanceId::from_index(0));
                 let defined_memory = handle.get_memory(wasmtime_environ::MemoryIndex::from_u32(0));
                 let memory_base = defined_memory.base as usize;
-                rawposix::interface::init_vmmap_helper(pid, memory_base, Some(minimal_pages as u32));
 
-                lind_syscall_api(
-                    pid,
-                    MMAP_SYSCALL as u32,
-                    0,
+                rawposix::sanitization::mem_conv::init_vmmap_helper(pid, memory_base, Some(minimal_pages as u32));
+
+                make_syscall(
+                    pid, // self cageid
+                    MMAP_SYSCALL, // syscall num
+                    pid, // target cageid (should be same)
                     0, // the first memory region starts from 0
                     minimal_pages << PAGESHIFT, // size of first memory region
                     (PROT_READ | PROT_WRITE) as u64,
                     (MAP_PRIVATE | MAP_ANONYMOUS | MAP_FIXED) as u64,
-                    // we need to pass -1 here, but since lind_syscall_api only accepts u64
+                    // we need to pass -1 here, but since make_syscall only accepts u64
                     // and rust does not directly allow things like -1 as u64, so we end up with this weird thing
                     (0 - 1) as u64,
                     0,
-                );
+                )
             },
             // InstantiateChild: this is the child wasm instance forked by parent
             InstantiateType::InstantiateChild { parent_pid, child_pid } => {
@@ -276,8 +277,8 @@ impl Instance {
                 let defined_memory = handle.get_memory(wasmtime_environ::MemoryIndex::from_u32(0));
                 let child_address = defined_memory.base as usize;
             
-                rawposix::interface::init_vmmap_helper(child_pid, child_address, None);
-                rawposix::interface::fork_vmmap_helper(parent_pid as u64, child_pid);
+                rawposix::sanitization::mem_conv::init_vmmap_helper(child_pid, child_address, None);
+                rawposix::sanitization::mem_conv::fork_vmmap_helper(parent_pid as u64, child_pid);
             }
         }
 
