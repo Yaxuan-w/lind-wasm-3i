@@ -250,7 +250,7 @@ impl Instance {
                 let defined_memory = handle.get_memory(wasmtime_environ::MemoryIndex::from_u32(0));
                 let memory_base = defined_memory.base as usize;
 
-                rawposix::sanitization::mem_conv::init_vmmap_helper(pid, memory_base, Some(minimal_pages as u32));
+                rawposix::memory::mem_helper::init_vmmap_helper(pid, memory_base, Some(minimal_pages as u32));
 
                 make_syscall(
                     pid, // self cageid
@@ -277,8 +277,8 @@ impl Instance {
                 let defined_memory = handle.get_memory(wasmtime_environ::MemoryIndex::from_u32(0));
                 let child_address = defined_memory.base as usize;
             
-                rawposix::sanitization::mem_conv::init_vmmap_helper(child_pid, child_address, None);
-                rawposix::sanitization::mem_conv::fork_vmmap_helper(parent_pid as u64, child_pid);
+                rawposix::memory::mem_helper::init_vmmap_helper(child_pid, child_address, None);
+                rawposix::memory::mem_helper::fork_vmmap_helper(parent_pid as u64, child_pid);
             }
         }
 
