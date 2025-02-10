@@ -1,7 +1,7 @@
 #![allow(dead_code)]
 /// This file is used for type conversion related files 
-use super::errno::*;
-use super::sockaddr::*;
+use crate::constants::err_constants::{syscall_error, Errno};
+use crate::network::sockaddr::*;
 pub use std::str::Utf8Error;
 pub use std::cmp::{max, min};
 pub use libc::*;

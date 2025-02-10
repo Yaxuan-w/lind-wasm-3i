@@ -9,13 +9,13 @@ pub use parking_lot::RwLock;
 pub use once_cell::sync::Lazy;
 pub use std::sync::atomic::{AtomicI32, AtomicU64};
 pub use std::path::{Path, PathBuf};
-use crate::rawposix::vmmap::*;
-use crate::rawposix::syscalls::sys_calls::exit_syscall;
-use crate::rawposix::syscalls::fs_calls::kernel_close;
+use crate::memory::vmmap::*;
+use crate::syscalls::sys_calls::exit_syscall;
+use crate::syscalls::fs_calls::kernel_close;
 use crate::fdtables;
 use std::ffi::CString;
 use crate::constants::{fs_constants, sys_constants};
-use crate::sanitization::errno::VERBOSE;
+use crate::constants::err_constants::VERBOSE;
 
 #[derive(Debug, Clone, Copy)]
 pub struct Zombie {

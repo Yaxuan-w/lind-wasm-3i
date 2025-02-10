@@ -5,7 +5,7 @@ use std::io;
 use nodit::NoditMap;
 use nodit::{interval::ie, Interval};
 use crate::fdtables;
-use crate::sanitization::errno::{Errno, syscall_error};
+use crate::constants::err_constants::{Errno, syscall_error};
 
 const DEFAULT_VMMAP_SIZE: u32 = 1 << (32 - PAGESHIFT);
 

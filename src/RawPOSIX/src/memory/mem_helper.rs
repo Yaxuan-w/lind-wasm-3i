@@ -2,9 +2,9 @@ use crate::constants::fs_constants::{
     F_GETFL, MAP_ANONYMOUS, MAP_FIXED, MAP_PRIVATE, PROT_EXEC, MAP_SHARED, PROT_NONE, PROT_READ, PROT_WRITE, PAGESHIFT, PAGESIZE, MREMAP_MAYMOVE, MREMAP_FIXED
 };
 
-use crate::rawposix::vmmap::{MemoryBackingType, Vmmap, VmmapOps};
+use crate::memory::vmmap::{MemoryBackingType, Vmmap, VmmapOps};
 use crate::cage::{Cage, get_cage};
-use crate::sanitization::errno::{syscall_error, Errno};
+use crate::constants::err_constants::{syscall_error, Errno};
 use libc::c_void;
 
 // heap is placed at the very top of the memory

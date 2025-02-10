@@ -1,15 +1,13 @@
-// use std::sync::Arc;
-// use std::collections::HashMap;
 
 use crate::fdtables;
 use crate::constants::fs_constants::*;
 use crate::constants::fs_constants;
-use crate::sanitization::errno::*;
-use crate::sanitization::syscall_conv::*;
+use crate::constants::err_constants::{Errno, syscall_error, handle_errno, get_errno};
+use crate::arg_conversion::syscall_conv::*;
 use crate::cage::get_cage;
 use libc::c_void;
-use crate::rawposix::vmmap::{VmmapOps, *};
-use crate::sanitization::mem_conv::*;
+use crate::memory::vmmap::{VmmapOps, *};
+use crate::memory::mem_helper::*;
 
 pub fn hello_syscall(_cageid: u64, _arg1: u64, _arg2: u64, _arg3: u64, _arg4: u64, _arg5: u64, _arg6: u64) -> i32 {
     // println!("hello from cageid = {:?}", cageid);
@@ -53,23 +51,6 @@ pub fn mkdir_syscall(cageid: u64, path_arg: u64, mode_arg: u64, _arg3: u64, _arg
     }
     ret
 }
-
-// syscall_handler!(write_syscall, [1 => convert_fd, 2 => convert_buf], |cageid, kernel_fd, buf, count_arg, _arg4, _arg5, _arg6| {
-//     // early return
-//     let count = count_arg as usize;
-//     if count == 0 {
-//         return 0;
-//     }
-//     let ret = unsafe {
-//         libc::write(kernel_fd, buf, count) as i32
-//     };
-
-//     if ret < 0 {
-//         let errno = get_errno();
-//         return handle_errno(errno, "write");
-//     }
-//     return ret;
-// });
 
 pub fn write_syscall(cageid: u64, virtual_fd: u64, buf_arg: u64, count_arg: u64, _arg4: u64, _arg5: u64, _arg6: u64) -> i32 {
     let kernel_fd = convert_fd(cageid, virtual_fd);

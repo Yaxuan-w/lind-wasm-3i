@@ -6,8 +6,8 @@ use dashmap::DashSet;
 use once_cell::sync::Lazy;
 use std::sync::{Arc, Mutex};
 
-use crate::sanitization::mem_conv::*;
-use crate::sanitization::errno::Errno;
+use crate::memory::mem_helper::*;
+use crate::constants::err_constants::Errno;
 use crate::constants::fs_constants::*;
 use crate::cage::get_cage;
 use std::io;

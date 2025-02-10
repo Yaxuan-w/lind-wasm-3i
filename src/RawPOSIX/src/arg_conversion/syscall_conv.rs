@@ -1,10 +1,9 @@
-use crate::sanitization::path_conv::*;
-use crate::sanitization::type_conv::*;
-use crate::sanitization::mem_conv::*;
-use crate::sanitization::errno::*;
+use crate::arg_conversion::path_conv::*;
+use crate::arg_conversion::type_conv::*;
+use crate::memory::mem_helper::*;
+use crate::constants::err_constants::{Errno, syscall_error};
 use crate::fdtables;
 use crate::cage::get_cage;
-use crate::threei::threei::CallFunc;
 
 /// compiler needs to know variable type ==> match first then assign
 /// different index corresponding to different op ==> use different match
