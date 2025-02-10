@@ -1,3 +1,10 @@
+//! This file provides essential functions for handling and validating `u64` inputs, converting 
+//! them to various system-specific data types needed in system calls.  It includes utilities 
+//! for transforming raw pointers to typed structures, such as integer, buffer, and string pointers, 
+//! as well as complex structures like polling, signal handling, timing, and socket-related types. 
+//! Each function ensures safe and correct usage by performing null checks, boundary validations, 
+//! and type casting, returning either a valid reference or an error if data is invalid. This design 
+//! promotes secure, reliable access to memory and resources in a low-level systems environment.
 #![allow(dead_code)]
 /// This file is used for type conversion related files 
 use crate::constants::err_constants::{syscall_error, Errno};
@@ -8,8 +15,6 @@ pub use libc::*;
 pub use std::time::Duration;
 
 const SIZEOF_SOCKADDR: u32 = 16;
-
-
 
 //redefining the FSData struct in this file so that we maintain flow of program
 //derive eq attributes for testing whether the structs equal other fsdata structs from stat/fstat
@@ -180,16 +185,6 @@ pub unsafe fn charstar_to_ruststr<'a>(cstr: *const i8) -> Result<&'a str, Utf8Er
     std::ffi::CStr::from_ptr(cstr as *const _).to_str() //returns a result to be unwrapped later
 }
 
-/*
-This file provides essential functions for handling and validating `u64` inputs, 
-converting them to various system-specific data types needed in system calls. 
-It includes utilities for transforming raw pointers to typed structures, such as integer,
-buffer, and string pointers, as well as complex structures like polling, signal handling, 
-timing, and socket-related types. Each function ensures safe and correct usage by performing 
-null checks, boundary validations, and type casting, returning either a valid reference 
-or an error if data is invalid. This design promotes secure, reliable access to memory and
- resources in a low-level systems environment.
-*/
 pub fn get_int(generic_argument: u64) -> Result<i32, i32> {
     let data = generic_argument as i32;
     let type_checker = (!0xffffffff) as u64;

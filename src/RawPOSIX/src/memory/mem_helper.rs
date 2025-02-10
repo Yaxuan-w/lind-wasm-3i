@@ -1,7 +1,9 @@
+//! This file provides helper functions related to vmmap, including address alignment, 
+//! initializing vmmap, helper functions for handling vmmap during a fork syscall, and 
+//! address translation and validation related to vmmap 
 use crate::constants::fs_constants::{
     F_GETFL, MAP_ANONYMOUS, MAP_FIXED, MAP_PRIVATE, PROT_EXEC, MAP_SHARED, PROT_NONE, PROT_READ, PROT_WRITE, PAGESHIFT, PAGESIZE, MREMAP_MAYMOVE, MREMAP_FIXED
 };
-
 use crate::memory::vmmap::{MemoryBackingType, Vmmap, VmmapOps};
 use crate::cage::{Cage, get_cage};
 use crate::constants::err_constants::{syscall_error, Errno};

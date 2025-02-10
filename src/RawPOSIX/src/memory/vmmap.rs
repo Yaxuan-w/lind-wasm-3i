@@ -1,3 +1,10 @@
+//! This file provides data structures and helper functions of `vmmap` for handling virtual memory regions, 
+//! including memory allocation, permission management, and address translation. The file introduces 
+//! `VmmapEntry` to represent memory mappings and `Vmmap` to store and manage these mappings. It also 
+//! implements the `VmmapOps` trait, which provides core operations such as adding, updating, removing, 
+//! and searching for memory regions, ensuring proper alignment, protection, and handling of shared 
+//! and file-backed memory.
+//! This file defines `vmmap` data structures. 
 use crate::constants::fs_constants::{
     PAGESHIFT, PROT_EXEC, PROT_NONE, PROT_READ, PROT_WRITE
 };
