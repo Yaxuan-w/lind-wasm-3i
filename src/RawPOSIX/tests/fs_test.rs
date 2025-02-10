@@ -1,7 +1,7 @@
-use threei::threei::{threei::*, threeiconstant};
 use threei::cage::*;
-use threei::rawposix::vmmap::*;
 use threei::fdtables;
+use threei::rawposix::vmmap::*;
+use threei::threei::{threei::*, threeiconstant};
 
 use std::thread;
 use std::time::{Duration, Instant};
@@ -26,7 +26,7 @@ fn simple_init_cage(cageid: u64) {
         main_threadid: AtomicU64::new(0),
         zombies: RwLock::new(vec![]),
         child_num: AtomicU64::new(0),
-        vmmap: RwLock::new(Vmmap::new())
+        vmmap: RwLock::new(Vmmap::new()),
     };
     add_cage(cage);
     fdtables::init_empty_cage(cageid);
@@ -49,36 +49,39 @@ fn test_make_syscall() {
     let cage2id = 40;
     simple_init_cage(cage2id);
     let reg_result = register_handler(
-        0,                  // Unused, kept for syscall convention
-        cageid,                // target cageid 42
-        1,             // target syscall: hello 
-        0,                 // Unused 
-        2,                // self syscall: write
-        cage2id,            // self cageid 40
-        0, 0, 0, 0, 0, 0, 0, 0,             // Unused 
+        0,       // Unused, kept for syscall convention
+        cageid,  // target cageid 42
+        1,       // target syscall: hello
+        0,       // Unused
+        2,       // self syscall: write
+        cage2id, // self cageid 40
+        0, 0, 0, 0, 0, 0, 0, 0, // Unused
     );
-    assert_eq!(reg_result, 0, "register_handler did not return the expected result");
+    assert_eq!(
+        reg_result, 0,
+        "register_handler did not return the expected result"
+    );
 
     // test make in case of same cageid
     let result = make_syscall(
         cage2id, //40
-        2,
-        1, // hello syscall
-        cage2id, 
-        0, 0, 0, 0, 0, 0,
+        2, 1, // hello syscall
+        cage2id, 0, 0, 0, 0, 0, 0,
     );
     assert_eq!(result, 0, "make_syscall did not return the expected result");
 
     // test make in case of different cageid
     let result2 = make_syscall(
         cage2id, // 40
-        2,
-        1, // hello
+        2, 1,      // hello
         cageid, // 42
         0, 0, 0, 0, 0, 0,
     );
-        
-    assert_eq!(result2, 0, "make_syscall second time did not return the expected result");
+
+    assert_eq!(
+        result2, 0,
+        "make_syscall second time did not return the expected result"
+    );
 
     testing_remove_all();
 }
@@ -97,25 +100,28 @@ fn test_copy_handler() {
 
     // Register cage1 handler
     let reg_result = register_handler(
-        0,                  // Unused, kept for syscall convention
-        cage2id,                // target cageid 40
-        1,             // Syscall number or match-all indicator
-        0,                 // Unused 
-        2,                // 
-        cageid,            // self cageid 41
-        0, 0, 0, 0, 0, 0, 0, 0,             // Unused 
+        0,       // Unused, kept for syscall convention
+        cage2id, // target cageid 40
+        1,       // Syscall number or match-all indicator
+        0,       // Unused
+        2,       //
+        cageid,  // self cageid 41
+        0, 0, 0, 0, 0, 0, 0, 0, // Unused
     );
-    assert_eq!(reg_result, 0, "register_handler did not return the expected result");
+    assert_eq!(
+        reg_result, 0,
+        "register_handler did not return the expected result"
+    );
 
-    let copy_result = copy_handler_table_to_cage(
-        0, 
-        cage3id, 
-        cageid, 
-        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
-    assert_eq!(copy_result, 0, "copy_handler didn't return the expected results");
+    let copy_result =
+        copy_handler_table_to_cage(0, cage3id, cageid, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    assert_eq!(
+        copy_result, 0,
+        "copy_handler didn't return the expected results"
+    );
 
     // The block of code is enclosed within curly braces to explicitly scope the lock on the `HANDLERTABLE`,
-    // which ensures that the lock is released as soon as the operation within the block is completed. 
+    // which ensures that the lock is released as soon as the operation within the block is completed.
     {
         let handler_table = HANDLERTABLE.lock().unwrap();
 
@@ -136,20 +142,20 @@ fn test_copy_handler() {
         let cage3_entries = handler_table.get(&cage3id).unwrap();
 
         for (callnum, cage1_handler) in cage1_entries.iter() {
-            let cage3_handler = cage3_entries.get(callnum).expect("Handler not found in cage3");
+            let cage3_handler = cage3_entries
+                .get(callnum)
+                .expect("Handler not found in cage3");
 
             let cage1_call = cage1_handler.lock().unwrap();
             let cage3_call = cage3_handler.lock().unwrap();
 
             assert_eq!(
-                cage1_call.defaultcallfunc,
-                cage3_call.defaultcallfunc,
+                cage1_call.defaultcallfunc, cage3_call.defaultcallfunc,
                 "DefaultCallFunc mismatch for callnum {}",
                 callnum
             );
             assert_eq!(
-                cage1_call.thiscalltable,
-                cage3_call.thiscalltable,
+                cage1_call.thiscalltable, cage3_call.thiscalltable,
                 "ThisCallTable mismatch for callnum {}",
                 callnum
             );
@@ -162,7 +168,7 @@ fn test_copy_handler() {
     testing_remove_all();
 }
 
-/// Test exit 
+/// Test exit
 #[test]
 fn test_exit() {
     let cageid = 41;
@@ -172,36 +178,41 @@ fn test_exit() {
     thread::sleep(Duration::from_secs(10));
     // Register cage1 handler: cage1/write --> cage2/write
     let reg_result = register_handler(
-        0,                  
-        cage2id,     // target cageid for cage2: 40
-        2,             // write syscall
-        0,                 // Unused 
-        2,                // write syscall
-        cageid,            // self cageid for cage1: 41
-        0, 0, 0, 0, 0, 0, 0, 0,             // Unused 
+        0, cage2id, // target cageid for cage2: 40
+        2,       // write syscall
+        0,       // Unused
+        2,       // write syscall
+        cageid,  // self cageid for cage1: 41
+        0, 0, 0, 0, 0, 0, 0, 0, // Unused
     );
-    assert_eq!(reg_result, 0, "register_handler did not return the expected result");
+    assert_eq!(
+        reg_result, 0,
+        "register_handler did not return the expected result"
+    );
 
     // Register cage1 handler: cage1/write --> cage2/hello
     let reg2_result = register_handler(
-        0,                  
-        cage2id,     // target cageid for cage2: 40
-        1,             // hello syscall
-        0,                 // Unused 
-        2,                // write syscall
-        cageid,            // self cageid for cage1: 41
-        0, 0, 0, 0, 0, 0, 0, 0,             // Unused 
+        0, cage2id, // target cageid for cage2: 40
+        1,       // hello syscall
+        0,       // Unused
+        2,       // write syscall
+        cageid,  // self cageid for cage1: 41
+        0, 0, 0, 0, 0, 0, 0, 0, // Unused
     );
-    assert_eq!(reg2_result, 0, "register_handler did not return the expected result");
+    assert_eq!(
+        reg2_result, 0,
+        "register_handler did not return the expected result"
+    );
 
-    // Call write from cage1 to cage2 
+    // Call write from cage1 to cage2
     let make_result = make_syscall(
-        cageid, 
-        2,
-        1, // hello syscall
-        cage2id, 
-        0, 0, 0, 0, 0, 0);
-    assert_eq!(make_result, 0, "make_syscall did not return the expected result");
+        cageid, 2, 1, // hello syscall
+        cage2id, 0, 0, 0, 0, 0, 0,
+    );
+    assert_eq!(
+        make_result, 0,
+        "make_syscall did not return the expected result"
+    );
 
     // Initialize tracing subscriber with a custom layer
     tracing_subscriber::registry()
@@ -211,22 +222,23 @@ fn test_exit() {
 
     // Exit cage1
     trigger_harsh_cage_exit(
-        cageid, 
-        0, // random exit type for testing purpose
-        );
+        cageid, 0, // random exit type for testing purpose
+    );
 
     let duration = start.elapsed();
     println!("trigger_harsh_cage_exit entire completed in {:?}", duration);
 
     // Call write from cage1 to cage2 again, should fail
     let make_result = make_syscall(
-        cageid, 
-        2, // write syscall
-        1,
-        cage2id, 
-        0, 0, 0, 0, 0, 0);
-    assert_eq!(make_result, threeiconstant::ELINDESRCH as i32, "make_syscall did not return the expected result");
-    
+        cageid, 2, // write syscall
+        1, cage2id, 0, 0, 0, 0, 0, 0,
+    );
+    assert_eq!(
+        make_result,
+        threeiconstant::ELINDESRCH as i32,
+        "make_syscall did not return the expected result"
+    );
+
     // Check if HANDLERTABLE is empty
     let handler_table = HANDLERTABLE.lock().unwrap();
     assert!(

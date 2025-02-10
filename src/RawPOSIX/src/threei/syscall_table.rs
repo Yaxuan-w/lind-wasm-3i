@@ -1,10 +1,13 @@
-use crate::syscalls::fs_calls::{hello_syscall, write_syscall, open_syscall, mkdir_syscall, mmap_syscall, munmap_syscall, brk_syscall, sbrk_syscall};
-use crate::syscalls::sys_calls::{exit_syscall, exec_syscall, fork_syscall};
+use crate::syscalls::fs_calls::{
+    brk_syscall, hello_syscall, mkdir_syscall, mmap_syscall, munmap_syscall, open_syscall,
+    sbrk_syscall, write_syscall,
+};
+use crate::syscalls::sys_calls::{exec_syscall, exit_syscall, fork_syscall};
 use crate::threei::threei::CallFunc;
 
-/// Will replace syscall number with Linux Standard after confirming the refactoring details 
+/// Will replace syscall number with Linux Standard after confirming the refactoring details
 pub const SYSCALL_TABLE: &[(u64, CallFunc)] = &[
-    (1, hello_syscall), // ONLY for testing purpose 
+    (1, hello_syscall), // ONLY for testing purpose
     (13, write_syscall),
     (10, open_syscall),
     (21, mmap_syscall),
@@ -16,4 +19,3 @@ pub const SYSCALL_TABLE: &[(u64, CallFunc)] = &[
     (175, brk_syscall),
     (176, sbrk_syscall),
 ];
-

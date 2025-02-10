@@ -1,9 +1,9 @@
-use criterion::{criterion_group, criterion_main, Criterion, BenchmarkId};
+use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion};
 
-use threei::threei::threei::*;
 use threei::cage::*;
-use threei::rawposix::vmmap::*;
 use threei::fdtables;
+use threei::rawposix::vmmap::*;
+use threei::threei::threei::*;
 
 const FDKIND_KERNEL: u32 = 0;
 
@@ -20,7 +20,7 @@ fn simple_init_cage(cageid: u64) {
         main_threadid: AtomicU64::new(0),
         zombies: RwLock::new(vec![]),
         child_num: AtomicU64::new(0),
-        vmmap: RwLock::new(Vmmap::new())
+        vmmap: RwLock::new(Vmmap::new()),
     };
     add_cage(cage);
     fdtables::init_empty_cage(cageid);
@@ -29,7 +29,7 @@ fn simple_init_cage(cageid: u64) {
     fdtables::get_specific_virtual_fd(cageid, 2, FDKIND_KERNEL, 2, false, 0).unwrap();
 }
 
-/// make benchmark -- caller and callee are same 
+/// make benchmark -- caller and callee are same
 /// Step the workload up from 1 to 100 times and measure the runtime for each workload
 fn benchmark_make_same_syscall(c: &mut Criterion) {
     let mut group = c.benchmark_group("make_syscall");
@@ -40,17 +40,20 @@ fn benchmark_make_same_syscall(c: &mut Criterion) {
     }
 
     for num_cages in 1..=100 as u64 {
-        group.bench_with_input(BenchmarkId::from_parameter(num_cages), &num_cages, |b, &num_cages| {
-            let cage_ids: Vec<u64> = (1..=num_cages as u64).collect();
-            
-            // b.iter() will choose the loop times according to the test behaviors.. not sure if we need to handle manually
-            b.iter(|| {
-                for &cage_id in &cage_ids {
-                    let _ = make_syscall(cage_id, 0, 1, cage_id, 0, 0, 0, 0, 0, 0);
-                }
-            });
+        group.bench_with_input(
+            BenchmarkId::from_parameter(num_cages),
+            &num_cages,
+            |b, &num_cages| {
+                let cage_ids: Vec<u64> = (1..=num_cages as u64).collect();
 
-        });
+                // b.iter() will choose the loop times according to the test behaviors.. not sure if we need to handle manually
+                b.iter(|| {
+                    for &cage_id in &cage_ids {
+                        let _ = make_syscall(cage_id, 0, 1, cage_id, 0, 0, 0, 0, 0, 0);
+                    }
+                });
+            },
+        );
     }
 
     group.finish();
@@ -63,26 +66,36 @@ fn benchmark_register_syscall(c: &mut Criterion) {
     // We use cages initialized in the first benchmark, so no need to re-initialization
 
     for num_cages in 1..=99 as u64 {
-        group.bench_with_input(BenchmarkId::from_parameter(num_cages), &num_cages, |b, &num_cages| {
-            let cage_ids: Vec<u64> = (1..=num_cages as u64).collect();
+        group.bench_with_input(
+            BenchmarkId::from_parameter(num_cages),
+            &num_cages,
+            |b, &num_cages| {
+                let cage_ids: Vec<u64> = (1..=num_cages as u64).collect();
 
-            // register handler for different cages
-            
-            b.iter(|| {
-                for &cage_id in &cage_ids {
-                    let _ = register_handler(
-                        0,                  // Unused, kept for syscall convention
-                        cage_id+1,                // target cageid: next one
-                        1,             // target syscall: hello 
-                        0,                 // Unused 
-                        2,                // self syscall: write
-                        cage_id,            // self cageid this one
-                        0, 0, 0, 0, 0, 0, 0, 0,             // Unused 
-                    );
-                }
-            });
+                // register handler for different cages
 
-        });
+                b.iter(|| {
+                    for &cage_id in &cage_ids {
+                        let _ = register_handler(
+                            0,           // Unused, kept for syscall convention
+                            cage_id + 1, // target cageid: next one
+                            1,           // target syscall: hello
+                            0,           // Unused
+                            2,           // self syscall: write
+                            cage_id,     // self cageid this one
+                            0,
+                            0,
+                            0,
+                            0,
+                            0,
+                            0,
+                            0,
+                            0, // Unused
+                        );
+                    }
+                });
+            },
+        );
     }
 
     group.finish();
@@ -97,37 +110,33 @@ fn benchmark_make_different_syscall(c: &mut Criterion) {
     // Then handler has been registered
 
     for num_cages in 1..=100 as u64 {
-        group.bench_with_input(BenchmarkId::from_parameter(num_cages), &num_cages, |b, &num_cages| {
-            let cage_ids: Vec<u64> = (1..=num_cages as u64).collect();
-            // Call from cage_id to cage_id+1(next cage)
-            b.iter(|| {
-                for &cage_id in &cage_ids {
-                    let _ = make_syscall(
-                        cage_id, 
-                        2, 
-                        1,
-                        cage_id+1, 
-                        0, 0, 0, 0, 0, 0,
-                    );
-                }
-            });
-
-        });
+        group.bench_with_input(
+            BenchmarkId::from_parameter(num_cages),
+            &num_cages,
+            |b, &num_cages| {
+                let cage_ids: Vec<u64> = (1..=num_cages as u64).collect();
+                // Call from cage_id to cage_id+1(next cage)
+                b.iter(|| {
+                    for &cage_id in &cage_ids {
+                        let _ = make_syscall(cage_id, 2, 1, cage_id + 1, 0, 0, 0, 0, 0, 0);
+                    }
+                });
+            },
+        );
     }
 
     group.finish();
 }
 
-/// Call syscall at the end of call stack 
+/// Call syscall at the end of call stack
 // fn benchmark_only_make_last(c: &mut Criterion) {
 
 // }
 
-
 criterion_group!(
-    benches_exit, 
-    benchmark_make_same_syscall, 
-    benchmark_register_syscall, 
+    benches_exit,
+    benchmark_make_same_syscall,
+    benchmark_register_syscall,
     benchmark_make_different_syscall,
 );
 criterion_main!(benches_exit);

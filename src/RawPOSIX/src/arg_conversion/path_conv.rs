@@ -1,23 +1,22 @@
-/// Path conversion related API 
-/// 
-/// This file provides APIs for converting between different argument types and translation between path from 
+use crate::cage;
+pub use libc::*;
+pub use std::ffi::{CStr, CString};
+/// Path conversion related API
+///
+/// This file provides APIs for converting between different argument types and translation between path from
 /// user's perspective to host's perspective
 use std::path::Component;
-use crate::cage;
-pub use std::ffi::{CString, CStr};
-pub use std::{ptr, mem};
-pub use libc::*;
 use std::path::PathBuf;
+pub use std::{mem, ptr};
 
 pub use crate::constants::fs_constants;
 
 /// Convert data type from `&str` to `PathBuf`
-pub fn convpath(cpath: &str) ->
-    PathBuf {
+pub fn convpath(cpath: &str) -> PathBuf {
     PathBuf::from(cpath)
 }
 
-/// Normalize receiving path arguments to eliminating `./..` and generate a 
+/// Normalize receiving path arguments to eliminating `./..` and generate a
 pub fn normpath(origp: PathBuf, cageid: u64) -> PathBuf {
     let cage = cage::get_cage(cageid).unwrap();
     //If path is relative, prefix it with the current working directory, otherwise populate it with rootdir
@@ -46,13 +45,13 @@ pub fn normpath(origp: PathBuf, cageid: u64) -> PathBuf {
     newp
 }
 
-/// This function first normalizes the path, then add `LIND_ROOT` at the beginning. 
+/// This function first normalizes the path, then add `LIND_ROOT` at the beginning.
 /// This function is mostly used by path argument translation function in `syscall_conv`
-/// 
-/// Input: 
+///
+/// Input:
 ///     - cageid: used for normalizing path
 ///     - path: the user seen path
-/// 
+///
 /// Output:
 ///     - c_path: path location from host's perspective
 pub fn add_lind_root(cageid: u64, path: &str) -> CString {
@@ -66,5 +65,3 @@ pub fn add_lind_root(cageid: u64, path: &str) -> CString {
     let c_path = CString::new(full_path).unwrap();
     c_path
 }
-
-

@@ -1,9 +1,9 @@
-use criterion::{criterion_group, criterion_main, Criterion, BenchmarkId};
+use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion};
 
-use threei::threei::threei::*;
 use threei::cage::*;
-use threei::rawposix::vmmap::*;
 use threei::fdtables;
+use threei::rawposix::vmmap::*;
+use threei::threei::threei::*;
 
 const FDKIND_KERNEL: u32 = 0;
 /// Helper function to initialize a cage
@@ -19,7 +19,7 @@ fn simple_init_cage(cageid: u64) {
         main_threadid: AtomicU64::new(0),
         zombies: RwLock::new(vec![]),
         child_num: AtomicU64::new(0),
-        vmmap: RwLock::new(Vmmap::new())
+        vmmap: RwLock::new(Vmmap::new()),
     };
     add_cage(cage);
     fdtables::init_empty_cage(cageid);
@@ -36,22 +36,31 @@ fn benchmark_register_syscall(c: &mut Criterion) {
     // We use cages initialized in the first benchmark, so no need to re-initialization
 
     for cage_id in 1..=99 as u64 {
-        group.bench_with_input(BenchmarkId::from_parameter(cage_id), &cage_id, |b, &cage_id| {
-
-            // register handler for different cages
-            b.iter(|| {
-                let _ = register_handler(
-                    0,                  // Unused, kept for syscall convention
-                    cage_id+1,                // target cageid: next one
-                    1,             // target syscall: hello 
-                    0,                 // Unused 
-                    2,                // self syscall: write
-                    cage_id,            // self cageid this one
-                    0, 0, 0, 0, 0, 0, 0, 0,             // Unused 
-                );
-            });
-
-        });
+        group.bench_with_input(
+            BenchmarkId::from_parameter(cage_id),
+            &cage_id,
+            |b, &cage_id| {
+                // register handler for different cages
+                b.iter(|| {
+                    let _ = register_handler(
+                        0,           // Unused, kept for syscall convention
+                        cage_id + 1, // target cageid: next one
+                        1,           // target syscall: hello
+                        0,           // Unused
+                        2,           // self syscall: write
+                        cage_id,     // self cageid this one
+                        0,
+                        0,
+                        0,
+                        0,
+                        0,
+                        0,
+                        0,
+                        0, // Unused
+                    );
+                });
+            },
+        );
     }
 
     group.finish();
@@ -63,22 +72,18 @@ fn benchmark_exit(c: &mut Criterion) {
 
     // Exit from the last one
     for cage_id in (1..=99).rev() {
-        group.bench_with_input(BenchmarkId::from_parameter(cage_id), &cage_id, |b, &cage_id| {
-            b.iter(|| {
-                let _ = trigger_harsh_cage_exit(
-                    cage_id, 
-                    0,
-                );
-            });
-
-        });
+        group.bench_with_input(
+            BenchmarkId::from_parameter(cage_id),
+            &cage_id,
+            |b, &cage_id| {
+                b.iter(|| {
+                    let _ = trigger_harsh_cage_exit(cage_id, 0);
+                });
+            },
+        );
     }
     group.finish();
 }
 
-criterion_group!(
-    benches, 
-    benchmark_register_syscall,
-    benchmark_exit,
-);
+criterion_group!(benches, benchmark_register_syscall, benchmark_exit,);
 criterion_main!(benches);

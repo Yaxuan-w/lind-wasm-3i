@@ -1,16 +1,16 @@
 //! Top level Type Conversion API
-//! 
-//! This file provides the top level type conversion API needed for actual syscall implementation 
+//!
+//! This file provides the top level type conversion API needed for actual syscall implementation
 //! under src/syscalls/
 use crate::arg_conversion::path_conv::*;
 use crate::arg_conversion::type_conv::*;
-use crate::memory::mem_helper::*;
-use crate::constants::err_constants::{Errno, syscall_error};
-use crate::fdtables;
 use crate::cage::get_cage;
+use crate::constants::err_constants::{syscall_error, Errno};
+use crate::fdtables;
+use crate::memory::mem_helper::*;
 
-/// Translate a received virtual file descriptor (`virtual_fd`) to real kernel file descriptor. 
-/// 
+/// Translate a received virtual file descriptor (`virtual_fd`) to real kernel file descriptor.
+///
 /// Return: underlying kernel file descriptor
 pub fn convert_fd(cageid: u64, virtual_fd: u64) -> i32 {
     // Find corresponding virtual fd instance from `fdtable` subsystem
@@ -23,16 +23,16 @@ pub fn convert_fd(cageid: u64, virtual_fd: u64) -> i32 {
     vfd.underfd as i32
 }
 
-/// This function provides two operations: first, it translates path pointer address from WASM environment 
-/// to kernel system address; then, it adjusts the path from user's perspective to host's perspective, 
-/// which is adding `LIND_ROOT` before the path arguments. Considering actual syscall implementation 
+/// This function provides two operations: first, it translates path pointer address from WASM environment
+/// to kernel system address; then, it adjusts the path from user's perspective to host's perspective,
+/// which is adding `LIND_ROOT` before the path arguments. Considering actual syscall implementation
 /// logic needs to pass string pointer to underlying rust libc, so this function will return `CString`
-/// 
-/// Input: 
+///
+/// Input:
 ///     - cageid: required to do address translation for path pointer
-///     - path_arg: the path pointer with address and contents from user's perspective. Address is 
+///     - path_arg: the path pointer with address and contents from user's perspective. Address is
 ///                 32-bit (because of WASM feature).
-/// 
+///
 /// Output:
 ///     - c_path: a `CString` variable stores the path from host's perspective
 pub fn convert_path_lind2host(cageid: u64, path_arg: u64) -> CString {
@@ -44,13 +44,13 @@ pub fn convert_path_lind2host(cageid: u64, path_arg: u64) -> CString {
     c_path
 }
 
-/// This function translates the buffer pointer from user buffer address to system address, because we are 
+/// This function translates the buffer pointer from user buffer address to system address, because we are
 /// transferring between 32-bit WASM environment to 64-bit kernel
-/// 
+///
 /// Input:
 ///     - cageid: required to do address translation for buf pointer
 ///     - buf_arg: the buf pointer address, which is 32-bit because of WASM feature
-/// 
+///
 /// Output:
 ///     - buf: actual system address, which is the actual position that stores data
 pub fn convert_buf(cageid: u64, buf_arg: u64) -> *const u8 {

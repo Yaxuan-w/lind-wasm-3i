@@ -1,5 +1,5 @@
 /// THIS FILE NEEDS TO BE REFACTORED LATER!
-/// 
+///
 use std::str::from_utf8;
 use std::sync::atomic::{AtomicUsize, Ordering};
 

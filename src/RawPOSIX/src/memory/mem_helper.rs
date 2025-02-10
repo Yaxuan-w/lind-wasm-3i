@@ -1,14 +1,15 @@
 //! VMMAP helper functions
-//! 
-//! This file provides helper functions related to vmmap, including address alignment, 
-//! initializing vmmap, helper functions for handling vmmap during a fork syscall, and 
-//! address translation and validation related to vmmap 
+//!
+//! This file provides helper functions related to vmmap, including address alignment,
+//! initializing vmmap, helper functions for handling vmmap during a fork syscall, and
+//! address translation and validation related to vmmap
+use crate::cage::{get_cage, Cage};
+use crate::constants::err_constants::{syscall_error, Errno};
 use crate::constants::fs_constants::{
-    F_GETFL, MAP_ANONYMOUS, MAP_FIXED, MAP_PRIVATE, PROT_EXEC, MAP_SHARED, PROT_NONE, PROT_READ, PROT_WRITE, PAGESHIFT, PAGESIZE, MREMAP_MAYMOVE, MREMAP_FIXED
+    F_GETFL, MAP_ANONYMOUS, MAP_FIXED, MAP_PRIVATE, MAP_SHARED, MREMAP_FIXED, MREMAP_MAYMOVE,
+    PAGESHIFT, PAGESIZE, PROT_EXEC, PROT_NONE, PROT_READ, PROT_WRITE,
 };
 use crate::memory::vmmap::{MemoryBackingType, Vmmap, VmmapOps};
-use crate::cage::{Cage, get_cage};
-use crate::constants::err_constants::{syscall_error, Errno};
 use libc::c_void;
 
 // heap is placed at the very top of the memory
@@ -43,7 +44,7 @@ pub fn round_up_page(length: u64) -> u64 {
 /// 3. **Private memory regions**:
 ///    - The function uses `std::ptr::copy_nonoverlapping` to copy the memory contents directly.
 ///    - **TODO**: Investigate whether using `writev` could improve performance for this case.
-/// 
+///
 /// # Arguments
 /// * `parent_vmmap` - vmmap struct of parent
 /// * `child_vmmap` - vmmap struct of child
@@ -64,15 +65,31 @@ pub fn fork_vmmap(parent_vmmap: &Vmmap, child_vmmap: &Vmmap) {
             // for shared memory, we are using mremap to fork shared memory
             // See "man 2 mremap" for description of what MREMAP_MAYMOVE does with old_size=0
             // when old_address points to a shared mapping
-            let result = unsafe { libc::mremap(parent_st as *mut libc::c_void, 0, addr_len, (MREMAP_MAYMOVE | MREMAP_FIXED) as i32, child_st as *mut libc::c_void) };
+            let result = unsafe {
+                libc::mremap(
+                    parent_st as *mut libc::c_void,
+                    0,
+                    addr_len,
+                    (MREMAP_MAYMOVE | MREMAP_FIXED) as i32,
+                    child_st as *mut libc::c_void,
+                )
+            };
         } else {
             unsafe {
                 // temporarily enable write on child's memory region to write parent data
-                libc::mprotect(child_st as *mut libc::c_void, addr_len, PROT_READ | PROT_WRITE);
+                libc::mprotect(
+                    child_st as *mut libc::c_void,
+                    addr_len,
+                    PROT_READ | PROT_WRITE,
+                );
 
                 // write parent data
                 // TODO: replace copy_nonoverlapping with writev for potential performance boost
-                std::ptr::copy_nonoverlapping(parent_st as *const u8, child_st as *mut u8, addr_len);
+                std::ptr::copy_nonoverlapping(
+                    parent_st as *const u8,
+                    child_st as *mut u8,
+                    addr_len,
+                );
 
                 // revert child's memory region prot
                 libc::mprotect(child_st as *mut libc::c_void, addr_len, entry.prot)
@@ -129,21 +146,26 @@ pub fn fork_vmmap_helper(parent_cageid: u64, child_cageid: u64) {
 /// - Ensuring addresses are properly aligned to pages
 /// - Validating all pages in the region are mapped with correct permissions
 /// - Preventing access outside of allocated memory regions
-pub fn check_and_convert_addr_ext(cageid: u64, arg: u64, length: usize, prot: i32) -> Result<u64, Errno> {
-    // search from the table and get the item from 
+pub fn check_and_convert_addr_ext(
+    cageid: u64,
+    arg: u64,
+    length: usize,
+    prot: i32,
+) -> Result<u64, Errno> {
+    // search from the table and get the item from
     let cage = get_cage(cageid).unwrap();
 
     // Get read lock on virtual memory map
     let mut vmmap = cage.vmmap.write();
-    
+
     // Calculate page numbers for start and end of region
-    let page_num = (arg >> PAGESHIFT) as u32;  // Starting page number
-    let end_page = ((arg + length as u64 + PAGESIZE as u64 - 1) >> PAGESHIFT) as u32;  // Ending page number (rounded up)
-    let npages = end_page - page_num;  // Total number of pages spanned
-    
+    let page_num = (arg >> PAGESHIFT) as u32; // Starting page number
+    let end_page = ((arg + length as u64 + PAGESIZE as u64 - 1) >> PAGESHIFT) as u32; // Ending page number (rounded up)
+    let npages = end_page - page_num; // Total number of pages spanned
+
     // Validate memory mapping and permissions
     if vmmap.check_addr_mapping(page_num, npages, prot).is_none() {
-        return Err(Errno::EFAULT);  // Return error if mapping invalid
+        return Err(Errno::EFAULT); // Return error if mapping invalid
     }
 
     // Convert to physical address by adding base address
@@ -151,20 +173,20 @@ pub fn check_and_convert_addr_ext(cageid: u64, arg: u64, length: usize, prot: i3
 }
 
 pub fn check_addr(cageid: u64, arg: u64, length: usize, prot: i32) -> Result<bool, Errno> {
-    // search from the table and get the item from 
+    // search from the table and get the item from
     let cage = get_cage(cageid).unwrap();
 
     // Get read lock on virtual memory map
     let mut vmmap = cage.vmmap.write();
-    
+
     // Calculate page numbers for start and end of region
-    let page_num = (arg >> PAGESHIFT) as u32;  // Starting page number
-    let end_page = ((arg + length as u64 + PAGESIZE as u64 - 1) >> PAGESHIFT) as u32;  // Ending page number (rounded up)
-    let npages = end_page - page_num;  // Total number of pages spanned
-    
+    let page_num = (arg >> PAGESHIFT) as u32; // Starting page number
+    let end_page = ((arg + length as u64 + PAGESIZE as u64 - 1) >> PAGESHIFT) as u32; // Ending page number (rounded up)
+    let npages = end_page - page_num; // Total number of pages spanned
+
     // Validate memory mapping and permissions
     if vmmap.check_addr_mapping(page_num, npages, prot).is_none() {
-        return Err(Errno::EFAULT);  // Return error if mapping invalid
+        return Err(Errno::EFAULT); // Return error if mapping invalid
     }
     Ok(true)
 }
