@@ -1,4 +1,7 @@
-/// This file is used for path conversion related functions 
+/// Path conversion related API 
+/// 
+/// This file provides APIs for converting between different argument types and translation between path from 
+/// user's perspective to host's perspective
 use std::path::Component;
 use crate::cage;
 pub use std::ffi::{CString, CStr};
@@ -8,11 +11,13 @@ use std::path::PathBuf;
 
 pub use crate::constants::fs_constants;
 
+/// Convert data type from `&str` to `PathBuf`
 pub fn convpath(cpath: &str) ->
     PathBuf {
     PathBuf::from(cpath)
 }
 
+/// Normalize receiving path arguments to eliminating `./..` and generate a 
 pub fn normpath(origp: PathBuf, cageid: u64) -> PathBuf {
     let cage = cage::get_cage(cageid).unwrap();
     //If path is relative, prefix it with the current working directory, otherwise populate it with rootdir
@@ -41,10 +46,22 @@ pub fn normpath(origp: PathBuf, cageid: u64) -> PathBuf {
     newp
 }
 
+/// This function first normalizes the path, then add `LIND_ROOT` at the beginning. 
+/// This function is mostly used by path argument translation function in `syscall_conv`
+/// 
+/// Input: 
+///     - cageid: used for normalizing path
+///     - path: the user seen path
+/// 
+/// Output:
+///     - c_path: path location from host's perspective
 pub fn add_lind_root(cageid: u64, path: &str) -> CString {
     // Convert data type from &str into *const i8
     let relpath = normpath(convpath(path), cageid);
     let relative_path = relpath.to_str().unwrap();
+
+    // TODO:
+    //  - what happens if non-terminate
     let full_path = format!("{}{}", fs_constants::LIND_ROOT, relative_path);
     let c_path = CString::new(full_path).unwrap();
     c_path

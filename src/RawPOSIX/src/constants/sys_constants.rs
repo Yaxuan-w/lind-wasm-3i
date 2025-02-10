@@ -1,3 +1,8 @@
+//! System Constants
+//! 
+//! This file contains all system related constants that aligns with POSIX standard. RawPOSIX imports all required constants 
+//! from here to ensure easier maintanence and avoid duplicate definitions or inconsistence. Moreover, it also makes it easier to 
+//! add platform specific constants (e.g.: MacOS / Linux) in the future. 
 #![allow(dead_code)]
 #![allow(unused_variables)]
 

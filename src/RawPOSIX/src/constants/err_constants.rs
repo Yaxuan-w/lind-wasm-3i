@@ -1,3 +1,7 @@
+//! Error constant and error-related helper functions
+//! 
+//! This file provides a reversable table that mapping `Error name` with corresponding `Errno`, and helper 
+//! functions to return POSIX standard error message to glibc
 #![allow(dead_code)]
 use std::sync::OnceLock;
 
@@ -427,6 +431,11 @@ pub fn handle_errno(e: i32, syscall: &str) -> i32 {
     }
 }
 
+/// This function sets the return value to `-errno` to indicate an error happening to `glibc`, which aligns with 
+/// POSIX standard.
+/// This function will print detailed error message when `VERBOSE` has been set.
+/// This function is used mostly on error handling (needs to return an error to `glibc`) inside actual syscall 
+/// implementation.
 pub fn syscall_error(e: Errno, syscall: &str, message: &str) -> i32 {
     if *VERBOSE.get().unwrap() > 0 {
         let msg = format!("Error in syscall: {} - {:?}: {}", syscall, e, message);

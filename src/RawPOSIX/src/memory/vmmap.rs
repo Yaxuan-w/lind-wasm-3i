@@ -1,3 +1,5 @@
+//! VMMAP data structure and structure-related operation
+//! 
 //! This file provides data structures and helper functions of `vmmap` for handling virtual memory regions, 
 //! including memory allocation, permission management, and address translation. The file introduces 
 //! `VmmapEntry` to represent memory mappings and `Vmmap` to store and manage these mappings. It also 

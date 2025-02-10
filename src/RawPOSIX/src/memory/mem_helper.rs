@@ -1,3 +1,5 @@
+//! VMMAP helper functions
+//! 
 //! This file provides helper functions related to vmmap, including address alignment, 
 //! initializing vmmap, helper functions for handling vmmap during a fork syscall, and 
 //! address translation and validation related to vmmap 
