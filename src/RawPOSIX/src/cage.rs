@@ -3,7 +3,7 @@
 //! finialization required by wasmtime
 use crate::constants::err_constants::VERBOSE;
 use crate::constants::{fs_constants, sys_constants};
-use crate::fdtables;
+use fdtables;
 use crate::memory::vmmap::*;
 use crate::syscalls::fs_calls::kernel_close;
 use crate::syscalls::sys_calls::exit_syscall;

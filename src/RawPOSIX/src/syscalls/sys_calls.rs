@@ -3,7 +3,7 @@
 //! This module contains all system calls that are being emulated/faked in Lind.
 use crate::cage;
 use crate::cage::*;
-use crate::fdtables;
+use fdtables;
 use std::sync::atomic::Ordering;
 use std::sync::atomic::Ordering::*;
 

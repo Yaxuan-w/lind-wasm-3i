@@ -6,7 +6,7 @@ use crate::arg_conversion::path_conv::*;
 use crate::arg_conversion::type_conv::*;
 use crate::cage::get_cage;
 use crate::constants::err_constants::{syscall_error, Errno};
-use crate::fdtables;
+use fdtables;
 use crate::memory::mem_helper::*;
 
 /// Translate a received virtual file descriptor (`virtual_fd`) to real kernel file descriptor.

@@ -151,7 +151,8 @@ members = [
   "examples/min-platform/embedding",
   "fuzz",
   "winch/codegen",
-  "crates/rawposix",
+  "RawPOSIX",
+  "fdtables",
 ]
 exclude = [
   'docs/rust_wasi_markdown_parser',

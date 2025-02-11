@@ -21,7 +21,7 @@ pub const FDT_INVALID_FD: u32 = 0xff00_0001;
 pub const FDT_KINDEPOLL: u32 = 0xff00_0002;
 
 // These are the values we look up with at the end...
-// #[doc = include_str!("../docs/fdtableentry.md")]
+#[doc = include_str!("../docs/fdtableentry.md")]
 #[derive(Clone, Copy, Hash, Debug, PartialEq, Eq)]
 /// This is a table entry, looked up by virtual fd.
 pub struct FDTableEntry {
@@ -96,12 +96,6 @@ pub const EPOLLWAKEUP: c_int = 0x2000_0000;
 pub const EPOLLONESHOT: c_int = 0x4000_0000;
 // Turning this on here because we copied from Rust's libc and I assume they
 // intended this...
-// `0x8000_0000` is a hexadecimal literal representing a 32-bit integer value
-// in rust and works for unsigned int. But it will cause warning in compilation
-// stage for signed int (ie `c_int`).
-// Since the value is copied from Rust's libc and is meant to match certain
-// system constants (such as EPOLLET), this case is by design.
-// Use #[allow(overflowing_literals)] to ensure our code compiles without warnings.
 #[allow(overflowing_literals)]
 /// copied from libc
 pub const EPOLLET: c_int = 0x8000_0000;

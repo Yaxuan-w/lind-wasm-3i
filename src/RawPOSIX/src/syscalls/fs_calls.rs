@@ -6,7 +6,7 @@ use crate::cage::get_cage;
 use crate::constants::err_constants::{get_errno, handle_errno, syscall_error, Errno};
 use crate::constants::fs_constants;
 use crate::constants::fs_constants::*;
-use crate::fdtables;
+use fdtables;
 use crate::memory::mem_helper::*;
 use crate::memory::vmmap::{VmmapOps, *};
 use libc::c_void;

@@ -9,7 +9,7 @@
 //! This file defines `vmmap` data structures.
 use crate::constants::err_constants::{syscall_error, Errno};
 use crate::constants::fs_constants::{PAGESHIFT, PROT_EXEC, PROT_NONE, PROT_READ, PROT_WRITE};
-use crate::fdtables;
+use fdtables;
 use nodit::NoditMap;
 use nodit::{interval::ie, Interval};
 use std::io;
