@@ -5,7 +5,7 @@
 use crate::arg_conversion::path_conv::*;
 use crate::arg_conversion::type_conv::*;
 use crate::cage::get_cage;
-use crate::constants::err_constants::{syscall_error, Errno};
+use constants::err_constants::{syscall_error, Errno};
 use fdtables;
 use crate::memory::mem_helper::*;
 

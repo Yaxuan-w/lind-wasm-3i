@@ -1,5 +1,4 @@
 pub mod cage;
-pub mod constants;
 pub mod memory;
 pub mod network;
 pub mod syscalls;

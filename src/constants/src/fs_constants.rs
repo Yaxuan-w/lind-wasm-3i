@@ -7,7 +7,7 @@
 #![allow(unused_variables)]
 
 // ===== Lind File System Root =====
-pub const LIND_ROOT: &str = "/home/lind-wasm/src/RawPOSIX/tmp";
+pub const LIND_ROOT: &str = "/home/lind/lind-wasm/src/RawPOSIX/tmp";
 
 // ===== Lind specific
 pub const FDKIND_KERNEL: u32 = 0;

@@ -7,8 +7,8 @@ use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 
 use crate::cage::get_cage;
-use crate::constants::err_constants::Errno;
-use crate::constants::fs_constants::*;
+use constants::err_constants::Errno;
+use constants::fs_constants::*;
 use crate::memory::mem_helper::*;
 use std::io;
 

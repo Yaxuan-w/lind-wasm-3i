@@ -7,7 +7,7 @@
 //! promotes secure, reliable access to memory and resources in a low-level systems environment.
 #![allow(dead_code)]
 /// This file is used for type conversion related files
-use crate::constants::err_constants::{syscall_error, Errno};
+use constants::err_constants::{syscall_error, Errno};
 use crate::network::sockaddr::*;
 pub use libc::*;
 pub use std::cmp::{max, min};
