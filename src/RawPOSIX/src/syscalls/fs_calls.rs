@@ -3,9 +3,9 @@
 //! This file provides all system related syscall implementation in RawPOSIX
 use crate::arg_conversion::syscall_conv::*;
 use crate::cage::get_cage;
-use crate::constants::err_constants::{get_errno, handle_errno, syscall_error, Errno};
-use crate::constants::fs_constants;
-use crate::constants::fs_constants::*;
+use constants::err_constants::{get_errno, handle_errno, syscall_error, Errno};
+use constants::fs_constants;
+use constants::fs_constants::*;
 use fdtables;
 use crate::memory::mem_helper::*;
 use crate::memory::vmmap::{VmmapOps, *};
@@ -51,13 +51,26 @@ pub fn kernel_close(fdentry: fdtables::FDTableEntry, _count: u64) {
 pub fn open_syscall(
     cageid: u64,
     path_arg: u64,
+    path_arg_cageid: u64,
     oflag_arg: u64,
+    olag_arg_cageid: u64,
     mode_arg: u64,
+    mode_arg_cageid: u64,
     _arg4: u64,
+    _arg4_cageid: u64,
     _arg5: u64,
+    _arg5_cageid: u64,
     _arg6: u64,
+    _arg6_cageid: u64,
 ) -> i32 {
     // Type conversion
+    let pathname = sc_convert_strncpy_from_cage(path_arg, path_arg_cageid, cageid, MAXPATH);
+    let oflag = sc_convert_sysarg_to_i32(arg2, arg2_cageid, cageid);  // Note the cageid here isn't really relevant because the argument is pass-by-value.   But it could be checked to ensure it's not set to something unexpected.  
+    let mode = sc_convert_sysarg_to_u32(arg3, arg3_cageid, cageid);
+    sc_unusedarg(arg4, arg4_cageid, cageid); // would sometimes check, sometimes be a no-op depending on the compiler settings
+    sc_unusedarg(arg5, arg5_cageid, cageid);
+    sc_unusedarg(arg6, arg6_cageid, cageid);
+
     let path = convert_path_lind2host(cageid, path_arg);
     let oflag = oflag_arg as i32;
     let mode = mode_arg as u32;

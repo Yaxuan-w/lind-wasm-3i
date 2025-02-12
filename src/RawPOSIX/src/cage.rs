@@ -1,8 +1,8 @@
 //! This file contains all the implementation related to Cage structure. Including structure
 //! definitions, a global variables that handles cage management, and cage initialization and
 //! finialization required by wasmtime
-use crate::constants::err_constants::VERBOSE;
-use crate::constants::{fs_constants, sys_constants};
+use constants::err_constants::VERBOSE;
+use constants::{fs_constants, sys_constants};
 use fdtables;
 use crate::memory::vmmap::*;
 use crate::syscalls::fs_calls::kernel_close;
