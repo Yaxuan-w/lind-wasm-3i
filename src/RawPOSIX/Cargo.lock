@@ -136,10 +136,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "constants"
-version = "0.1.0"
-
-[[package]]
 name = "criterion"
 version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -509,7 +505,6 @@ dependencies = [
 name = "rawposix"
 version = "0.1.0"
 dependencies = [
- "constants",
  "criterion",
  "dashmap",
  "fdtables",
@@ -519,6 +514,7 @@ dependencies = [
  "once_cell",
  "parking_lot",
  "quick_cache",
+ "sysdefs",
  "tracing",
  "tracing-subscriber",
 ]
@@ -670,6 +666,13 @@ dependencies = [
  "proc-macro2",
  "quote",
  "unicode-ident",
+]
+
+[[package]]
+name = "sysdefs"
+version = "0.1.0"
+dependencies = [
+ "libc",
 ]
 
 [[package]]

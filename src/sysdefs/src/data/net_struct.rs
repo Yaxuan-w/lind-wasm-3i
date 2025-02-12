@@ -225,3 +225,18 @@ pub struct SockaddrV6 {
     pub sin6_addr: V6Addr,
     pub sin6_scope_id: u32,
 }
+
+
+#[derive(Debug, Default)]
+#[repr(C)]
+pub struct PollStruct {
+    pub fd: i32,
+    pub events: i16,
+    pub revents: i16,
+}
+
+#[repr(C)]
+pub struct SockaddrDummy {
+    pub sa_family: u16,
+    pub _sa_data: [u16; 14],
+}

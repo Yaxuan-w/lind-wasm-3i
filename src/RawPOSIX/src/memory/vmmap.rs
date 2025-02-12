@@ -7,8 +7,8 @@
 //! and searching for memory regions, ensuring proper alignment, protection, and handling of shared
 //! and file-backed memory.
 //! This file defines `vmmap` data structures.
-use constants::err_constants::{syscall_error, Errno};
-use constants::fs_constants::{PAGESHIFT, PROT_EXEC, PROT_NONE, PROT_READ, PROT_WRITE};
+use sysdefs::err_constants::{syscall_error, Errno};
+use sysdefs::fs_constants::{PAGESHIFT, PROT_EXEC, PROT_NONE, PROT_READ, PROT_WRITE};
 use fdtables;
 use nodit::NoditMap;
 use nodit::{interval::ie, Interval};

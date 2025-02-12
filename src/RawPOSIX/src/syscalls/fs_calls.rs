@@ -3,9 +3,9 @@
 //! This file provides all system related syscall implementation in RawPOSIX
 use crate::arg_conversion::syscall_conv::*;
 use crate::cage::get_cage;
-use constants::err_constants::{get_errno, handle_errno, syscall_error, Errno};
-use constants::fs_constants;
-use constants::fs_constants::*;
+use sysdefs::err_constants::{get_errno, handle_errno, syscall_error, Errno};
+use sysdefs::fs_constants;
+use sysdefs::fs_constants::*;
 use fdtables;
 use crate::memory::mem_helper::*;
 use crate::memory::vmmap::{VmmapOps, *};

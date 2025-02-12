@@ -4,8 +4,8 @@
 //! initializing vmmap, helper functions for handling vmmap during a fork syscall, and
 //! address translation and validation related to vmmap
 use crate::cage::{get_cage, Cage};
-use constants::err_constants::{syscall_error, Errno};
-use constants::fs_constants::{
+use sysdefs::err_constants::{syscall_error, Errno};
+use sysdefs::fs_constants::{
     F_GETFL, MAP_ANONYMOUS, MAP_FIXED, MAP_PRIVATE, MAP_SHARED, MREMAP_FIXED, MREMAP_MAYMOVE,
     PAGESHIFT, PAGESIZE, PROT_EXEC, PROT_NONE, PROT_READ, PROT_WRITE,
 };
