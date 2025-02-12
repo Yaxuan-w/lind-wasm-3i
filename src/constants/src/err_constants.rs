@@ -4,6 +4,7 @@
 //! functions to return POSIX standard error message to glibc
 #![allow(dead_code)]
 use std::sync::OnceLock;
+use libc;
 
 pub static VERBOSE: OnceLock<isize> = OnceLock::new();
 
