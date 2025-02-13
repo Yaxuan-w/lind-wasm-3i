@@ -277,6 +277,12 @@ impl<T: Clone + Send + 'static + std::marker::Sync, U: Clone + Send + 'static + 
             FORK_SYSCALL, // syscall num for fork 
             self.pid as u64, 
             child_cageid, 
+            self.pid as u64,
+            0,
+            0,
+            0,
+            0,
+            0,
             0,
             0,
             0,
@@ -385,10 +391,16 @@ impl<T: Clone + Send + 'static + std::marker::Sync, U: Clone + Send + 'static + 
                         Val::I32(val) => {
                             // exit the cage with the exit code
                             make_syscall(
+                                child_cageid, // self cage
+                                EXIT_SYSCALL, // syscall num
+                                child_cageid, // target cage
+                                *val as u64, // 1st arg: status
                                 child_cageid,
-                                EXIT_SYSCALL,
-                                child_cageid,
-                                *val as u64,
+                                0,
+                                0,
+                                0,
+                                0,
+                                0,
                                 0,
                                 0,
                                 0,
@@ -788,6 +800,12 @@ impl<T: Clone + Send + 'static + std::marker::Sync, U: Clone + Send + 'static + 
                 cloned_pid as u64, 
                 EXEC_SYSCALL, // syscall num for exec 
                 cloned_pid as u64, 
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
                 0,
                 0,
                 0,
