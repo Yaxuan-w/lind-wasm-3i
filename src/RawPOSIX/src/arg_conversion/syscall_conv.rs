@@ -20,17 +20,17 @@ pub fn convert_fd_to_host(
     virtual_fd: u64,
     arg_cageid: u64,
     _cageid: u64,
-) -> Result<i32, Box<dyn Error>> {
+) -> i32 {
     #[cfg(feature = "secure")]
     {
         if !validate_cageid(path_arg_cageid, cageid) {
-            return Err("Invalide Cage ID");
+            return -1;
         }
     }
     // Find corresponding virtual fd instance from `fdtable` subsystem
     let wrappedvfd = fdtables::translate_virtual_fd(arg_cageid, virtual_fd);
     if wrappedvfd.is_err() {
-        return syscall_error(Errno::EBADF, "write", "Bad File Descriptor");
+        return -Errno::EBADF;
     }
     let vfd = wrappedvfd.unwrap();
     // Actual kernel fd mapped with provided virtual fd
@@ -57,18 +57,18 @@ pub fn sc_convert_path_to_host(
     path_arg: u64,
     path_arg_cageid: u64,
     cageid: u64,
-) -> Result<CString, Box<dyn Error>> {
+) -> CString {
     #[cfg(feature = "secure")]
     {
         if !validate_cageid(path_arg_cageid, cageid) {
-            return Err("Invalide Cage ID");
+            return panic!("Invalide Cage ID");
         }
     }
     let cage = get_cage(path_arg_cageid).unwrap();
     let addr = translate_vmmap_addr(&cage, path_arg).unwrap();
     match get_cstr(addr) {
         Ok(path) => path,
-        Err(e) => Err(e),
+        Err(e) => panic!(e),
     }
     // We will create a new variable in host process to handle the path value
     let relpath = normpath(convpath(path), path_arg_cageid);
@@ -79,7 +79,7 @@ pub fn sc_convert_path_to_host(
         let total_length = fs_const::LIND_ROOT.len() + relative_path.len();
 
         if total_length >= PATH_MAX {
-            return Err("Path exceeds PATH_MAX (4096)");
+            return panic!("Path exceeds PATH_MAX (4096)");
         }
     }
 
@@ -87,8 +87,8 @@ pub fn sc_convert_path_to_host(
     // contained within the string.
     let full_path = format!("{}{}", fs_const::LIND_ROOT, relative_path);
     match CString::new(full_path) {
-        Ok(c_path) => Ok(c_path),
-        Err(_) => Err("String contains internal null byte"),
+        Ok(c_path) => c_path,
+        Err(_) => panic!("String contains internal null byte"),
     }
 }
 
@@ -99,52 +99,52 @@ pub fn validate_cageid(cageid_1: u64, cageid_2: u64) -> bool {
     true
 }
 
-pub fn get_i32(arg: u64, arg_cageid: u64, cageid: u64) -> Result<i32, Box<dyn Error>> {
+pub fn get_i32(arg: u64, arg_cageid: u64, cageid: u64) -> i32 {
     if !validate_cageid(arg_cageid, cageid) {
-        return Err("Invalide Cage ID");
+        return panic!("Invalide Cage ID");
     }
 
     if (arg & 0xFFFFFFFF_00000000) != 1 {
-        return Ok(arg & 0xFFFFFFFF as i32);
+        return Ok((arg & 0xFFFFFFFF) as i32);
     }
 
-    return Err("Invalide argument");
+    return panic!("Invalide argument");
 }
 
-pub fn get_u32(arg: u64, arg_cageid: u64, cageid: u64) -> Result<u32, Box<dyn Error>> {
+pub fn get_u32(arg: u64, arg_cageid: u64, cageid: u64) -> u32 {
     if !validate_cageid(arg_cageid, cageid) {
-        return Err("Invalide Cage ID");
+        return panic!("Invalide Cage ID");
     }
 
     if (arg & 0xFFFFFFFF_00000000) != 1 {
-        return Ok(arg & 0xFFFFFFFF as u32);
+        return Ok((arg & 0xFFFFFFFF) as u32);
     }
 
-    return Err("Invalide argument");
+    return panic!("Invalide argument");
 }
 
-pub unsafe fn charstar_to_ruststr<'a>(cstr: CharPtr) -> Result<&'a str, Utf8Error> {
+pub unsafe fn charstar_to_ruststr<'a>(cstr: *const u8) -> Result<&'a str, Utf8Error> {
     std::ffi::CStr::from_ptr(cstr as *const _).to_str() //returns a result to be unwrapped later
 }
 
-pub fn get_cstr(arg: u64) -> Result<&'a str, Box<dyn Error>> {
+pub fn get_cstr<'a>(arg: u64) -> Result<&'astr, i32> {
     let ptr = arg as *const i8;
     if !ptr.is_null() {
         if let Ok(data) = unsafe { charstar_to_ruststr(ptr) } {
             return Ok(data);
         } else {
-            return Err("could not parse input data to a string");
+            return Err(-1);
         }
     }
 
-    return Err("input data not valid");
+    return Err(-1);
 }
 
 pub fn sc_convert_sysarg_to_i32(
     arg: u64,
     arg_cageid: u64,
     cageid: u64,
-) -> Result<i32, Box<dyn Error>> {
+) -> i32 {
     #[cfg(feature = "fast")]
     return arg as i32;
 
@@ -156,7 +156,7 @@ pub fn sc_convert_sysarg_to_u32(
     arg: u64,
     arg_cageid: u64,
     cageid: u64,
-) -> Result<u32, Box<dyn Error>> {
+) -> u32 {
     #[cfg(feature = "fast")]
     return arg as u32;
 
@@ -168,7 +168,7 @@ pub fn sc_convert_sysarg_to_isize(
     arg: u64,
     arg_cageid: u64,
     cageid: u64,
-) -> Result<isize, Box<dyn Error>> {
+) -> u32 {
     #[cfg(feature = "fast")]
     return arg as isize;
 
@@ -182,7 +182,7 @@ pub fn sc_convert_sysarg_to_usize(
     arg: u64,
     arg_cageid: u64,
     cageid: u64,
-) -> Result<usize, Box<dyn Error>> {
+) -> usize {
     #[cfg(feature = "fast")]
     return arg as usize;
 
@@ -196,7 +196,7 @@ pub fn sc_convert_sysarg_to_i64(
     arg: u64,
     arg_cageid: u64,
     cageid: u64,
-) -> Result<i64, Box<dyn Error>> {
+) -> i64 {
     #[cfg(feature = "fast")]
     return arg as i64;
 

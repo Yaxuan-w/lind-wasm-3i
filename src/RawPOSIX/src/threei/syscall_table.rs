@@ -1,5 +1,5 @@
 use crate::syscalls::fs_calls::{
-    brk_syscall, hello_syscall, mkdir_syscall, mmap_syscall, munmap_syscall, open_syscall,
+    brk_syscall, mkdir_syscall, mmap_syscall, munmap_syscall, open_syscall,
     sbrk_syscall, write_syscall,
 };
 use crate::syscalls::sys_calls::{exec_syscall, exit_syscall, fork_syscall};

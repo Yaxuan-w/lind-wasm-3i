@@ -49,11 +49,11 @@ pub fn open_syscall(
     arg6_cageid: u64,
 ) -> i32 {
     // Type conversion
-    let path = sc_convert_path_to_host(path_arg, path_cageid, cageid).unwrap();
+    let path = sc_convert_path_to_host(path_arg, path_cageid, cageid);
     // Note the cageid here isn't really relevant because the argument is pass-by-value.
     // But it could be checked to ensure it's not set to something unexpected.
-    let oflag = sc_convert_sysarg_to_i32(oflag_arg, oflag_cageid, cageid).unwrap();
-    let mode = sc_convert_sysarg_to_u32(mode_arg, mode_cageid, cageid).unwrap();
+    let oflag = sc_convert_sysarg_to_i32(oflag_arg, oflag_cageid, cageid);
+    let mode = sc_convert_sysarg_to_u32(mode_arg, mode_cageid, cageid);
     // would sometimes check, sometimes be a no-op depending on the compiler settings
     if !(sc_unusedarg(arg4, arg4_cageid)
         && sc_unusedarg(arg5, arg5_cageid)
@@ -115,10 +115,10 @@ pub fn mkdir_syscall(
     arg6_cageid: u64,
 ) -> i32 {
     // Type conversion
-    let path = sc_convert_path_to_host(path_arg, path_arg_cageid, cageid).unwrap();
+    let path = sc_convert_path_to_host(path_arg, path_arg_cageid, cageid);
     // Note the cageid here isn't really relevant because the argument is pass-by-value.
     // But it could be checked to ensure it's not set to something unexpected.
-    let mode = sc_convert_sysarg_to_i32(mode_arg, mode_cageid, cageid).unwrap();
+    let mode = sc_convert_sysarg_to_u32(mode_arg, mode_cageid, cageid);
     // would sometimes check, sometimes be a no-op depending on the compiler settings
     if !(sc_unusedarg(arg3, arg3_cageid)
         && sc_unusedarg(arg4, arg4_cageid)
@@ -168,15 +168,21 @@ pub fn write_syscall(
     arg6: u64,
     arg6_cageid: u64,
 ) -> i32 {
-    let kernel_fd = convert_fd_to_host(virtual_fd, vfd_cageid, cageid).unwrap();
-    let buf = sc_convert_buf(buf_arg, buf_cageid, cageid).unwrap();
+    let kernel_fd = convert_fd_to_host(virtual_fd, vfd_cageid, cageid);
+
+    if kernel_fd == -1 {
+        return syscall_error(Errno::EFAULT, "write", "Invalid Cage ID");
+    } else if kernel_fd == -Errno::EBADF {
+        return syscall_error(Errno::EBADF, "write", "Bad File Descriptor");
+    }
+
+    let buf = sc_convert_buf(buf_arg, buf_cageid, cageid);
     // would sometimes check, sometimes be a no-op depending on the compiler settings
-    if !(sc_unusedarg(arg3, arg3_cageid)
-        && sc_unusedarg(arg4, arg4_cageid)
+    if !(sc_unusedarg(arg4, arg4_cageid)
         && sc_unusedarg(arg5, arg5_cageid)
         && sc_unusedarg(arg6, arg6_cageid))
     {
-        return syscall_error(Errno::EFAULT, "open_syscall", "Invalide Cage ID");
+        return syscall_error(Errno::EFAULT, "write", "Invalide Cage ID");
     }
 
     let count = count_arg as usize;
@@ -231,11 +237,11 @@ pub fn mmap_syscall(
 ) -> i32 {
     // TODO: Check will perform in the below logic??
     let mut addr = addr_arg as *mut u8;
-    let mut len = sc_convert_sysarg_to_usize(len_arg, len_cageid, cageid).unwrap();
-    let mut prot = sc_convert_sysarg_to_i32(prot_arg, prot_cageid, cageid).unwrap();
-    let mut flags = sc_convert_sysarg_to_i32(flags_cageid, flags_cageid, cageid).unwrap();
-    let fildes = convert_fd(virtual_fd_arg, vfd_cageid, cageid).unwrap();
-    let mut off = sc_convert_sysarg_to_i64(off_arg, off_cageid, cageid).unwrap();
+    let mut len = sc_convert_sysarg_to_usize(len_arg, len_cageid, cageid);
+    let mut prot = sc_convert_sysarg_to_i32(prot_arg, prot_cageid, cageid);
+    let mut flags = sc_convert_sysarg_to_i32(flags_cageid, flags_cageid, cageid);
+    let fildes = convert_fd_to_host(virtual_fd_arg, vfd_cageid, cageid);
+    let mut off = sc_convert_sysarg_to_i64(off_arg, off_cageid, cageid);
 
     let cage = get_cage(cageid).unwrap();
 
@@ -339,7 +345,7 @@ pub fn mmap_syscall(
                     MemoryBackingType::Anonymous
                 } else {
                     // if we are doing file-backed mapping, we need to set maxprot to the file permission
-                    let flags = fcntl_syscall(cageid, fildes as u64, F_GETFL as u64, 0, 0, 0, 0);
+                    let flags = fcntl_syscall(cageid, fildes as u64, vfd_cageid, F_GETFL as u64, flags_cageid, 0, 0, 0, 0, 0, 0, 0, 0);
                     if flags < 0 {
                         return syscall_error(Errno::EINVAL, "mmap", "invalid file descriptor")
                             as i32;
@@ -445,9 +451,10 @@ pub fn munmap_syscall(
     arg5: u64,
     arg5_cageid: u64,
     arg6: u64,
+    arg6_cageid: u64,
 ) -> i32 {
     let addr = addr_arg as *mut u8;
-    let len = sc_convert_sysarg_to_usize(len_arg, len_cageid, cageid).unwrap();
+    let len = sc_convert_sysarg_to_usize(len_arg, len_cageid, cageid);
     // would sometimes check, sometimes be a no-op depending on the compiler settings
     if !(sc_unusedarg(arg3, arg3_cageid)
         && sc_unusedarg(arg4, arg4_cageid)
@@ -645,7 +652,7 @@ pub fn sbrk_syscall(
     arg6: u64,
     arg6_cageid: u64,
 ) -> i32 {
-    let brk = sc_convert_sysarg_to_i32(sbrk_arg, sbrk_cageid, cageid).unwrap();
+    let brk = sc_convert_sysarg_to_i32(sbrk_arg, sbrk_cageid, cageid);
     // would sometimes check, sometimes be a no-op depending on the compiler settings
     if !(sc_unusedarg(arg2, arg2_cageid)
         && sc_unusedarg(arg3, arg3_cageid)

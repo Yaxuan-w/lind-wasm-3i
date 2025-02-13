@@ -8,8 +8,8 @@ use std::sync::{Arc, Mutex};
 
 use crate::cage::get_cage;
 use crate::memory::mem_helper::*;
-use constants::err_const::Errno;
-use constants::fs_const::*;
+use sysdefs::constants::err_const::Errno;
+use sysdefs::constants::fs_const::*;
 use std::io;
 
 const exit_syscallnum: u64 = 30; // Develop purpose only
@@ -480,7 +480,7 @@ pub fn harsh_cage_exit(
     _arg6cage: u64,
 ) -> u64 {
     // Directly execute
-    let result = make_syscall(targetcage, callnum, targetcage, exittype, 0, 0, 0, 0, 0);
+    let result = make_syscall(targetcage, callnum, targetcage, exittype, target_cageid, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 
     // TODO:
     // This should align with specific exit type. Does different exit type mean different things..?

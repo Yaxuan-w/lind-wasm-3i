@@ -14,8 +14,9 @@ use std::ffi::CString;
 pub use std::path::{Path, PathBuf};
 pub use std::sync::atomic::{AtomicI32, AtomicU64};
 pub use std::sync::Arc;
-use sysdefs::err_constants::VERBOSE;
-use sysdefs::{fs_constants, sys_constants};
+use sysdefs::constants::err_constants::VERBOSE;
+use sysdefs::constants::fs_constants::*; 
+use sysdefs::constants::sys_constants;
 
 #[derive(Debug, Clone, Copy)]
 pub struct Zombie {
@@ -65,10 +66,6 @@ pub struct Cage {
 ///     happen only via `exit()`, the additional overhead introduced by `RwLock` should be minimal in terms
 ///     of overall performance impact.
 ///
-/// Maximum cage id determines how many processes can exist simultaneously in the RawPOSIX
-/// `Vec` in Rust is indexed using `usize` not `u64`
-pub const MAX_CAGEID: usize = 1024;
-
 /// Pre-allocate MAX_CAGEID elements, all initialized to None.
 /// Lazy causes `CAGE_MAP` to be initialized when it is first accessed, rather than when the program starts.
 pub static CAGE_MAP: Lazy<RwLock<Vec<Option<Arc<Cage>>>>> = Lazy::new(|| {
@@ -123,6 +120,12 @@ pub fn cagetable_clear() {
         exit_syscall(
             cageid as u64,
             sys_constants::EXIT_SUCCESS as u64,
+            cageid as u64,
+            0,
+            0,
+            0,
+            0,
+            0,
             0,
             0,
             0,

@@ -6,6 +6,10 @@ use crate::cage::*;
 use fdtables;
 use std::sync::atomic::Ordering;
 use std::sync::atomic::Ordering::*;
+use crate::arg_conversion::syscall_conv::*;
+use sysdefs::constants::err_const::{get_errno, handle_errno, syscall_error, Errno};
+use sysdefs::constants::fs_const;
+use sysdefs::constants::fs_const::*;
 
 /// Reference to Linux: https://man7.org/linux/man-pages/man2/fork.2.html
 ///
@@ -48,7 +52,7 @@ pub fn fork_syscall(
     let new_vmmap = parent_vmmap.clone();
 
     let cageobj = cage::Cage {
-        cageid: child_cageid,
+        cageid: child_arg,
         cwd: RwLock::new(selfcage.cwd.read().clone()),
         parent: child_arg_cageid,
         gid: AtomicI32::new(selfcage.gid.load(Ordering::Relaxed)),
@@ -64,7 +68,7 @@ pub fn fork_syscall(
     // increment child counter for parent
     selfcage.child_num.fetch_add(1, Ordering::SeqCst);
 
-    add_cage(child_cageid, cageobj);
+    add_cage(child_arg, cageobj);
     0
 }
 
@@ -88,7 +92,7 @@ pub fn exit_syscall(
     arg6: u64,
     arg6_cageid: u64,
 ) -> i32 {
-    let status = sc_convert_sysarg_to_i32(status_arg, status_cageid, cageid).unwrap();
+    let status = sc_convert_sysarg_to_i32(status_arg, status_cageid, cageid);
     // would sometimes check, sometimes be a no-op depending on the compiler settings
     if !(sc_unusedarg(arg2, arg2_cageid)
         && sc_unusedarg(arg3, arg3_cageid)
@@ -109,7 +113,7 @@ pub fn exit_syscall(
             parent.child_num.fetch_sub(1, SeqCst);
             let mut zombie_vec = parent.zombies.write();
             zombie_vec.push(cage::Zombie {
-                status_cageid,
+                cageid: status_cageid,
                 exit_code: status,
             });
         } else {
