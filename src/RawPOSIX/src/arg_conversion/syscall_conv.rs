@@ -7,8 +7,9 @@ use crate::arg_conversion::type_conv::*;
 use crate::cage::get_cage;
 use crate::memory::mem_helper::*;
 use fdtables;
-use sysdefs::constant::err_const::{syscall_error, Errno};
-use sysdefs::constant::fs_const::PATH_MAX;
+use sysdefs::constants::err_const::{syscall_error, Errno};
+use sysdefs::constants::fs_const::PATH_MAX;
+use std::error::Error;
 
 /// Translate a received virtual file descriptor (`virtual_fd`) to real kernel file descriptor.
 /// This function is not for security purpose. Always using arg_cageid to translate.
@@ -205,7 +206,7 @@ pub fn sc_convert_sysarg_to_i64(
     }
 }
 
-pub fn sc_unused(arg: u64, arg_cageid: u64) -> bool {
+pub fn sc_unusedarg(arg: u64, arg_cageid: u64) -> bool {
     #[cfg(feature = "fast")]
     return true;
 

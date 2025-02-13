@@ -7,9 +7,9 @@ use crate::memory::mem_helper::*;
 use crate::memory::vmmap::{VmmapOps, *};
 use fdtables;
 use libc::c_void;
-use sysdefs::constant::err_const::{get_errno, handle_errno, syscall_error, Errno};
-use sysdefs::constant::fs_const;
-use sysdefs::constant::fs_const::*;
+use sysdefs::constants::err_const::{get_errno, handle_errno, syscall_error, Errno};
+use sysdefs::constants::fs_const;
+use sysdefs::constants::fs_const::*;
 
 /// Helper function for close_syscall
 ///

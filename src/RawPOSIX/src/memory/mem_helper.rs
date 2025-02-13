@@ -6,8 +6,8 @@
 use crate::cage::{get_cage, Cage};
 use crate::memory::vmmap::{MemoryBackingType, Vmmap, VmmapOps};
 use libc::c_void;
-use sysdefs::constant::err_const::{syscall_error, Errno};
-use sysdefs::constant::fs_const::{
+use sysdefs::constants::err_const::{syscall_error, Errno};
+use sysdefs::constants::fs_const::{
     F_GETFL, MAP_ANONYMOUS, MAP_FIXED, MAP_PRIVATE, MAP_SHARED, MREMAP_FIXED, MREMAP_MAYMOVE,
     PAGESHIFT, PAGESIZE, PROT_EXEC, PROT_NONE, PROT_READ, PROT_WRITE,
 };

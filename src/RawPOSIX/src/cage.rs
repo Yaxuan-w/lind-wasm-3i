@@ -67,7 +67,7 @@ pub struct Cage {
 ///
 /// Maximum cage id determines how many processes can exist simultaneously in the RawPOSIX
 /// `Vec` in Rust is indexed using `usize` not `u64`
-const MAX_CAGEID: usize = 1024;
+pub const MAX_CAGEID: usize = 1024;
 
 /// Pre-allocate MAX_CAGEID elements, all initialized to None.
 /// Lazy causes `CAGE_MAP` to be initialized when it is first accessed, rather than when the program starts.
