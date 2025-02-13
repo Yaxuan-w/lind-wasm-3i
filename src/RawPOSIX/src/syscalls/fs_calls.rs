@@ -172,7 +172,7 @@ pub fn write_syscall(
 
     if kernel_fd == -1 {
         return syscall_error(Errno::EFAULT, "write", "Invalid Cage ID");
-    } else if kernel_fd == -Errno::EBADF {
+    } else if kernel_fd == -9 {
         return syscall_error(Errno::EBADF, "write", "Bad File Descriptor");
     }
 

@@ -58,13 +58,12 @@ impl CageCallTable {
 
     // This function will only be called when MATCHALL flag has been set in register_handler function
     // to initialize default
-    pub fn set_default_handler(&mut self, targetcage: u64) -> Result<()> {
+    pub fn set_default_handler(&mut self, targetcage: u64) {
         let mut default_mapping = HashMap::new();
         for &(_, syscall_name) in SYSCALL_TABLE {
             default_mapping.insert(targetcage, syscall_name);
         }
-        self.defaultcallfunc = Some(default_mapping);
-        return Ok(());
+        self.defaultcallfunc = Some(default_mapping)
     }
 }
 
@@ -185,10 +184,7 @@ pub fn register_handler(
                 .entry(targetcallnum)
                 .or_insert_with(|| Arc::new(Mutex::new(CageCallTable::new(vec![]))));
             let mut cage_call_table = cage_call_table.lock().unwrap();
-            match cage_call_table.set_default_handler(targetcage) {
-                Ok(_) => return 0,
-                Err(_e) => return threeiconstant::ELINDAPIABORTED,
-            };
+            cage_call_table.set_default_handler(targetcage);
         }
 
         // Find the corresponding CallFunc pointer from SYSCALL_TABLE

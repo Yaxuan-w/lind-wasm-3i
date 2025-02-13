@@ -15,8 +15,8 @@ pub use std::path::{Path, PathBuf};
 pub use std::sync::atomic::{AtomicI32, AtomicU64};
 pub use std::sync::Arc;
 use sysdefs::constants::err_constants::VERBOSE;
-use sysdefs::constants::fs_constants::*; 
-use sysdefs::constants::sys_constants;
+use sysdefs::constants::fs_const::*; 
+use sysdefs::constants::sys_const;
 
 #[derive(Debug, Clone, Copy)]
 pub struct Zombie {

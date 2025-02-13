@@ -30,7 +30,7 @@ pub fn convert_fd_to_host(
     // Find corresponding virtual fd instance from `fdtable` subsystem
     let wrappedvfd = fdtables::translate_virtual_fd(arg_cageid, virtual_fd);
     if wrappedvfd.is_err() {
-        return -Errno::EBADF;
+        return -9;
     }
     let vfd = wrappedvfd.unwrap();
     // Actual kernel fd mapped with provided virtual fd
@@ -127,7 +127,7 @@ pub unsafe fn charstar_to_ruststr<'a>(cstr: *const u8) -> Result<&'a str, Utf8Er
     std::ffi::CStr::from_ptr(cstr as *const _).to_str() //returns a result to be unwrapped later
 }
 
-pub fn get_cstr<'a>(arg: u64) -> Result<&'astr, i32> {
+pub fn get_cstr<'a>(arg: u64) -> Result<&'a str, i32> {
     let ptr = arg as *const i8;
     if !ptr.is_null() {
         if let Ok(data) = unsafe { charstar_to_ruststr(ptr) } {
