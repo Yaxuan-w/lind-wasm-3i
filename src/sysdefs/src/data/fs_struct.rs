@@ -1,6 +1,6 @@
 #![allow(dead_code)]
 /// This file is used for type conversion related files
-use crate::constants::err_constants::{syscall_error, Errno};
+use crate::constants::err_const::{syscall_error, Errno};
 pub use libc::*;
 pub use std::cmp::{max, min};
 pub use std::str::Utf8Error;
