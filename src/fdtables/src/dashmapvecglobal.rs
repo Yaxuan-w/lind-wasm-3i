@@ -3,7 +3,7 @@
 //      Static DashMap.  Let's see if having the FDTableEntries be a Vector
 //      is any faster...
 
-use crate::fdtables::threei;
+use crate::threei;
 
 use dashmap::DashMap;
 

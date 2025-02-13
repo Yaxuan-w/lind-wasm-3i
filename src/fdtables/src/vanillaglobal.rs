@@ -53,7 +53,7 @@ lazy_static! {
         // be. Otherwise, I'm not sure how I get this started. I think this
         // should be invalid from a 3i standpoint, etc. Could this mask an
         // error in the future?
-        m.insert(threei::TESTING_CAGEID,HashMap::new());
+        // m.insert(threei::TESTING_CAGEID,HashMap::new());
         Mutex::new(m)
     };
 }
@@ -113,6 +113,12 @@ pub fn translate_virtual_fd(cageid: u64, virtualfd: u64) -> Result<u64, threei::
     // time
     if !fdtable.contains_key(&cageid) {
         panic!("Unknown cageid in fdtable access");
+    }
+
+    // Below condition checks if the virtualfd is out of bounds and if yes it throws an error
+    // Note that this assumes that all virtualfd numbers returned < FD_PER_PROCESS_MAX 
+    if virtualfd >= FD_PER_PROCESS_MAX {
+        return Err(threei::Errno::EBADFD as u64);
     }
 
     return match fdtable.get(&cageid).unwrap().get(&virtualfd) {

@@ -240,7 +240,7 @@ pub fn mmap_syscall(
     let mut addr = addr_arg as *mut u8;
     let mut len = sc_convert_sysarg_to_usize(len_arg, len_cageid, cageid);
     let mut prot = sc_convert_sysarg_to_i32(prot_arg, prot_cageid, cageid);
-    let mut flags = sc_convert_sysarg_to_i32(flags_cageid, flags_cageid, cageid);
+    let mut flags = sc_convert_sysarg_to_i32(flags_args, flags_cageid, cageid);
     let mut fildes = convert_fd_to_host(virtual_fd_arg, vfd_cageid, cageid);
     let mut off = sc_convert_sysarg_to_i64(off_arg, off_cageid, cageid);
 
@@ -387,7 +387,7 @@ pub fn mmap_inner(
     virtual_fd: i32,
     off: i64,
 ) -> usize {
-    println!("[mmap_inner] cageid: {:?}, vfd: {:?}", cageid, virtualfd);
+    println!("[mmap_inner] cageid: {:?}, vfd: {:?}", cageid, virtual_fd);
     if virtual_fd != -1 {
         match fdtables::translate_virtual_fd(cageid, virtual_fd as u64) {
             Ok(kernel_fd) => {
