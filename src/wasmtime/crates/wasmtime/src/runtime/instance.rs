@@ -11,7 +11,7 @@ use crate::{
     StoreContext, StoreContextMut, Table, TypedFunc,
 };
 use alloc::sync::Arc;
-use rawposix::constants::fs_constants::{MAP_ANONYMOUS, MAP_FIXED, MAP_PRIVATE, PAGESHIFT, PROT_READ, PROT_WRITE};
+use sysdefs::constants::fs_const::{MAP_ANONYMOUS, MAP_FIXED, MAP_PRIVATE, PAGESHIFT, PROT_READ, PROT_WRITE};
 use rawposix::threei::threei::make_syscall;
 use wasmtime_lind_utils::lind_syscall_numbers::MMAP_SYSCALL;
 use core::ptr::NonNull;
@@ -257,12 +257,18 @@ impl Instance {
                     MMAP_SYSCALL, // syscall num
                     pid, // target cageid (should be same)
                     0, // the first memory region starts from 0
+                    pid,
                     minimal_pages << PAGESHIFT, // size of first memory region
+                    pid,
                     (PROT_READ | PROT_WRITE) as u64,
+                    pid,
                     (MAP_PRIVATE | MAP_ANONYMOUS | MAP_FIXED) as u64,
+                    pid,
                     // we need to pass -1 here, but since make_syscall only accepts u64
                     // and rust does not directly allow things like -1 as u64, so we end up with this weird thing
                     (0 - 1) as u64,
+                    pid,
+                    0,
                     0,
                 );
             },

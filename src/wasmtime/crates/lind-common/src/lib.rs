@@ -61,11 +61,17 @@ impl LindCommonCtx {
                     call_number as u64,
                     self.pid as u64, // Set target_cageid same with self_cageid by defualt 
                     arg1, 
+                    self.pid as u64,
                     arg2,
+                    self.pid as u64,
                     arg3, 
+                    self.pid as u64,
                     arg4,
+                    self.pid as u64,
                     arg5,
+                    self.pid as u64,
                     arg6,
+                    self.pid as u64,
                 )
             }
         }
