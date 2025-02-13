@@ -240,7 +240,7 @@ pub fn mmap_syscall(
     let mut len = sc_convert_sysarg_to_usize(len_arg, len_cageid, cageid);
     let mut prot = sc_convert_sysarg_to_i32(prot_arg, prot_cageid, cageid);
     let mut flags = sc_convert_sysarg_to_i32(flags_cageid, flags_cageid, cageid);
-    let fildes = convert_fd_to_host(virtual_fd_arg, vfd_cageid, cageid);
+    let mut fildes = convert_fd_to_host(virtual_fd_arg, vfd_cageid, cageid);
     let mut off = sc_convert_sysarg_to_i64(off_arg, off_cageid, cageid);
 
     let cage = get_cage(cageid).unwrap();

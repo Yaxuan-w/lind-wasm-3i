@@ -168,7 +168,7 @@ pub fn sc_convert_sysarg_to_isize(
     arg: u64,
     arg_cageid: u64,
     cageid: u64,
-) -> u32 {
+) -> isize {
     #[cfg(feature = "fast")]
     return arg as isize;
 
