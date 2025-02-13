@@ -1,12 +1,10 @@
 //! This file contains all the implementation related to Cage structure. Including structure
 //! definitions, a global variables that handles cage management, and cage initialization and
 //! finialization required by wasmtime
-use sysdefs::err_constants::VERBOSE;
-use sysdefs::{fs_constants, sys_constants};
-use fdtables;
 use crate::memory::vmmap::*;
 use crate::syscalls::fs_calls::kernel_close;
 use crate::syscalls::sys_calls::exit_syscall;
+use fdtables;
 pub use once_cell::sync::Lazy;
 /// Uses spinlocks first (for short waits) and parks threads when blocking to reduce kernel
 /// interaction and increases efficiency.
@@ -16,6 +14,8 @@ use std::ffi::CString;
 pub use std::path::{Path, PathBuf};
 pub use std::sync::atomic::{AtomicI32, AtomicU64};
 pub use std::sync::Arc;
+use sysdefs::err_constants::VERBOSE;
+use sysdefs::{fs_constants, sys_constants};
 
 #[derive(Debug, Clone, Copy)]
 pub struct Zombie {

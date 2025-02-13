@@ -7,9 +7,9 @@ use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 
 use crate::cage::get_cage;
-use constants::err_constants::Errno;
-use constants::fs_constants::*;
 use crate::memory::mem_helper::*;
+use constants::err_const::Errno;
+use constants::fs_const::*;
 use std::io;
 
 const exit_syscallnum: u64 = 30; // Develop purpose only
@@ -22,9 +22,21 @@ const exit_syscallnum: u64 = 30; // Develop purpose only
 /// In the current implementation, I only implemented per cage system call filtering.
 /// Because in make_syscall, if we filter the system call based on per syscall, it will be difficult to track (because we
 /// don’t know what the syscall num is that currently issues make)
-
-pub type CallFunc =
-    fn(target_cageid: u64, arg1: u64, arg2: u64, arg3: u64, arg4: u64, arg5: u64, arg6: u64) -> i32;
+pub type CallFunc = fn(
+    target_cageid: u64,
+    arg1: u64,
+    arg2: u64,
+    arg3: u64,
+    arg4: u64,
+    arg5: u64,
+    arg6: u64,
+    arg1_cageid: u64,
+    arg2_cageid: u64,
+    arg3_cageid: u64,
+    arg4_cageid: u64,
+    arg5_cageid: u64,
+    arg6_cageid: u64,
+) -> i32;
 
 #[derive(Debug, Clone)]
 pub struct CageCallTable {
@@ -46,10 +58,7 @@ impl CageCallTable {
 
     // This function will only be called when MATCHALL flag has been set in register_handler function
     // to initialize default
-    pub fn set_default_handler(
-        &mut self,
-        targetcage: u64,
-    ) -> Result<(), Box<dyn std::error::Error>> {
+    pub fn set_default_handler(&mut self, targetcage: u64) -> Result<()> {
         let mut default_mapping = HashMap::new();
         for &(_, syscall_name) in SYSCALL_TABLE {
             default_mapping.insert(targetcage, syscall_name);
@@ -288,25 +297,43 @@ pub fn make_syscall(
     syscall_num: u64,
     target_cageid: u64,
     arg1: u64,
+    arg1_cageid: u64,
     arg2: u64,
+    arg2_cageid: u64,
     arg3: u64,
+    arg3_cageid: u64,
     arg4: u64,
+    arg4_cageid: u64,
     arg5: u64,
+    arg5_cageid: u64,
     arg6: u64,
+    arg6_cageid: u64,
 ) -> i32 {
     // Return error if the target cage/grate is exiting. We need to add this check beforehead, because make_syscall will also
     // contain cases that can directly redirect a syscall when self_cageid == target_id, which will bypass the handlertable check
-    // TODO: replace 3 with actual exit callnum
     if EXITING_TABLE.contains(&target_cageid) && syscall_num != exit_syscallnum {
         return threeiconstant::ELINDESRCH as i32;
     }
 
-    // TODO: replace 3 with actual exit callnum
     if self_cageid == target_cageid || syscall_num == exit_syscallnum {
         // println!("syscall num in make_syscall: {:?}", syscall_num);
         if let Some(&(_, syscall_func)) = SYSCALL_TABLE.iter().find(|&&(num, _)| num == syscall_num)
         {
-            return syscall_func(target_cageid, arg1, arg2, arg3, arg4, arg5, arg6);
+            return syscall_func(
+                target_cageid,
+                arg1,
+                arg1_cageid,
+                arg2,
+                arg2_cageid,
+                arg3,
+                arg3_cageid,
+                arg4,
+                arg4_cageid,
+                arg5,
+                arg5_cageid,
+                arg6,
+                arg6_cageid,
+            );
         } else {
             eprintln!("Syscall number {} not found!", syscall_num);
             return threeiconstant::ELINDAPIABORTED as i32;
@@ -328,7 +355,21 @@ pub fn make_syscall(
                                                                        // - How to deal with multiple syscalls with same target cage num?
             if let Some(syscall_func) = cage_call_table.thiscalltable.get(&target_cageid).cloned() {
                 // eprintln!("self cage id = {:?}, target cage id = {:?}", self_cageid, target_cageid);
-                return syscall_func(target_cageid, arg1, arg2, arg3, arg4, arg5, arg6);
+                return syscall_func(
+                    target_cageid,
+                    arg1,
+                    arg1_cageid,
+                    arg2,
+                    arg2_cageid,
+                    arg3,
+                    arg3_cageid,
+                    arg4,
+                    arg4_cageid,
+                    arg5,
+                    arg5_cageid,
+                    arg6,
+                    arg6_cageid,
+                );
             } else {
                 return threeiconstant::ELINDESRCH as i32;
             };

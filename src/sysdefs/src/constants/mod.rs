@@ -1,4 +1,4 @@
-pub mod err_constants;
-pub mod fs_constants;
-pub mod net_constants;
-pub mod sys_constants;
+pub mod err_const;
+pub mod fs_const;
+pub mod net_const;
+pub mod sys_const;

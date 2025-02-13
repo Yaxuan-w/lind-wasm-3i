@@ -9,7 +9,7 @@ use std::path::Component;
 use std::path::PathBuf;
 pub use std::{mem, ptr};
 
-pub use sysdefs::fs_constants;
+pub use sysdefs::fs_const;
 
 /// Convert data type from `&str` to `PathBuf`
 pub fn convpath(cpath: &str) -> PathBuf {
@@ -59,8 +59,6 @@ pub fn add_lind_root(cageid: u64, path: &str) -> CString {
     let relpath = normpath(convpath(path), cageid);
     let relative_path = relpath.to_str().unwrap();
 
-    // TODO:
-    //  - what happens if non-terminate
     let full_path = format!("{}{}", fs_constants::LIND_ROOT, relative_path);
     let c_path = CString::new(full_path).unwrap();
     c_path

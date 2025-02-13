@@ -4,13 +4,13 @@
 //! initializing vmmap, helper functions for handling vmmap during a fork syscall, and
 //! address translation and validation related to vmmap
 use crate::cage::{get_cage, Cage};
-use sysdefs::err_constants::{syscall_error, Errno};
-use sysdefs::fs_constants::{
+use crate::memory::vmmap::{MemoryBackingType, Vmmap, VmmapOps};
+use libc::c_void;
+use sysdefs::err_const::{syscall_error, Errno};
+use sysdefs::fs_const::{
     F_GETFL, MAP_ANONYMOUS, MAP_FIXED, MAP_PRIVATE, MAP_SHARED, MREMAP_FIXED, MREMAP_MAYMOVE,
     PAGESHIFT, PAGESIZE, PROT_EXEC, PROT_NONE, PROT_READ, PROT_WRITE,
 };
-use crate::memory::vmmap::{MemoryBackingType, Vmmap, VmmapOps};
-use libc::c_void;
 
 // heap is placed at the very top of the memory
 pub const HEAP_ENTRY_INDEX: u32 = 0;

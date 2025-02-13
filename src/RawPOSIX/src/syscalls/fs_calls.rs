@@ -3,28 +3,13 @@
 //! This file provides all system related syscall implementation in RawPOSIX
 use crate::arg_conversion::syscall_conv::*;
 use crate::cage::get_cage;
-use sysdefs::err_constants::{get_errno, handle_errno, syscall_error, Errno};
-use sysdefs::fs_constants;
-use sysdefs::fs_constants::*;
-use fdtables;
 use crate::memory::mem_helper::*;
 use crate::memory::vmmap::{VmmapOps, *};
+use fdtables;
 use libc::c_void;
-
-/// Used for testing purpose
-/// TODO: Remove after developing
-pub fn hello_syscall(
-    _cageid: u64,
-    _arg1: u64,
-    _arg2: u64,
-    _arg3: u64,
-    _arg4: u64,
-    _arg5: u64,
-    _arg6: u64,
-) -> i32 {
-    // println!("hello from cageid = {:?}", cageid);
-    return 0;
-}
+use sysdefs::err_const::{get_errno, handle_errno, syscall_error, Errno};
+use sysdefs::fs_const;
+use sysdefs::fs_const::*;
 
 /// Helper function for close_syscall
 ///
@@ -51,29 +36,31 @@ pub fn kernel_close(fdentry: fdtables::FDTableEntry, _count: u64) {
 pub fn open_syscall(
     cageid: u64,
     path_arg: u64,
-    path_arg_cageid: u64,
+    path_cageid: u64,
     oflag_arg: u64,
-    olag_arg_cageid: u64,
+    olag_cageid: u64,
     mode_arg: u64,
-    mode_arg_cageid: u64,
-    _arg4: u64,
-    _arg4_cageid: u64,
-    _arg5: u64,
-    _arg5_cageid: u64,
-    _arg6: u64,
-    _arg6_cageid: u64,
+    mode_cageid: u64,
+    arg4: u64,
+    arg4_cageid: u64,
+    arg5: u64,
+    arg5_cageid: u64,
+    arg6: u64,
+    arg6_cageid: u64,
 ) -> i32 {
     // Type conversion
-    let pathname = sc_convert_strncpy_from_cage(path_arg, path_arg_cageid, cageid, MAXPATH);
-    let oflag = sc_convert_sysarg_to_i32(arg2, arg2_cageid, cageid);  // Note the cageid here isn't really relevant because the argument is pass-by-value.   But it could be checked to ensure it's not set to something unexpected.  
-    let mode = sc_convert_sysarg_to_u32(arg3, arg3_cageid, cageid);
-    sc_unusedarg(arg4, arg4_cageid, cageid); // would sometimes check, sometimes be a no-op depending on the compiler settings
-    sc_unusedarg(arg5, arg5_cageid, cageid);
-    sc_unusedarg(arg6, arg6_cageid, cageid);
-
-    let path = convert_path_lind2host(cageid, path_arg);
-    let oflag = oflag_arg as i32;
-    let mode = mode_arg as u32;
+    let path = sc_convert_path_to_host(path_arg, path_cageid, cageid).unwrap();
+    // Note the cageid here isn't really relevant because the argument is pass-by-value.
+    // But it could be checked to ensure it's not set to something unexpected.
+    let oflag = sc_convert_sysarg_to_i32(oflag_arg, oflag_cageid, cageid).unwrap();
+    let mode = sc_convert_sysarg_to_u32(mode_arg, mode_cageid, cageid).unwrap();
+    // would sometimes check, sometimes be a no-op depending on the compiler settings
+    if !(sc_unusedarg(arg4, arg4_cageid)
+        && sc_unusedarg(arg5, arg5_cageid)
+        && sc_unusedarg(arg6, arg6_cageid))
+    {
+        return syscall_error(Errno::EFAULT, "open_syscall", "Invalide Cage ID");
+    }
 
     // Get the kernel fd first
     let kernel_fd = unsafe { libc::open(path.as_ptr(), oflag, mode) };
@@ -83,12 +70,12 @@ pub fn open_syscall(
     }
 
     // Check if `O_CLOEXEC` has been est
-    let should_cloexec = (oflag & fs_constants::O_CLOEXEC) != 0;
+    let should_cloexec = (oflag & fs_const::O_CLOEXEC) != 0;
 
     // Mapping a new virtual fd and set `O_CLOEXEC` flag
     match fdtables::get_unused_virtual_fd(
         cageid,
-        fs_constants::FDKIND_KERNEL,
+        fs_const::FDKIND_KERNEL,
         kernel_fd as u64,
         should_cloexec,
         0,
@@ -115,15 +102,31 @@ pub fn open_syscall(
 pub fn mkdir_syscall(
     cageid: u64,
     path_arg: u64,
+    path_arg_cageid: u64,
     mode_arg: u64,
-    _arg3: u64,
-    _arg4: u64,
-    _arg5: u64,
-    _arg6: u64,
+    mode_cageid: u64,
+    arg3: u64,
+    arg3_cageid: u64,
+    arg4: u64,
+    arg4_cageid: u64,
+    arg5: u64,
+    arg5_cageid: u64,
+    arg6: u64,
+    arg6_cageid: u64,
 ) -> i32 {
     // Type conversion
-    let path = convert_path_lind2host(cageid, path_arg);
-    let mode = mode_arg as u32;
+    let path = sc_convert_path_to_host(path_arg, path_arg_cageid, cageid).unwrap();
+    // Note the cageid here isn't really relevant because the argument is pass-by-value.
+    // But it could be checked to ensure it's not set to something unexpected.
+    let mode = sc_convert_sysarg_to_i32(mode_arg, mode_cageid, cageid).unwrap();
+    // would sometimes check, sometimes be a no-op depending on the compiler settings
+    if !(sc_unusedarg(arg3, arg3_cageid)
+        && sc_unusedarg(arg4, arg4_cageid)
+        && sc_unusedarg(arg5, arg5_cageid)
+        && sc_unusedarg(arg6, arg6_cageid))
+    {
+        return syscall_error(Errno::EFAULT, "open_syscall", "Invalide Cage ID");
+    }
 
     let ret = unsafe { libc::mkdir(path.as_ptr(), mode) };
     // Error handling
@@ -153,14 +156,28 @@ pub fn mkdir_syscall(
 pub fn write_syscall(
     cageid: u64,
     virtual_fd: u64,
+    vfd_cageid: u64,
     buf_arg: u64,
+    buf_cageid: u64,
     count_arg: u64,
-    _arg4: u64,
-    _arg5: u64,
-    _arg6: u64,
+    arg3_cageid: u64,
+    arg4: u64,
+    arg4_cageid: u64,
+    arg5: u64,
+    arg5_cageid: u64,
+    arg6: u64,
+    arg6_cageid: u64,
 ) -> i32 {
-    let kernel_fd = convert_fd(cageid, virtual_fd);
-    let buf = convert_buf(cageid, buf_arg);
+    let kernel_fd = convert_fd_to_host(virtual_fd, vfd_cageid, cageid).unwrap();
+    let buf = sc_convert_buf(buf_arg, buf_cageid, cageid).unwrap();
+    // would sometimes check, sometimes be a no-op depending on the compiler settings
+    if !(sc_unusedarg(arg3, arg3_cageid)
+        && sc_unusedarg(arg4, arg4_cageid)
+        && sc_unusedarg(arg5, arg5_cageid)
+        && sc_unusedarg(arg6, arg6_cageid))
+    {
+        return syscall_error(Errno::EFAULT, "open_syscall", "Invalide Cage ID");
+    }
 
     let count = count_arg as usize;
     if count == 0 {
@@ -200,18 +217,25 @@ pub fn write_syscall(
 pub fn mmap_syscall(
     cageid: u64,
     addr_arg: u64,
+    addr_cageid: u64,
     len_arg: u64,
+    len_cageid: u64,
     prot_arg: u64,
+    prot_cageid: u64,
     flags_arg: u64,
+    flags_cageid: u64,
     virtual_fd_arg: u64,
+    vfd_cageid: u64,
     off_arg: u64,
+    off_cageid: u64,
 ) -> i32 {
+    // TODO: Check will perform in the below logic??
     let mut addr = addr_arg as *mut u8;
-    let mut len = len_arg as usize;
-    let mut prot = prot_arg as i32;
-    let mut flags = flags_arg as i32;
-    let mut fildes = virtual_fd_arg as i32;
-    let mut off = off_arg as i64;
+    let mut len = sc_convert_sysarg_to_usize(len_arg, len_cageid, cageid).unwrap();
+    let mut prot = sc_convert_sysarg_to_i32(prot_arg, prot_cageid, cageid).unwrap();
+    let mut flags = sc_convert_sysarg_to_i32(flags_cageid, flags_cageid, cageid).unwrap();
+    let fildes = convert_fd(virtual_fd_arg, vfd_cageid, cageid).unwrap();
+    let mut off = sc_convert_sysarg_to_i64(off_arg, off_cageid, cageid).unwrap();
 
     let cage = get_cage(cageid).unwrap();
 
@@ -411,19 +435,32 @@ pub fn mmap_inner(
 pub fn munmap_syscall(
     cageid: u64,
     addr_arg: u64,
+    addr_cageid: u64,
     len_arg: u64,
-    _arg3: u64,
-    _arg4: u64,
-    _arg5: u64,
-    _arg6: u64,
+    len_cageid: u64,
+    arg3: u64,
+    arg3_cageid: u64,
+    arg4: u64,
+    arg4_cageid: u64,
+    arg5: u64,
+    arg5_cageid: u64,
+    arg6: u64,
 ) -> i32 {
     let addr = addr_arg as *mut u8;
-    let len = len_arg as usize;
+    let len = sc_convert_sysarg_to_usize(len_arg, len_cageid, cageid).unwrap();
+    // would sometimes check, sometimes be a no-op depending on the compiler settings
+    if !(sc_unusedarg(arg3, arg3_cageid)
+        && sc_unusedarg(arg4, arg4_cageid)
+        && sc_unusedarg(arg5, arg5_cageid)
+        && sc_unusedarg(arg6, arg6_cageid))
+    {
+        return syscall_error(Errno::EFAULT, "munmap_syscall", "Invalide Cage ID");
+    }
 
     if len == 0 {
         return syscall_error(Errno::EINVAL, "munmap", "length cannot be zero");
     }
-    let cage = get_cage(cageid).unwrap();
+    let cage = get_cage(addr_cageid).unwrap();
 
     // check if the provided address is multiple of pages
     let rounded_addr = round_up_page(addr as u64) as usize;
@@ -478,13 +515,29 @@ pub fn munmap_syscall(
 pub fn brk_syscall(
     cageid: u64,
     brk_arg: u64,
-    _arg2: u64,
-    _arg3: u64,
-    _arg4: u64,
-    _arg5: u64,
-    _arg6: u64,
+    brk_cageid: u64,
+    arg2: u64,
+    arg2_cageid: u64,
+    arg3: u64,
+    arg3_cageid: u64,
+    arg4: u64,
+    arg4_cageid: u64,
+    arg5: u64,
+    arg5_cageid: u64,
+    arg6: u64,
+    arg6_cageid: u64,
 ) -> i32 {
     let brk = brk_arg as i32;
+    // would sometimes check, sometimes be a no-op depending on the compiler settings
+    if !(sc_unusedarg(arg2, arg2_cageid)
+        && sc_unusedarg(arg3, arg3_cageid)
+        && sc_unusedarg(arg4, arg4_cageid)
+        && sc_unusedarg(arg5, arg5_cageid)
+        && sc_unusedarg(arg6, arg6_cageid))
+    {
+        return syscall_error(Errno::EFAULT, "munmap_syscall", "Invalide Cage ID");
+    }
+
     let cage = get_cage(cageid).unwrap();
 
     let mut vmmap = cage.vmmap.write();
@@ -580,14 +633,30 @@ pub fn brk_syscall(
 pub fn sbrk_syscall(
     cageid: u64,
     sbrk_arg: u64,
-    _arg2: u64,
-    _arg3: u64,
-    _arg4: u64,
-    _arg5: u64,
-    _arg6: u64,
+    sbrk_cageid: u64,
+    arg2: u64,
+    arg2_cageid: u64,
+    arg3: u64,
+    arg3_cageid: u64,
+    arg4: u64,
+    arg4_cageid: u64,
+    arg5: u64,
+    arg5_cageid: u64,
+    arg6: u64,
+    arg6_cageid: u64,
 ) -> i32 {
-    let brk = sbrk_arg as i32;
-    let cage = get_cage(cageid).unwrap();
+    let brk = sc_convert_sysarg_to_i32(sbrk_arg, sbrk_cageid, cageid).unwrap();
+    // would sometimes check, sometimes be a no-op depending on the compiler settings
+    if !(sc_unusedarg(arg2, arg2_cageid)
+        && sc_unusedarg(arg3, arg3_cageid)
+        && sc_unusedarg(arg4, arg4_cageid)
+        && sc_unusedarg(arg5, arg5_cageid)
+        && sc_unusedarg(arg6, arg6_cageid))
+    {
+        return syscall_error(Errno::EFAULT, "munmap_syscall", "Invalide Cage ID");
+    }
+
+    let cage = get_cage(sbrk_cageid).unwrap();
 
     // get the heap entry
     let mut vmmap = cage.vmmap.read();
@@ -616,6 +685,12 @@ pub fn sbrk_syscall(
     if brk_syscall(
         cageid,
         ((heap.npages as i32 + brk_page) << PAGESHIFT) as u64,
+        sbrk_cageid,
+        0,
+        0,
+        0,
+        0,
+        0,
         0,
         0,
         0,
@@ -633,11 +708,17 @@ pub fn sbrk_syscall(
 pub fn fcntl_syscall(
     cageid: u64,
     _arg1: u64,
+    arg1_cageid: u64,
     _arg2: u64,
+    arg2_cageid: u64,
     _arg3: u64,
+    arg3_cageid: u64,
     _arg4: u64,
+    arg4_cageid: u64,
     _arg5: u64,
+    arg5_cageid: u64,
     _arg6: u64,
+    arg6_cageid: u64,
 ) -> i32 {
     0
 }

@@ -7,7 +7,6 @@ use crate::threei::threei::CallFunc;
 
 /// Will replace syscall number with Linux Standard after confirming the refactoring details
 pub const SYSCALL_TABLE: &[(u64, CallFunc)] = &[
-    (1, hello_syscall), // ONLY for testing purpose
     (13, write_syscall),
     (10, open_syscall),
     (21, mmap_syscall),

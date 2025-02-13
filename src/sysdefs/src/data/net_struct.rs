@@ -226,7 +226,6 @@ pub struct SockaddrV6 {
     pub sin6_scope_id: u32,
 }
 
-
 #[derive(Debug, Default)]
 #[repr(C)]
 pub struct PollStruct {

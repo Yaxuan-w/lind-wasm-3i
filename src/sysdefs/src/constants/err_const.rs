@@ -3,8 +3,8 @@
 //! This file provides a reversable table that mapping `Error name` with corresponding `Errno`, and helper
 //! functions to return POSIX standard error message to glibc
 #![allow(dead_code)]
-use std::sync::OnceLock;
 use libc;
+use std::sync::OnceLock;
 
 pub static VERBOSE: OnceLock<isize> = OnceLock::new();
 

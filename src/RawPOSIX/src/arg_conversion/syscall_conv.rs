@@ -5,16 +5,29 @@
 use crate::arg_conversion::path_conv::*;
 use crate::arg_conversion::type_conv::*;
 use crate::cage::get_cage;
-use sysdefs::err_constants::{syscall_error, Errno};
-use fdtables;
 use crate::memory::mem_helper::*;
+use fdtables;
+use sysdefs::err_const::{syscall_error, Errno};
+use sysdefs::fs_const::PATH_MAX;
 
 /// Translate a received virtual file descriptor (`virtual_fd`) to real kernel file descriptor.
-///
+/// This function is not for security purpose. Always using arg_cageid to translate.
+///     - If arg_cageid != cageid: this call is sent by grate. We need to translate according to cage
+///     - If arg_cageid == cageid: this call is sent by cage, we can use either one
 /// Return: underlying kernel file descriptor
-pub fn convert_fd(cageid: u64, virtual_fd: u64) -> i32 {
+pub fn convert_fd_to_host(
+    virtual_fd: u64,
+    arg_cageid: u64,
+    _cageid: u64,
+) -> Result<i32, Box<dyn Error>> {
+    #[cfg(feature = "secure")]
+    {
+        if !validate_cageid(path_arg_cageid, cageid) {
+            return Err("Invalide Cage ID");
+        }
+    }
     // Find corresponding virtual fd instance from `fdtable` subsystem
-    let wrappedvfd = fdtables::translate_virtual_fd(cageid, virtual_fd);
+    let wrappedvfd = fdtables::translate_virtual_fd(arg_cageid, virtual_fd);
     if wrappedvfd.is_err() {
         return syscall_error(Errno::EBADF, "write", "Bad File Descriptor");
     }
@@ -27,7 +40,9 @@ pub fn convert_fd(cageid: u64, virtual_fd: u64) -> i32 {
 /// to kernel system address; then, it adjusts the path from user's perspective to host's perspective,
 /// which is adding `LIND_ROOT` before the path arguments. Considering actual syscall implementation
 /// logic needs to pass string pointer to underlying rust libc, so this function will return `CString`
-///
+/// lways using arg_cageid to translate.
+///     - If arg_cageid != cageid: this call is sent by grate. We need to translate according to cage
+///     - If arg_cageid == cageid: this call is sent by cage, we can use either one
 /// Input:
 ///     - cageid: required to do address translation for path pointer
 ///     - path_arg: the path pointer with address and contents from user's perspective. Address is
@@ -35,13 +50,167 @@ pub fn convert_fd(cageid: u64, virtual_fd: u64) -> i32 {
 ///
 /// Output:
 ///     - c_path: a `CString` variable stores the path from host's perspective
-pub fn convert_path_lind2host(cageid: u64, path_arg: u64) -> CString {
-    // Since we need to first translate the arguments address from
-    let cage = get_cage(cageid).unwrap();
+///     - will return error if total length exceed the MAX_PATH (which is 4096). We use `Box<dyn Error>` here to
+///      let upper functions do error handling. (ie: we want to )
+pub fn sc_convert_path_to_host(
+    path_arg: u64,
+    path_arg_cageid: u64,
+    cageid: u64,
+) -> Result<CString, Box<dyn Error>> {
+    #[cfg(feature = "secure")]
+    {
+        if !validate_cageid(path_arg_cageid, cageid) {
+            return Err("Invalide Cage ID");
+        }
+    }
+    let cage = get_cage(path_arg_cageid).unwrap();
     let addr = translate_vmmap_addr(&cage, path_arg).unwrap();
-    let path = get_cstr(addr).unwrap();
-    let c_path = add_lind_root(cageid, path);
-    c_path
+    match get_cstr(addr) {
+        Ok(path) => path,
+        Err(e) => Err(e),
+    }
+    // We will create a new variable in host process to handle the path value
+    let relpath = normpath(convpath(path), path_arg_cageid);
+    let relative_path = relpath.to_str().unwrap();
+
+    #[cfg(feature = "secure")]
+    {
+        let total_length = fs_const::LIND_ROOT.len() + relative_path.len();
+
+        if total_length >= PATH_MAX {
+            return Err("Path exceeds PATH_MAX (4096)");
+        }
+    }
+
+    // CString will handle the case when string is not terminated by `\0`, but will return error if `\0` is
+    // contained within the string.
+    let full_path = format!("{}{}", fs_const::LIND_ROOT, relative_path);
+    match CString::new(full_path) {
+        Ok(c_path) => Ok(c_path),
+        Err(_) => Err("String contains internal null byte"),
+    }
+}
+
+pub fn validate_cageid(cageid_1: u64, cageid_2: u64) -> bool {
+    if cageid_1 > MAX_CAGEID || cageid_2 > MAX_CAGEID {
+        return false;
+    }
+    true
+}
+
+pub fn get_i32(arg: u64, arg_cageid: u64, cageid: u64) -> Result<i32, Box<dyn Error>> {
+    if !validate_cageid(arg_cageid, cageid) {
+        return Err("Invalide Cage ID");
+    }
+
+    if (arg & 0xFFFFFFFF_00000000) != 1 {
+        return Ok(arg & 0xFFFFFFFF as i32);
+    }
+
+    return Err("Invalide argument");
+}
+
+pub fn get_u32(arg: u64, arg_cageid: u64, cageid: u64) -> Result<u32, Box<dyn Error>> {
+    if !validate_cageid(arg_cageid, cageid) {
+        return Err("Invalide Cage ID");
+    }
+
+    if (arg & 0xFFFFFFFF_00000000) != 1 {
+        return Ok(arg & 0xFFFFFFFF as u32);
+    }
+
+    return Err("Invalide argument");
+}
+
+pub unsafe fn charstar_to_ruststr<'a>(cstr: CharPtr) -> Result<&'a str, Utf8Error> {
+    std::ffi::CStr::from_ptr(cstr as *const _).to_str() //returns a result to be unwrapped later
+}
+
+pub fn get_cstr(arg: u64) -> Result<&'a str, Box<dyn Error>> {
+    let ptr = arg as *const i8;
+    if !ptr.is_null() {
+        if let Ok(data) = unsafe { charstar_to_ruststr(ptr) } {
+            return Ok(data);
+        } else {
+            return Err("could not parse input data to a string");
+        }
+    }
+
+    return Err("input data not valid");
+}
+
+pub fn sc_convert_sysarg_to_i32(
+    arg: u64,
+    arg_cageid: u64,
+    cageid: u64,
+) -> Result<i32, Box<dyn Error>> {
+    #[cfg(feature = "fast")]
+    return arg as i32;
+
+    #[cfg(feature = "secure")]
+    return get_i32(arg, arg_cageid, cageid)?;
+}
+
+pub fn sc_convert_sysarg_to_u32(
+    arg: u64,
+    arg_cageid: u64,
+    cageid: u64,
+) -> Result<u32, Box<dyn Error>> {
+    #[cfg(feature = "fast")]
+    return arg as u32;
+
+    #[cfg(feature = "secure")]
+    return get_u32(arg)?;
+}
+
+pub fn sc_convert_sysarg_to_isize(
+    arg: u64,
+    arg_cageid: u64,
+    cageid: u64,
+) -> Result<isize, Box<dyn Error>> {
+    #[cfg(feature = "fast")]
+    return arg as isize;
+
+    #[cfg(feature = "secure")]
+    if !validate_cageid(arg_cageid, cageid) {
+        return Err("Invalide Cage ID")?;
+    }
+}
+
+pub fn sc_convert_sysarg_to_usize(
+    arg: u64,
+    arg_cageid: u64,
+    cageid: u64,
+) -> Result<usize, Box<dyn Error>> {
+    #[cfg(feature = "fast")]
+    return arg as usize;
+
+    #[cfg(feature = "secure")]
+    if !validate_cageid(arg_cageid, cageid) {
+        return Err("Invalide Cage ID")?;
+    }
+}
+
+pub fn sc_convert_sysarg_to_i64(
+    arg: u64,
+    arg_cageid: u64,
+    cageid: u64,
+) -> Result<i64, Box<dyn Error>> {
+    #[cfg(feature = "fast")]
+    return arg as i64;
+
+    #[cfg(feature = "secure")]
+    if !validate_cageid(arg_cageid, cageid) {
+        return Err("Invalide Cage ID")?;
+    }
+}
+
+pub fn sc_unused(arg: u64, arg_cageid: u64) -> bool {
+    #[cfg(feature = "fast")]
+    return true;
+
+    #[cfg(feature = "secure")]
+    return !(arg | arg_cageid);
 }
 
 /// This function translates the buffer pointer from user buffer address to system address, because we are
@@ -53,10 +222,11 @@ pub fn convert_path_lind2host(cageid: u64, path_arg: u64) -> CString {
 ///
 /// Output:
 ///     - buf: actual system address, which is the actual position that stores data
-pub fn convert_buf(cageid: u64, buf_arg: u64) -> *const u8 {
-    // Get cage reference for memory operations
-    let cage = get_cage(cageid).unwrap();
-    // Convert user buffer address to system address
+pub fn sc_convert_buf(buf_arg: u64, arg_cageid: u64, cageid: u64) -> *const u8 {
+    // Get cage reference to translate address
+    let cage = get_cage(arg_cageid).unwrap();
+    // Convert user buffer address to system address. We don't need to check permission here.
+    // Permission check has been handled in 3i
     let buf = translate_vmmap_addr(&cage, buf_arg).unwrap() as *const u8;
     buf
 }
