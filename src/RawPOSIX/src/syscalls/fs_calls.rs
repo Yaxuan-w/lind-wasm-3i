@@ -38,7 +38,7 @@ pub fn open_syscall(
     path_arg: u64,
     path_cageid: u64,
     oflag_arg: u64,
-    olag_cageid: u64,
+    oflag_cageid: u64,
     mode_arg: u64,
     mode_cageid: u64,
     arg4: u64,

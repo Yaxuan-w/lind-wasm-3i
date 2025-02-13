@@ -14,7 +14,7 @@ use std::ffi::CString;
 pub use std::path::{Path, PathBuf};
 pub use std::sync::atomic::{AtomicI32, AtomicU64};
 pub use std::sync::Arc;
-use sysdefs::constants::err_constants::VERBOSE;
+use sysdefs::constants::err_const::VERBOSE;
 use sysdefs::constants::fs_const::*; 
 use sysdefs::constants::sys_const;
 

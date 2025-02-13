@@ -67,7 +67,7 @@ pub fn sc_convert_path_to_host(
     }
     let cage = get_cage(path_arg_cageid).unwrap();
     let addr = translate_vmmap_addr(&cage, path_arg).unwrap();
-    match get_cstr(addr) {
+    let path = match get_cstr(addr) {
         Ok(path) => path,
         Err(e) => panic!("{:?}", e),
     }
@@ -93,7 +93,7 @@ pub fn sc_convert_path_to_host(
     }
 }
 
-pub unsafe fn charstar_to_ruststr<'a>(cstr: *const u8) -> Result<&'a str, Utf8Error> {
+pub unsafe fn charstar_to_ruststr<'a>(cstr: *const i8) -> Result<&'a str, Utf8Error> {
     std::ffi::CStr::from_ptr(cstr as *const _).to_str() //returns a result to be unwrapped later
 }
 
@@ -111,7 +111,7 @@ pub fn get_cstr<'a>(arg: u64) -> Result<&'a str, i32> {
 }
 
 pub fn validate_cageid(cageid_1: u64, cageid_2: u64) -> bool {
-    if cageid_1 > MAX_CAGEID || cageid_2 > MAX_CAGEID {
+    if cageid_1 > MAX_CAGEID as u64 || cageid_2 > MAX_CAGEID as u64 {
         return false;
     }
     true
