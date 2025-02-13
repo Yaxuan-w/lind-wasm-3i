@@ -9,7 +9,7 @@ use std::path::Component;
 use std::path::PathBuf;
 pub use std::{mem, ptr};
 
-pub use sysdefs::fs_const;
+pub use sysdefs::constant::fs_const;
 
 /// Convert data type from `&str` to `PathBuf`
 pub fn convpath(cpath: &str) -> PathBuf {

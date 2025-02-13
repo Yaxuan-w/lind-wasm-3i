@@ -7,8 +7,8 @@ use crate::arg_conversion::type_conv::*;
 use crate::cage::get_cage;
 use crate::memory::mem_helper::*;
 use fdtables;
-use sysdefs::err_const::{syscall_error, Errno};
-use sysdefs::fs_const::PATH_MAX;
+use sysdefs::constant::err_const::{syscall_error, Errno};
+use sysdefs::constant::fs_const::PATH_MAX;
 
 /// Translate a received virtual file descriptor (`virtual_fd`) to real kernel file descriptor.
 /// This function is not for security purpose. Always using arg_cageid to translate.
