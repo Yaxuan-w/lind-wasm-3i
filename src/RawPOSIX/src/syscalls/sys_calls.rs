@@ -15,18 +15,34 @@ use std::sync::atomic::Ordering::*;
 /// with this cloned tables.
 pub fn fork_syscall(
     cageid: u64,
-    child_cageid: u64,
-    _arg2: u64,
-    _arg3: u64,
-    _arg4: u64,
-    _arg5: u64,
-    _arg6: u64,
+    child_arg: u64, // Child's cage id
+    child_arg_cageid: u64, // Child's cage id arguments cageid 
+    arg2: u64,
+    arg2_cageid: u64,
+    arg3: u64,
+    arg3_cageid: u64,
+    arg4: u64,
+    arg4_cageid: u64,
+    arg5: u64,
+    arg5_cageid: u64,
+    arg6: u64,
+    arg6_cageid: u64,
 ) -> i32 {
+    // would sometimes check, sometimes be a no-op depending on the compiler settings
+    if !(sc_unusedarg(arg2, arg2_cageid)
+        && sc_unusedarg(arg3, arg3_cageid)
+        && sc_unusedarg(arg4, arg4_cageid)
+        && sc_unusedarg(arg5, arg5_cageid)
+        && sc_unusedarg(arg6, arg6_cageid))
+    {
+        return syscall_error(Errno::EFAULT, "munmap_syscall", "Invalide Cage ID");
+    }
+
     // Modify the fdtable manually
-    fdtables::copy_fdtable_for_cage(cageid, child_cageid).unwrap();
+    fdtables::copy_fdtable_for_cage(child_arg_cageid, child_arg).unwrap();
 
     // Get the self cage
-    let selfcage = cage::get_cage(cageid).unwrap();
+    let selfcage = cage::get_cage(child_arg_cageid).unwrap();
 
     let parent_vmmap = selfcage.vmmap.read();
     let new_vmmap = parent_vmmap.clone();
@@ -34,7 +50,7 @@ pub fn fork_syscall(
     let cageobj = cage::Cage {
         cageid: child_cageid,
         cwd: RwLock::new(selfcage.cwd.read().clone()),
-        parent: cageid,
+        parent: child_arg_cageid,
         gid: AtomicI32::new(selfcage.gid.load(Ordering::Relaxed)),
         uid: AtomicI32::new(selfcage.uid.load(Ordering::Relaxed)),
         egid: AtomicI32::new(selfcage.egid.load(Ordering::Relaxed)),
@@ -60,24 +76,40 @@ pub fn fork_syscall(
 pub fn exit_syscall(
     cageid: u64,
     status_arg: u64,
-    _arg2: u64,
-    _arg3: u64,
-    _arg4: u64,
-    _arg5: u64,
-    _arg6: u64,
+    status_cageid: u64,
+    arg2: u64,
+    arg2_cageid: u64,
+    arg3: u64,
+    arg3_cageid: u64,
+    arg4: u64,
+    arg4_cageid: u64,
+    arg5: u64,
+    arg5_cageid: u64,
+    arg6: u64,
+    arg6_cageid: u64,
 ) -> i32 {
-    let status = status_arg as i32;
-    let _ = fdtables::remove_cage_from_fdtable(cageid);
+    let status = sc_convert_sysarg_to_i32(status_arg, status_cageid, cageid).unwrap();
+    // would sometimes check, sometimes be a no-op depending on the compiler settings
+    if !(sc_unusedarg(arg2, arg2_cageid)
+        && sc_unusedarg(arg3, arg3_cageid)
+        && sc_unusedarg(arg4, arg4_cageid)
+        && sc_unusedarg(arg5, arg5_cageid)
+        && sc_unusedarg(arg6, arg6_cageid))
+    {
+        return syscall_error(Errno::EFAULT, "munmap_syscall", "Invalide Cage ID");
+    }
+
+    let _ = fdtables::remove_cage_from_fdtable(status_cageid);
 
     // Get the self cage
-    let selfcage = cage::get_cage(cageid).unwrap();
+    let selfcage = cage::get_cage(status_cageid).unwrap();
     if selfcage.parent != cageid {
         let parent_cage = cage::get_cage(selfcage.parent);
         if let Some(parent) = parent_cage {
             parent.child_num.fetch_sub(1, SeqCst);
             let mut zombie_vec = parent.zombies.write();
             zombie_vec.push(cage::Zombie {
-                cageid,
+                status_cageid,
                 exit_code: status,
             });
         } else {
@@ -102,12 +134,18 @@ pub fn exit_syscall(
 /// cageid, cwd, parent, interval_timer
 pub fn exec_syscall(
     cageid: u64,
-    _arg1: u64,
-    _arg2: u64,
-    _arg3: u64,
-    _arg4: u64,
-    _arg5: u64,
-    _arg6: u64,
+    arg1: u64,
+    arg1_cageid: u64,
+    arg2: u64,
+    arg2_cageid: u64,
+    arg3: u64,
+    arg3_cageid: u64,
+    arg4: u64,
+    arg4_cageid: u64,
+    arg5: u64,
+    arg5_cageid: u64,
+    arg6: u64,
+    arg6_cageid: u64,
 ) -> i32 {
     0
 }
