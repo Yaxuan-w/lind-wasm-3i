@@ -11,7 +11,7 @@ use crate::{
     StoreContext, StoreContextMut, Table, TypedFunc,
 };
 use alloc::sync::Arc;
-use sysdefs::constants::fs_const::{MAP_ANONYMOUS, MAP_FIXED, MAP_PRIVATE, PAGESHIFT, PROT_READ, PROT_WRITE};
+use crate::sysdefs::constants::fs_const::{MAP_ANONYMOUS, MAP_FIXED, MAP_PRIVATE, PAGESHIFT, PROT_READ, PROT_WRITE};
 use rawposix::threei::threei::make_syscall;
 use wasmtime_lind_utils::lind_syscall_numbers::MMAP_SYSCALL;
 use core::ptr::NonNull;
