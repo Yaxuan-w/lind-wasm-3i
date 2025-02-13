@@ -70,7 +70,7 @@ pub fn sc_convert_path_to_host(
     let path = match get_cstr(addr) {
         Ok(path) => path,
         Err(e) => panic!("{:?}", e),
-    }
+    };
     // We will create a new variable in host process to handle the path value
     let relpath = normpath(convpath(path), path_arg_cageid);
     let relative_path = relpath.to_str().unwrap();

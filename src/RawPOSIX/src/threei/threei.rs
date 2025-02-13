@@ -476,7 +476,7 @@ pub fn harsh_cage_exit(
     _arg6cage: u64,
 ) -> u64 {
     // Directly execute
-    let result = make_syscall(targetcage, callnum, targetcage, exittype, targetcageid, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    let result = make_syscall(targetcage, callnum, targetcage, exittype, targetcage, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 
     // TODO:
     // This should align with specific exit type. Does different exit type mean different things..?
