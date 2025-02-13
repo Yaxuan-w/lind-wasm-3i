@@ -119,7 +119,7 @@ pub fn cagetable_clear() {
     for cageid in exitvec {
         exit_syscall(
             cageid as u64,
-            sys_constants::EXIT_SUCCESS as u64,
+            sys_const::EXIT_SUCCESS as u64,
             cageid as u64,
             0,
             0,
@@ -141,7 +141,7 @@ pub fn lindrustinit(verbosity: isize) {
     let _ = VERBOSE.set(verbosity); //assigned to suppress unused result warning
 
     fdtables::register_close_handlers(
-        fs_const::FDKIND_KERNEL,
+        FDKIND_KERNEL,
         fdtables::NULL_FUNC,
         kernel_close,
     );
@@ -184,9 +184,9 @@ pub fn lindrustinit(verbosity: isize) {
     // STDIN
     fdtables::get_specific_virtual_fd(
         0,
-        fs_const::STDIN_FILENO as u64,
-        fs_const::FDKIND_KERNEL,
-        fs_const::STDIN_FILENO as u64,
+        STDIN_FILENO as u64,
+        FDKIND_KERNEL,
+        STDIN_FILENO as u64,
         false,
         0,
     )
@@ -194,9 +194,9 @@ pub fn lindrustinit(verbosity: isize) {
     // STDOUT
     fdtables::get_specific_virtual_fd(
         0,
-        fs_const::STDOUT_FILENO as u64,
-        fs_const::FDKIND_KERNEL,
-        fs_const::STDOUT_FILENO as u64,
+        STDOUT_FILENO as u64,
+        FDKIND_KERNEL,
+        STDOUT_FILENO as u64,
         false,
         0,
     )
@@ -204,9 +204,9 @@ pub fn lindrustinit(verbosity: isize) {
     // STDERR
     fdtables::get_specific_virtual_fd(
         0,
-        fs_const::STDERR_FILENO as u64,
-        fs_const::FDKIND_KERNEL,
-        fs_const::STDERR_FILENO as u64,
+        STDERR_FILENO as u64,
+        FDKIND_KERNEL,
+        STDERR_FILENO as u64,
         false,
         0,
     )
@@ -238,9 +238,9 @@ pub fn lindrustinit(verbosity: isize) {
     // STDIN
     fdtables::get_specific_virtual_fd(
         1,
-        fs_const::STDIN_FILENO as u64,
-        fs_const::FDKIND_KERNEL,
-        fs_const::STDIN_FILENO as u64,
+        STDIN_FILENO as u64,
+        FDKIND_KERNEL,
+        STDIN_FILENO as u64,
         false,
         0,
     )
@@ -248,9 +248,9 @@ pub fn lindrustinit(verbosity: isize) {
     // STDOUT
     fdtables::get_specific_virtual_fd(
         1,
-        fs_const::STDOUT_FILENO as u64,
-        fs_const::FDKIND_KERNEL,
-        fs_const::STDOUT_FILENO as u64,
+        STDOUT_FILENO as u64,
+        FDKIND_KERNEL,
+        STDOUT_FILENO as u64,
         false,
         0,
     )
@@ -258,9 +258,9 @@ pub fn lindrustinit(verbosity: isize) {
     // STDERR
     fdtables::get_specific_virtual_fd(
         1,
-        fs_const::STDERR_FILENO as u64,
-        fs_const::FDKIND_KERNEL,
-        fs_const::STDERR_FILENO as u64,
+        STDERR_FILENO as u64,
+        FDKIND_KERNEL,
+        STDERR_FILENO as u64,
         false,
         0,
     )

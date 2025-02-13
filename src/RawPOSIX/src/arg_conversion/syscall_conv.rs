@@ -8,8 +8,9 @@ use crate::cage::get_cage;
 use crate::memory::mem_helper::*;
 use fdtables;
 use sysdefs::constants::err_const::{syscall_error, Errno};
-use sysdefs::constants::fs_const::PATH_MAX;
+use sysdefs::constants::fs_const::{PATH_MAX, MAX_CAGEID};
 use std::error::Error;
+use std::str::Utf8Error;
 
 /// Translate a received virtual file descriptor (`virtual_fd`) to real kernel file descriptor.
 /// This function is not for security purpose. Always using arg_cageid to translate.
@@ -68,7 +69,7 @@ pub fn sc_convert_path_to_host(
     let addr = translate_vmmap_addr(&cage, path_arg).unwrap();
     match get_cstr(addr) {
         Ok(path) => path,
-        Err(e) => panic!(e),
+        Err(e) => panic!("{:?}", e),
     }
     // We will create a new variable in host process to handle the path value
     let relpath = normpath(convpath(path), path_arg_cageid);
@@ -92,37 +93,6 @@ pub fn sc_convert_path_to_host(
     }
 }
 
-pub fn validate_cageid(cageid_1: u64, cageid_2: u64) -> bool {
-    if cageid_1 > MAX_CAGEID || cageid_2 > MAX_CAGEID {
-        return false;
-    }
-    true
-}
-
-pub fn get_i32(arg: u64, arg_cageid: u64, cageid: u64) -> i32 {
-    if !validate_cageid(arg_cageid, cageid) {
-        return panic!("Invalide Cage ID");
-    }
-
-    if (arg & 0xFFFFFFFF_00000000) != 1 {
-        return Ok((arg & 0xFFFFFFFF) as i32);
-    }
-
-    return panic!("Invalide argument");
-}
-
-pub fn get_u32(arg: u64, arg_cageid: u64, cageid: u64) -> u32 {
-    if !validate_cageid(arg_cageid, cageid) {
-        return panic!("Invalide Cage ID");
-    }
-
-    if (arg & 0xFFFFFFFF_00000000) != 1 {
-        return Ok((arg & 0xFFFFFFFF) as u32);
-    }
-
-    return panic!("Invalide argument");
-}
-
 pub unsafe fn charstar_to_ruststr<'a>(cstr: *const u8) -> Result<&'a str, Utf8Error> {
     std::ffi::CStr::from_ptr(cstr as *const _).to_str() //returns a result to be unwrapped later
 }
@@ -140,6 +110,37 @@ pub fn get_cstr<'a>(arg: u64) -> Result<&'a str, i32> {
     return Err(-1);
 }
 
+pub fn validate_cageid(cageid_1: u64, cageid_2: u64) -> bool {
+    if cageid_1 > MAX_CAGEID || cageid_2 > MAX_CAGEID {
+        return false;
+    }
+    true
+}
+
+pub fn get_i32(arg: u64, arg_cageid: u64, cageid: u64) -> i32 {
+    if !validate_cageid(arg_cageid, cageid) {
+        return panic!("Invalide Cage ID");
+    }
+
+    if (arg & 0xFFFFFFFF_00000000) != 1 {
+        return (arg & 0xFFFFFFFF) as i32;
+    }
+
+    return panic!("Invalide argument");
+}
+
+pub fn get_u32(arg: u64, arg_cageid: u64, cageid: u64) -> u32 {
+    if !validate_cageid(arg_cageid, cageid) {
+        return panic!("Invalide Cage ID");
+    }
+
+    if (arg & 0xFFFFFFFF_00000000) != 1 {
+        return (arg & 0xFFFFFFFF) as u32;
+    }
+
+    return panic!("Invalide argument");
+}
+
 pub fn sc_convert_sysarg_to_i32(
     arg: u64,
     arg_cageid: u64,
@@ -149,7 +150,7 @@ pub fn sc_convert_sysarg_to_i32(
     return arg as i32;
 
     #[cfg(feature = "secure")]
-    return get_i32(arg, arg_cageid, cageid)?;
+    return get_i32(arg, arg_cageid, cageid);
 }
 
 pub fn sc_convert_sysarg_to_u32(
@@ -161,7 +162,7 @@ pub fn sc_convert_sysarg_to_u32(
     return arg as u32;
 
     #[cfg(feature = "secure")]
-    return get_u32(arg)?;
+    return get_u32(arg);
 }
 
 pub fn sc_convert_sysarg_to_isize(
@@ -174,7 +175,7 @@ pub fn sc_convert_sysarg_to_isize(
 
     #[cfg(feature = "secure")]
     if !validate_cageid(arg_cageid, cageid) {
-        return Err("Invalide Cage ID")?;
+        panic!("Invalide Cage ID");
     }
 }
 
@@ -188,7 +189,7 @@ pub fn sc_convert_sysarg_to_usize(
 
     #[cfg(feature = "secure")]
     if !validate_cageid(arg_cageid, cageid) {
-        return Err("Invalide Cage ID")?;
+        panic!("Invalide Cage ID");
     }
 }
 
@@ -202,7 +203,7 @@ pub fn sc_convert_sysarg_to_i64(
 
     #[cfg(feature = "secure")]
     if !validate_cageid(arg_cageid, cageid) {
-        return Err("Invalide Cage ID")?;
+        panic!("Invalide Cage ID");
     }
 }
 
