@@ -236,7 +236,7 @@ pub fn mmap_syscall(
     off_cageid: u64,
 ) -> i32 {
     // TODO: Check will perform in the below logic??
-    println("[mmap_syscall] selfcageid: {:?}, FD Cageid: {:?}", cageid, vfd_cageid);
+    println!("[mmap_syscall] selfcageid: {:?}, FD Cageid: {:?}", cageid, vfd_cageid);
     let mut addr = addr_arg as *mut u8;
     let mut len = sc_convert_sysarg_to_usize(len_arg, len_cageid, cageid);
     let mut prot = sc_convert_sysarg_to_i32(prot_arg, prot_cageid, cageid);
@@ -387,6 +387,7 @@ pub fn mmap_inner(
     virtual_fd: i32,
     off: i64,
 ) -> usize {
+    println!("[mmap_inner] cageid: {:?}, vfd: {:?}", cageid, virtualfd);
     if virtual_fd != -1 {
         match fdtables::translate_virtual_fd(cageid, virtual_fd as u64) {
             Ok(kernel_fd) => {
