@@ -20,7 +20,7 @@ use std::str::Utf8Error;
 pub fn convert_fd_to_host(
     virtual_fd: u64,
     arg_cageid: u64,
-    _cageid: u64,
+    cageid: u64,
 ) -> i32 {
     #[cfg(feature = "secure")]
     {

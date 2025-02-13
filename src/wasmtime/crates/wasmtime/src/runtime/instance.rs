@@ -269,7 +269,7 @@ impl Instance {
                     (0 - 1) as u64,
                     pid,
                     0,
-                    0,
+                    pid,
                 );
             },
             // InstantiateChild: this is the child wasm instance forked by parent

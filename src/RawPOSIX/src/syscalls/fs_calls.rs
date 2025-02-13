@@ -236,6 +236,7 @@ pub fn mmap_syscall(
     off_cageid: u64,
 ) -> i32 {
     // TODO: Check will perform in the below logic??
+    println("[mmap_syscall] selfcageid: {:?}, FD Cageid: {:?}", cageid, vfd_cageid);
     let mut addr = addr_arg as *mut u8;
     let mut len = sc_convert_sysarg_to_usize(len_arg, len_cageid, cageid);
     let mut prot = sc_convert_sysarg_to_i32(prot_arg, prot_cageid, cageid);
@@ -534,7 +535,7 @@ pub fn brk_syscall(
     arg6: u64,
     arg6_cageid: u64,
 ) -> i32 {
-    let brk = brk_arg as i32;
+    let brk = sc_convert_sysarg_to_i32(brk_arg, brk_cageid, cageid);
     // would sometimes check, sometimes be a no-op depending on the compiler settings
     if !(sc_unusedarg(arg2, arg2_cageid)
         && sc_unusedarg(arg3, arg3_cageid)
@@ -590,7 +591,7 @@ pub fn brk_syscall(
     // we need to mmap the new region
     if brk_page > old_brk_page {
         let ret = mmap_inner(
-            cageid,
+            brk_cageid,
             old_heap_end_sys,
             ((brk_page - old_brk_page) * PAGESIZE) as usize,
             heap.prot,
@@ -608,7 +609,7 @@ pub fn brk_syscall(
     // to unmap the extra memory
     else if brk_page < old_brk_page {
         let ret = mmap_inner(
-            cageid,
+            brk_cageid,
             new_heap_end_sys,
             ((old_brk_page - brk_page) * PAGESIZE) as usize,
             PROT_NONE,
