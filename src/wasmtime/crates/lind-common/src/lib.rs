@@ -1,7 +1,7 @@
 #![allow(dead_code)]
 
 use anyhow::Result;
-use rawposix::threei::threei::make_syscall;
+use threei::threei::make_syscall;
 use wasmtime_lind_multi_process::{get_memory_base, LindHost, clone_constants::CloneArgStruct};
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;

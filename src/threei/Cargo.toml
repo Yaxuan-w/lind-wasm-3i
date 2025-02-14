@@ -1,0 +1,12 @@
+[package]
+name = "threei"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+libc = "0.2"
+cage = { path = "../cage" }
+sysdefs = { path = "../sysdefs" }
+rawposix = { path = "../RawPOSIX" }
+dashmap = "5.0"      
+once_cell = "1.18" 

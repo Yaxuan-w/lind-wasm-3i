@@ -59,8 +59,9 @@ smallvec = { workspace = true, optional = true }
 hashbrown = { workspace = true }
 libm = "0.2.7"
 bitflags = { workspace = true }
-rawposix = { path = "../rawposix" }
 sysdefs = { path = "../sysdefs" }
+threei = { path = "../threei" }
+cage = { path = "../cage" }
 wasmtime-lind-utils = { path = "../lind-utils" }
 
 [target.'cfg(target_os = "windows")'.dependencies.windows-sys]

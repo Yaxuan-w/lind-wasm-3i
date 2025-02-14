@@ -58,9 +58,10 @@ wasmtime-lind-multi-process = { path = "crates/lind-multi-process" }
 wasmtime-lind-common = { path = "crates/lind-common" }
 wasmtime-lind-utils = { path = "crates/lind-utils" }
 wasmtime-wasi-http = { workspace = true, optional = true }
-rawposix = { workspace = true }
+threei = { workspace = true }
 fdtables = { workspace = true }
 sysdefs = { workspace = true }
+cage = { workspace = true }
 clap = { workspace = true }
 anyhow = { workspace = true, features = ['std'] }
 target-lexicon = { workspace = true }
@@ -153,9 +154,10 @@ members = [
   "examples/min-platform/embedding",
   "fuzz",
   "winch/codegen",
-  "crates/rawposix",
+  "crates/threei",
   "crates/fdtables",
   "crates/sysdefs",
+  "crates/cage",
 ]
 exclude = [
   'docs/rust_wasi_markdown_parser',
@@ -220,9 +222,10 @@ wasmtime-fuzzing = { path = "crates/fuzzing" }
 wasmtime-jit-icache-coherence = { path = "crates/jit-icache-coherence", version = "=23.0.0" }
 wasmtime-wit-bindgen = { path = "crates/wit-bindgen", version = "=23.0.0" }
 test-programs-artifacts = { path = 'crates/test-programs/artifacts' }
-rawposix = { path = "crates/rawposix" }
+threei = { path = "crates/threei" }
 fdtables = { path = "crates/fdtables" }
 sysdefs = { path = "crates/sysdefs" }
+cage = { path = "crates/cage" }
 
 cranelift-wasm = { path = "cranelift/wasm", version = "0.110.0" }
 cranelift-codegen = { path = "cranelift/codegen", version = "0.110.0", default-features = false, features = ["std", "unwind", "trace-log"] }

@@ -1,7 +1,7 @@
 #![allow(dead_code)]
 
 use anyhow::{anyhow, Result};
-use rawposix::threei::threei::make_syscall;
+use threei::threei::make_syscall;
 use wasmtime_lind_utils::lind_syscall_numbers::{EXIT_SYSCALL, FORK_SYSCALL, EXEC_SYSCALL};
 use wasmtime_lind_utils::{parse_env_var, LindCageManager};
 
