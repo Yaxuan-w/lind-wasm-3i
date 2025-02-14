@@ -14,11 +14,6 @@ pub use std::sync::atomic::{AtomicI32, AtomicU64};
 pub use std::sync::Arc;
 use sysdefs::constants::err_const::VERBOSE;
 use sysdefs::constants::fs_const::*; 
-use sysdefs::constants::sys_const::EXIT_SUCCESS;
-use threei::threei::make_syscall;
-
-// TODO: tmp usage, will be replaced by importing constants file
-const EXIT_SYSCALL: u64 = 30; 
 
 #[derive(Debug, Clone, Copy)]
 pub struct Zombie {
@@ -106,8 +101,11 @@ pub fn get_cage(cageid: u64) -> Option<Arc<Cage>> {
 }
 
 /// Clear `CAGE_MAP` and exit all existing cages
+/// 
+/// Return:
+///     Will return a list of current cageid in CAGE_MAP, rawposix will performs exit to individual cage
 /// TODO: will self cageid always be same with target cageid??
-pub fn cagetable_clear() {
+pub fn cagetable_clear() -> Vec<usize> {
     let mut exitvec = Vec::new();
 
     {
@@ -119,23 +117,5 @@ pub fn cagetable_clear() {
         }
     }
 
-    for cageid in exitvec {
-        make_syscall(
-            cageid as u64, // self cage id 
-            EXIT_SYSCALL,    // syscall num
-            cageid as u64,  // target cageid
-            EXIT_SUCCESS,  // status arg
-            cageid as u64, // status arg's cageid 
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-        );
-    }
+    exitvec
 }

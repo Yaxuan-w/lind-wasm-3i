@@ -284,5 +284,24 @@ pub fn lindrustinit(verbosity: isize) {
 }
 
 pub fn lindrustfinalize() {
-    cagetable_clear();
+    let exitvec = cagetable_clear();
+
+    for cageid in exitvec {
+        exit_syscall(
+            cageid as u64,  // target cageid
+            EXIT_SUCCESS,  // status arg
+            cageid as u64, // status arg's cageid 
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+        );
+    }
+
 }
