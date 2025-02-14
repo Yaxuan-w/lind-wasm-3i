@@ -13,7 +13,7 @@ use crate::{
 use alloc::sync::Arc;
 use sysdefs::constants::fs_const::{MAP_ANONYMOUS, MAP_FIXED, MAP_PRIVATE, PAGESHIFT, PROT_READ, PROT_WRITE};
 use threei::threei::make_syscall;
-use ::cage;
+use ::cage::mem_helper;
 use wasmtime_lind_utils::lind_syscall_numbers::MMAP_SYSCALL;
 use core::ptr::NonNull;
 use wasmparser::WasmFeatures;
