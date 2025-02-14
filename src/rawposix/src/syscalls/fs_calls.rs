@@ -3,14 +3,17 @@
 //! This file provides all system related syscall implementation in RawPOSIX
 use typemap::syscall_conv::*;
 use cage::get_cage;
-use memory::mem_helper::*;
-use memory::vmmap::{VmmapOps, *};
+use cage::memory::mem_helper::*;
+use cage::memory::vmmap::{VmmapOps, *};
 use fdtables;
 use sysdefs::constants::err_const::{get_errno, handle_errno, syscall_error, Errno};
 use sysdefs::constants::fs_const::{MAP_ANONYMOUS, MAP_FAILED, MAP_FIXED, MAP_PRIVATE, MAP_SHARED, PAGESHIFT, PROT_EXEC, PROT_NONE, PROT_READ, PROT_WRITE, F_GETFL, PAGESIZE, F_GETOWN, F_SETOWN
 };
 use sysdefs::constants::fs_const;
 use libc::*;
+use std::sync::atomic::{AtomicI32, AtomicU64};
+use parking_lot::RwLock;
+use std::sync::Arc;
 
 /// Helper function for close_syscall
 ///

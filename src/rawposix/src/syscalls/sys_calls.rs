@@ -1,12 +1,21 @@
 //! System syscalls implementation
 //!
 //! This module contains all system calls that are being emulated/faked in Lind.
-use crate::cage::{Cage, get_cage};
-use fdtables;
 use std::sync::atomic::Ordering::*;
 use typemap::syscall_conv::*;
+use std::path::PathBuf;
+use std::ffi::CString;
+use std::sync::atomic::{AtomicI32, AtomicU64};
+use parking_lot::RwLock;
+use std::sync::Arc;
+use crate::syscalls::fs_calls::kernel_close;
+use cage::memory::mem_helper::*;
+use cage::memory::vmmap::{VmmapOps, *};
+use cage::{Cage, get_cage, add_cage, cagetable_clear};
+use fdtables;
 use sysdefs::constants::err_const::{get_errno, handle_errno, syscall_error, Errno};
 use sysdefs::constants::fs_const::*;
+use sysdefs::constants::EXIT_SUCCESS;
 
 /// Reference to Linux: https://man7.org/linux/man-pages/man2/fork.2.html
 ///
@@ -289,7 +298,7 @@ pub fn lindrustfinalize() {
     for cageid in exitvec {
         exit_syscall(
             cageid as u64,  // target cageid
-            EXIT_SUCCESS,  // status arg
+            EXIT_SUCCESS as u64,  // status arg
             cageid as u64, // status arg's cageid 
             0,
             0,
