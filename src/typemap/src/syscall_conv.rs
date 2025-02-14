@@ -2,10 +2,10 @@
 //!
 //! This file provides the top level type conversion API needed for actual syscall implementation
 //! under src/syscalls/
-use crate::arg_conversion::path_conv::*;
-use crate::arg_conversion::type_conv::*;
-use crate::cage::get_cage;
-use crate::memory::mem_helper::*;
+use crate::path_conv::*;
+use crate::type_conv::*;
+use cage::get_cage;
+use cage::memory::mem_helper::*;
 use fdtables;
 use sysdefs::constants::err_const::{syscall_error, Errno};
 use sysdefs::constants::fs_const::{PATH_MAX, MAX_CAGEID};
@@ -62,7 +62,7 @@ pub fn sc_convert_path_to_host(
     #[cfg(feature = "secure")]
     {
         if !validate_cageid(path_arg_cageid, cageid) {
-            return panic!("Invalide Cage ID");
+            panic!("Invalide Cage ID");
         }
     }
     let cage = get_cage(path_arg_cageid).unwrap();
@@ -80,7 +80,7 @@ pub fn sc_convert_path_to_host(
         let total_length = fs_const::LIND_ROOT.len() + relative_path.len();
 
         if total_length >= PATH_MAX {
-            return panic!("Path exceeds PATH_MAX (4096)");
+            panic!("Path exceeds PATH_MAX (4096)");
         }
     }
 
@@ -119,26 +119,26 @@ pub fn validate_cageid(cageid_1: u64, cageid_2: u64) -> bool {
 
 pub fn get_i32(arg: u64, arg_cageid: u64, cageid: u64) -> i32 {
     if !validate_cageid(arg_cageid, cageid) {
-        return panic!("Invalide Cage ID");
+        panic!("Invalide Cage ID");
     }
 
     if (arg & 0xFFFFFFFF_00000000) != 1 {
         return (arg & 0xFFFFFFFF) as i32;
     }
 
-    return panic!("Invalide argument");
+    panic!("Invalide argument");
 }
 
 pub fn get_u32(arg: u64, arg_cageid: u64, cageid: u64) -> u32 {
     if !validate_cageid(arg_cageid, cageid) {
-        return panic!("Invalide Cage ID");
+        panic!("Invalide Cage ID");
     }
 
     if (arg & 0xFFFFFFFF_00000000) != 1 {
         return (arg & 0xFFFFFFFF) as u32;
     }
 
-    return panic!("Invalide argument");
+    panic!("Invalide argument");
 }
 
 pub fn sc_convert_sysarg_to_i32(
