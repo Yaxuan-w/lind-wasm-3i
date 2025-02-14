@@ -63,6 +63,7 @@ pub fn open_syscall(
         return syscall_error(Errno::EFAULT, "open_syscall", "Invalide Cage ID");
     }
 
+    println!("[open_syscall] path: {:?}", path);
     // Get the kernel fd first
     let kernel_fd = unsafe { libc::open(path.as_ptr(), oflag, mode) };
 
