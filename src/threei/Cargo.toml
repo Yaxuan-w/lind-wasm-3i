@@ -5,7 +5,6 @@ edition = "2021"
 
 [dependencies]
 libc = "0.2"
-cage = { path = "../cage" }
 sysdefs = { path = "../sysdefs" }
 rawposix = { path = "../rawposix" }
 dashmap = "5.0"      
