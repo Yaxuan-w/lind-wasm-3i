@@ -316,7 +316,7 @@ pub fn make_syscall(
         // println!("syscall num in make_syscall: {:?}", syscall_num);
         if let Some(&(_, syscall_func)) = SYSCALL_TABLE.iter().find(|&&(num, _)| num == syscall_num)
         {
-            return syscall_func(
+            let ret = syscall_func(
                 target_cageid,
                 arg1,
                 arg1_cageid,
@@ -331,6 +331,8 @@ pub fn make_syscall(
                 arg6,
                 arg6_cageid,
             );
+            println!("[make_syscall] syscallnum: {}, ret: {}, self_cageid: {}, target_cageid: {}", syscall_num, ret, self_cageid, target_cageid);
+            return ret;
         } else {
             eprintln!("Syscall number {} not found!", syscall_num);
             return threeiconstant::ELINDAPIABORTED as i32;
