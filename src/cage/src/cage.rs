@@ -2,8 +2,6 @@
 //! definitions, a global variables that handles cage management, and cage initialization and
 //! finialization required by wasmtime
 use crate::memory::vmmap::*;
-use crate::syscalls::fs_calls::kernel_close;
-use crate::syscalls::sys_calls::exit_syscall;
 use fdtables;
 pub use once_cell::sync::Lazy;
 /// Uses spinlocks first (for short waits) and parks threads when blocking to reduce kernel
@@ -16,7 +14,11 @@ pub use std::sync::atomic::{AtomicI32, AtomicU64};
 pub use std::sync::Arc;
 use sysdefs::constants::err_const::VERBOSE;
 use sysdefs::constants::fs_const::*; 
-use sysdefs::constants::sys_const;
+use sysdefs::constants::sys_const::EXIT_SUCCESS;
+use threei::threei::make_syscall;
+
+// TODO: tmp usage, will be replaced by importing constants file
+const EXIT_SYSCALL: u64 = 30; 
 
 #[derive(Debug, Clone, Copy)]
 pub struct Zombie {
@@ -104,6 +106,7 @@ pub fn get_cage(cageid: u64) -> Option<Arc<Cage>> {
 }
 
 /// Clear `CAGE_MAP` and exit all existing cages
+/// TODO: will self cageid always be same with target cageid??
 pub fn cagetable_clear() {
     let mut exitvec = Vec::new();
 
@@ -117,10 +120,12 @@ pub fn cagetable_clear() {
     }
 
     for cageid in exitvec {
-        exit_syscall(
-            cageid as u64,
-            sys_const::EXIT_SUCCESS as u64,
-            cageid as u64,
+        make_syscall(
+            cageid as u64, // self cage id 
+            EXIT_SYSCALL,    // syscall num
+            cageid as u64,  // target cageid
+            EXIT_SUCCESS,  // status arg
+            cageid as u64, // status arg's cageid 
             0,
             0,
             0,
@@ -133,140 +138,4 @@ pub fn cagetable_clear() {
             0,
         );
     }
-}
-
-/// Those functions are required by wasmtime to create the first cage. `verbosity` indicates whether
-/// detailed error messages will be printed if set
-pub fn lindrustinit(verbosity: isize) {
-    let _ = VERBOSE.set(verbosity); //assigned to suppress unused result warning
-
-    fdtables::register_close_handlers(
-        FDKIND_KERNEL,
-        fdtables::NULL_FUNC,
-        kernel_close,
-    );
-
-    let utilcage = Cage {
-        cageid: 0,
-        cwd: RwLock::new(Arc::new(PathBuf::from("/"))),
-        parent: 0,
-        gid: AtomicI32::new(-1),
-        uid: AtomicI32::new(-1),
-        egid: AtomicI32::new(-1),
-        euid: AtomicI32::new(-1),
-        main_threadid: AtomicU64::new(0),
-        zombies: RwLock::new(vec![]),
-        child_num: AtomicU64::new(0),
-        vmmap: RwLock::new(Vmmap::new()),
-    };
-
-    add_cage(
-        0, // cageid
-        utilcage,
-    );
-    fdtables::init_empty_cage(0);
-    // Set the first 3 fd to STDIN / STDOUT / STDERR
-    // TODO:
-    // Replace the hardcoded values with variables (possibly by adding a LIND-specific constants file)
-    let dev_null = CString::new("/home/lind-wasm/src/RawPOSIX/tmp/dev/null").unwrap();
-
-    // Make sure that the standard file descriptor (stdin, stdout, stderr) is always valid, even if they
-    // are closed before.
-    // Standard input (fd = 0) is redirected to /dev/null
-    // Standard output (fd = 1) is redirected to /dev/null
-    // Standard error (fd = 2) is set to copy of stdout
-    unsafe {
-        libc::open(dev_null.as_ptr(), libc::O_RDONLY);
-        libc::open(dev_null.as_ptr(), libc::O_WRONLY);
-        libc::dup(1);
-    }
-
-    // STDIN
-    fdtables::get_specific_virtual_fd(
-        0,
-        STDIN_FILENO as u64,
-        FDKIND_KERNEL,
-        STDIN_FILENO as u64,
-        false,
-        0,
-    )
-    .unwrap();
-    // STDOUT
-    fdtables::get_specific_virtual_fd(
-        0,
-        STDOUT_FILENO as u64,
-        FDKIND_KERNEL,
-        STDOUT_FILENO as u64,
-        false,
-        0,
-    )
-    .unwrap();
-    // STDERR
-    fdtables::get_specific_virtual_fd(
-        0,
-        STDERR_FILENO as u64,
-        FDKIND_KERNEL,
-        STDERR_FILENO as u64,
-        false,
-        0,
-    )
-    .unwrap();
-
-    //init cage is its own parent
-    let initcage = Cage {
-        cageid: 1,
-        cwd: RwLock::new(Arc::new(PathBuf::from("/"))),
-        parent: 1,
-        gid: AtomicI32::new(-1),
-        uid: AtomicI32::new(-1),
-        egid: AtomicI32::new(-1),
-        euid: AtomicI32::new(-1),
-        main_threadid: AtomicU64::new(0),
-        zombies: RwLock::new(vec![]),
-        child_num: AtomicU64::new(0),
-        vmmap: RwLock::new(Vmmap::new()),
-    };
-
-    // Add cage to cagetable
-    add_cage(
-        1, // cageid
-        initcage,
-    );
-
-    fdtables::init_empty_cage(1);
-    // Set the first 3 fd to STDIN / STDOUT / STDERR
-    // STDIN
-    fdtables::get_specific_virtual_fd(
-        1,
-        STDIN_FILENO as u64,
-        FDKIND_KERNEL,
-        STDIN_FILENO as u64,
-        false,
-        0,
-    )
-    .unwrap();
-    // STDOUT
-    fdtables::get_specific_virtual_fd(
-        1,
-        STDOUT_FILENO as u64,
-        FDKIND_KERNEL,
-        STDOUT_FILENO as u64,
-        false,
-        0,
-    )
-    .unwrap();
-    // STDERR
-    fdtables::get_specific_virtual_fd(
-        1,
-        STDERR_FILENO as u64,
-        FDKIND_KERNEL,
-        STDERR_FILENO as u64,
-        false,
-        0,
-    )
-    .unwrap();
-}
-
-pub fn lindrustfinalize() {
-    cagetable_clear();
 }
