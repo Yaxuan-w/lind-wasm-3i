@@ -160,7 +160,7 @@ pub fn write_syscall(
     buf_arg: u64,
     buf_cageid: u64,
     count_arg: u64,
-    arg3_cageid: u64,
+    count_cageid: u64,
     arg4: u64,
     arg4_cageid: u64,
     arg5: u64,
@@ -177,6 +177,7 @@ pub fn write_syscall(
     }
 
     let buf = sc_convert_buf(buf_arg, buf_cageid, cageid);
+    let count = sc_convert_sysarg_to_usize(count_arg, count_cageid, cageid);
     // would sometimes check, sometimes be a no-op depending on the compiler settings
     if !(sc_unusedarg(arg4, arg4_cageid)
         && sc_unusedarg(arg5, arg5_cageid)
@@ -185,10 +186,11 @@ pub fn write_syscall(
         return syscall_error(Errno::EFAULT, "write", "Invalide Cage ID");
     }
 
-    let count = count_arg as usize;
+    // Early return
     if count == 0 {
         return 0;
     }
+
     let ret = unsafe { libc::write(kernel_fd, buf as *const c_void, count) as i32 };
 
     if ret < 0 {
@@ -196,6 +198,44 @@ pub fn write_syscall(
         return handle_errno(errno, "write");
     }
     return ret;
+}
+
+pub fn dup_syscall(
+    cageid: u64,
+    virtual_fd: u64,
+    vfd_cageid: u64,
+    arg2: u64,
+    arg2_cageid: u64,
+    arg3: u64,
+    arg3_cageid: u64,
+    arg4: u64,
+    arg4_cageid: u64,
+    arg5: u64,
+    arg5_cageid: u64,
+    arg6: u64,
+    arg6_cageid: u64,
+) -> i32 {
+    if !(sc_unusedarg(arg2, arg2_cageid)
+        && sc_unusedarg(arg3, arg3_cageid)
+        && sc_unusedarg(arg4, arg4_cageid)
+        && sc_unusedarg(arg5, arg5_cageid)
+        && sc_unusedarg(arg6, arg6_cageid))
+    {
+        return syscall_error(Errno::EFAULT, "dup", "Invalide Cage ID");
+    }
+
+    if virtual_fd < 0 {
+        return syscall_error(Errno::EBADF, "dup", "Bad File Descriptor");
+    }
+    let wrappedvfd = fdtables::translate_virtual_fd(self.cageid, virtual_fd as u64);
+    if wrappedvfd.is_err() {
+        return syscall_error(Errno::EBADF, "dup", "Bad File Descriptor");
+    }
+    let vfd = wrappedvfd.unwrap();
+    let ret_kernelfd = unsafe{ libc::dup(vfd.underfd as i32) };
+    let ret_virtualfd = fdtables::get_unused_virtual_fd(self.cageid, vfd.fdkind, ret_kernelfd as u64, false, 0).unwrap();
+    return ret_virtualfd as i32;
+    
 }
 
 /// Handles the `mmap_syscall`, interacting with the `vmmap` structure.
@@ -654,6 +694,7 @@ pub fn sbrk_syscall(
     arg6: u64,
     arg6_cageid: u64,
 ) -> i32 {
+    println!("[sbrk_syscall]")
     let brk = sc_convert_sysarg_to_i32(sbrk_arg, sbrk_cageid, cageid);
     // would sometimes check, sometimes be a no-op depending on the compiler settings
     if !(sc_unusedarg(arg2, arg2_cageid)
@@ -716,18 +757,91 @@ pub fn sbrk_syscall(
 
 pub fn fcntl_syscall(
     cageid: u64,
-    _arg1: u64,
-    arg1_cageid: u64,
-    _arg2: u64,
-    arg2_cageid: u64,
-    _arg3: u64,
-    arg3_cageid: u64,
-    _arg4: u64,
+    virtual_fd: u64,
+    vfd_cageid: u64,
+    cmd_arg: u64,
+    cmd_cageid: u64,
+    arg_arg: u64,
+    arg_cageid: u64,
+    arg4: u64,
     arg4_cageid: u64,
-    _arg5: u64,
+    arg5: u64,
     arg5_cageid: u64,
-    _arg6: u64,
+    arg6: u64,
     arg6_cageid: u64,
 ) -> i32 {
-    0
+    let cmd = sc_convert_sysarg_to_i32(cmd_arg, cmd_cageid, cageid);
+    let arg = sc_convert_sysarg_to_i32(arg_arg, arg_cageid, cageid);
+    // would sometimes check, sometimes be a no-op depending on the compiler settings
+    if !(sc_unusedarg(arg4, arg4_cageid)
+        && sc_unusedarg(arg5, arg5_cageid)
+        && sc_unusedarg(arg6, arg6_cageid))
+    {
+        return syscall_error(Errno::EFAULT, "munmap_syscall", "Invalide Cage ID");
+    }
+    match (cmd, arg) {
+        (F_GETOWN, ..) => {
+            // 
+            1000
+        }
+        (F_SETOWN, arg) if arg >= 0 => {
+            0
+        }
+        _ => {
+            let wrappedvfd = fdtables::translate_virtual_fd(self.cageid, virtual_fd as u64);
+            if wrappedvfd.is_err() {
+                return syscall_error(Errno::EBADF, "fcntl", "Bad File Descriptor");
+            }
+            let vfd = wrappedvfd.unwrap();
+            if cmd == libc::F_DUPFD {
+                match arg {
+                    n if n < 0 => return syscall_error(Errno::EINVAL, "fcntl", "op is F_DUPFD and arg is negative or is greater than the maximum allowable value"),
+                    0..=1024 => return self.dup2_syscall(virtual_fd, arg),
+                    _ => return syscall_error(Errno::EMFILE, "fcntl", "op is F_DUPFD and the per-process limit on the number of open file descriptors has been reached")
+                }
+            }
+            let ret = unsafe { libc::fcntl(vfd.underfd as i32, cmd, arg) };
+            if ret < 0 {
+                let errno = get_errno();
+                return handle_errno(errno, "fcntl");
+            }
+            ret
+        }
+    }
+}
+
+pub fn clock_gettime_syscall(
+    cageid: u64,
+    clockid_arg: u64,
+    clockid_cageid: u64,
+    tp_arg: u64,
+    tp_cageid: u64,
+    arg3: u64,
+    arg3_cageid: u64,
+    arg4: u64,
+    arg4_cageid: u64,
+    arg5: u64,
+    arg5_cageid: u64,
+    arg6: u64,
+    arg6_cageid: u64,
+) -> i32 {
+    let clockid = sc_convert_sysarg_to_u32(clockid_arg, clockid_cageid, cageid);
+    let tp = sc_convert_sysarg_to_usize(tp_arg, tp_cageid, cageid);
+    // would sometimes check, sometimes be a no-op depending on the compiler settings
+    if !(sc_unusedarg(arg3, arg3_cageid)
+        && sc_unusedarg(arg4, arg4_cageid)
+        && sc_unusedarg(arg5, arg5_cageid)
+        && sc_unusedarg(arg6, arg6_cageid))
+    {
+        return syscall_error(Errno::EFAULT, "clock_gettime", "Invalide Cage ID");
+    }
+
+    let ret = unsafe { syscall(SYS_clock_gettime, clockid, tp) as i32 };
+
+    if ret < 0 {
+        let errno = get_errno();
+        return handle_errno(errno, "clock_gettime");
+    }
+
+    ret
 }
