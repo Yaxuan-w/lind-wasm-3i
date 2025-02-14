@@ -7,7 +7,8 @@ use crate::memory::mem_helper::*;
 use crate::memory::vmmap::{VmmapOps, *};
 use fdtables;
 use sysdefs::constants::err_const::{get_errno, handle_errno, syscall_error, Errno};
-use sysdefs::constants::fs_const;
+use sysdefs::constants::fs_const::{MAP_ANONYMOUS, MAP_FAILED, MAP_FIXED, MAP_PRIVATE, MAP_SHARED, PAGESHIFT, PROT_EXEC, PROT_NONE, PROT_READ, PROT_WRITE, F_GETFL, PAGESHIFT, PAGESIZE
+};
 use sysdefs::constants::fs_const::*;
 use libc::*;
 
