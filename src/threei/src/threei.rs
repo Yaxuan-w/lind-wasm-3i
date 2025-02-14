@@ -8,7 +8,8 @@ use std::sync::{Arc, Mutex};
 
 // use cage::cage::get_cage;
 // use cage::memory::mem_helper::*;
-use sysdefs::{Errno,threeiconstant};
+use sysdefs::constants::threeiconstant;
+use sysdefs::constants::Errno;
 use sysdefs::constants::{PROT_READ, PROT_WRITE};
 use std::io;
 

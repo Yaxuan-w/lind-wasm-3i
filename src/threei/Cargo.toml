@@ -9,3 +9,4 @@ sysdefs = { path = "../sysdefs" }
 rawposix = { path = "../rawposix" }
 dashmap = "5.0"      
 once_cell = "1.18" 
+lazy_static = "1.4"
