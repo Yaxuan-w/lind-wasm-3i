@@ -125,7 +125,7 @@ pub fn mkdir_syscall(
         && sc_unusedarg(arg5, arg5_cageid)
         && sc_unusedarg(arg6, arg6_cageid))
     {
-        return syscall_error(Errno::EFAULT, "open_syscall", "Invalide Cage ID");
+        return syscall_error(Errno::EFAULT, "mkdir_syscall", "Invalide Cage ID");
     }
 
     let ret = unsafe { libc::mkdir(path.as_ptr(), mode) };
@@ -227,14 +227,59 @@ pub fn dup_syscall(
     if virtual_fd < 0 {
         return syscall_error(Errno::EBADF, "dup", "Bad File Descriptor");
     }
-    let wrappedvfd = fdtables::translate_virtual_fd(self.cageid, virtual_fd as u64);
+    let wrappedvfd = fdtables::translate_virtual_fd(cageid, virtual_fd as u64);
     if wrappedvfd.is_err() {
         return syscall_error(Errno::EBADF, "dup", "Bad File Descriptor");
     }
     let vfd = wrappedvfd.unwrap();
     let ret_kernelfd = unsafe{ libc::dup(vfd.underfd as i32) };
-    let ret_virtualfd = fdtables::get_unused_virtual_fd(self.cageid, vfd.fdkind, ret_kernelfd as u64, false, 0).unwrap();
+    let ret_virtualfd = fdtables::get_unused_virtual_fd(cageid, vfd.fdkind, ret_kernelfd as u64, false, 0).unwrap();
     return ret_virtualfd as i32;
+    
+}
+
+pub fn dup2_syscall(
+    cageid: u64,
+    old_virtualfd: u64,
+    old_vfd_cageid: u64,
+    new_virtualfd: u64,
+    new_vfd_cageid: u64,
+    arg3: u64,
+    arg3_cageid: u64,
+    arg4: u64,
+    arg4_cageid: u64,
+    arg5: u64,
+    arg5_cageid: u64,
+    arg6: u64,
+    arg6_cageid: u64,
+) -> i32 {
+    // would sometimes check, sometimes be a no-op depending on the compiler settings
+    if !(sc_unusedarg(arg3, arg3_cageid)
+        && sc_unusedarg(arg4, arg4_cageid)
+        && sc_unusedarg(arg5, arg5_cageid)
+        && sc_unusedarg(arg6, arg6_cageid))
+    {
+        return syscall_error(Errno::EFAULT, "dup2", "Invalide Cage ID");
+    }
+
+    if old_virtualfd < 0 || new_virtualfd < 0 {
+        return syscall_error(Errno::EBADF, "dup2", "Bad File Descriptor");
+    }
+
+    match fdtables::translate_virtual_fd(cageid, old_virtualfd) {
+        Ok(old_vfd) => {
+            let new_kernelfd = unsafe {
+                libc::dup(old_vfd.underfd as i32)
+            };
+            // Map new kernel fd with provided kernel fd
+            let _ret_kernelfd = unsafe{ libc::dup2(old_vfd.underfd as i32, new_kernelfd) };
+            let _ = fdtables::get_specific_virtual_fd(cageid, new_virtualfd, old_vfd.fdkind, new_kernelfd as u64, false, old_vfd.perfdinfo).unwrap();
+            return new_virtualfd;
+        },
+        Err(_e) => {
+            return syscall_error(Errno::EBADF, "dup2", "Bad File Descriptor");
+        }
+    }
     
 }
 
@@ -503,7 +548,7 @@ pub fn munmap_syscall(
         && sc_unusedarg(arg5, arg5_cageid)
         && sc_unusedarg(arg6, arg6_cageid))
     {
-        return syscall_error(Errno::EFAULT, "munmap_syscall", "Invalide Cage ID");
+        return syscall_error(Errno::EFAULT, "munmap", "Invalide Cage ID");
     }
 
     if len == 0 {
@@ -514,7 +559,7 @@ pub fn munmap_syscall(
     // check if the provided address is multiple of pages
     let rounded_addr = round_up_page(addr as u64) as usize;
     if rounded_addr != addr as usize {
-        return syscall_error(Errno::EINVAL, "mmap", "address it not aligned");
+        return syscall_error(Errno::EINVAL, "munmap", "address it not aligned");
     }
 
     let vmmap = cage.vmmap.read();
@@ -584,7 +629,7 @@ pub fn brk_syscall(
         && sc_unusedarg(arg5, arg5_cageid)
         && sc_unusedarg(arg6, arg6_cageid))
     {
-        return syscall_error(Errno::EFAULT, "munmap_syscall", "Invalide Cage ID");
+        return syscall_error(Errno::EFAULT, "brk", "Invalide Cage ID");
     }
 
     let cage = get_cage(cageid).unwrap();
@@ -694,7 +739,7 @@ pub fn sbrk_syscall(
     arg6: u64,
     arg6_cageid: u64,
 ) -> i32 {
-    println!("[sbrk_syscall]")
+    println!("[sbrk_syscall]");
     let brk = sc_convert_sysarg_to_i32(sbrk_arg, sbrk_cageid, cageid);
     // would sometimes check, sometimes be a no-op depending on the compiler settings
     if !(sc_unusedarg(arg2, arg2_cageid)
@@ -703,7 +748,7 @@ pub fn sbrk_syscall(
         && sc_unusedarg(arg5, arg5_cageid)
         && sc_unusedarg(arg6, arg6_cageid))
     {
-        return syscall_error(Errno::EFAULT, "munmap_syscall", "Invalide Cage ID");
+        return syscall_error(Errno::EFAULT, "sbrk_syscall", "Invalide Cage ID");
     }
 
     let cage = get_cage(sbrk_cageid).unwrap();
@@ -777,7 +822,7 @@ pub fn fcntl_syscall(
         && sc_unusedarg(arg5, arg5_cageid)
         && sc_unusedarg(arg6, arg6_cageid))
     {
-        return syscall_error(Errno::EFAULT, "munmap_syscall", "Invalide Cage ID");
+        return syscall_error(Errno::EFAULT, "fcntl_syscall", "Invalide Cage ID");
     }
     match (cmd, arg) {
         (F_GETOWN, ..) => {
@@ -788,7 +833,7 @@ pub fn fcntl_syscall(
             0
         }
         _ => {
-            let wrappedvfd = fdtables::translate_virtual_fd(self.cageid, virtual_fd as u64);
+            let wrappedvfd = fdtables::translate_virtual_fd(cageid, virtual_fd as u64);
             if wrappedvfd.is_err() {
                 return syscall_error(Errno::EBADF, "fcntl", "Bad File Descriptor");
             }
@@ -796,7 +841,7 @@ pub fn fcntl_syscall(
             if cmd == libc::F_DUPFD {
                 match arg {
                     n if n < 0 => return syscall_error(Errno::EINVAL, "fcntl", "op is F_DUPFD and arg is negative or is greater than the maximum allowable value"),
-                    0..=1024 => return self.dup2_syscall(virtual_fd, arg),
+                    0..=1024 => return dup2_syscall(vfd_cageid, virtual_fd, vfd_cageid, arg, arg_cageid, 0, 0, 0, 0, 0, 0, 0, 0),
                     _ => return syscall_error(Errno::EMFILE, "fcntl", "op is F_DUPFD and the per-process limit on the number of open file descriptors has been reached")
                 }
             }
