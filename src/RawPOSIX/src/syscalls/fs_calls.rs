@@ -6,10 +6,10 @@ use crate::cage::get_cage;
 use crate::memory::mem_helper::*;
 use crate::memory::vmmap::{VmmapOps, *};
 use fdtables;
-use libc::c_void;
 use sysdefs::constants::err_const::{get_errno, handle_errno, syscall_error, Errno};
 use sysdefs::constants::fs_const;
 use sysdefs::constants::fs_const::*;
+use libc::
 
 /// Helper function for close_syscall
 ///
@@ -274,7 +274,7 @@ pub fn dup2_syscall(
             // Map new kernel fd with provided kernel fd
             let _ret_kernelfd = unsafe{ libc::dup2(old_vfd.underfd as i32, new_kernelfd) };
             let _ = fdtables::get_specific_virtual_fd(cageid, new_virtualfd, old_vfd.fdkind, new_kernelfd as u64, false, old_vfd.perfdinfo).unwrap();
-            return new_virtualfd;
+            return new_virtualfd as i32;
         },
         Err(_e) => {
             return syscall_error(Errno::EBADF, "dup2", "Bad File Descriptor");
@@ -841,7 +841,7 @@ pub fn fcntl_syscall(
             if cmd == libc::F_DUPFD {
                 match arg {
                     n if n < 0 => return syscall_error(Errno::EINVAL, "fcntl", "op is F_DUPFD and arg is negative or is greater than the maximum allowable value"),
-                    0..=1024 => return dup2_syscall(vfd_cageid, virtual_fd, vfd_cageid, arg, arg_cageid, 0, 0, 0, 0, 0, 0, 0, 0),
+                    0..=1024 => return dup2_syscall(vfd_cageid, virtual_fd, vfd_cageid, arg as u64, arg_cageid, 0, 0, 0, 0, 0, 0, 0, 0),
                     _ => return syscall_error(Errno::EMFILE, "fcntl", "op is F_DUPFD and the per-process limit on the number of open file descriptors has been reached")
                 }
             }
