@@ -1,4 +1,4 @@
-use crate::threei::syscall_table::SYSCALL_TABLE;
+use crate::syscall_table::SYSCALL_TABLE;
 
 use core::panic;
 use dashmap::DashSet;
@@ -9,6 +9,7 @@ use std::sync::{Arc, Mutex};
 // use cage::cage::get_cage;
 // use cage::memory::mem_helper::*;
 use sysdefs::{Errno,threeiconstant};
+use sysdefs::constants::{PROT_READ, PROT_WRITE};
 use std::io;
 
 const exit_syscallnum: u64 = 30; // Develop purpose only
@@ -505,53 +506,53 @@ pub fn harsh_cage_exit(
 //  - If the destination range becomes valid and satisfies the required permissions after mapping, proceed to
 //      perform the copy operation.
 // Otherwise, abort the operation if the mapping fails or permissions are insufficient.
-pub fn copy_data_between_cages(
-    callnum: u64,
-    targetcage: u64,
-    srcaddr: u64,
-    srccage: u64,
-    destaddr: u64,
-    destcage: u64,
-    len: u64,
-    _arg3cage: u64,
-    copytype: u64,
-    _arg4cage: u64,
-    _arg5: u64,
-    _arg5cage: u64,
-    _arg6: u64,
-    _arg6cage: u64,
-) -> u64 {
-    // Check address validity and permissions
-    // Validate source address
-    if !check_addr(srccage, srcaddr, len as usize, PROT_READ as i32).unwrap_or(false) {
-        eprintln!("Source address is invalid.");
-        return threeiconstant::ELINDAPIABORTED; // Error: Invalid address
-    }
+// pub fn copy_data_between_cages(
+//     callnum: u64,
+//     targetcage: u64,
+//     srcaddr: u64,
+//     srccage: u64,
+//     destaddr: u64,
+//     destcage: u64,
+//     len: u64,
+//     _arg3cage: u64,
+//     copytype: u64,
+//     _arg4cage: u64,
+//     _arg5: u64,
+//     _arg5cage: u64,
+//     _arg6: u64,
+//     _arg6cage: u64,
+// ) -> u64 {
+//     // Check address validity and permissions
+//     // Validate source address
+//     if !check_addr(srccage, srcaddr, len as usize, PROT_READ as i32).unwrap_or(false) {
+//         eprintln!("Source address is invalid.");
+//         return threeiconstant::ELINDAPIABORTED; // Error: Invalid address
+//     }
 
-    // Validate destination address, and we will try to map if we don't the memory region
-    // unmapping
-    if !check_addr(destcage, destaddr, len as usize, PROT_WRITE as i32).unwrap_or(false) {
-        eprintln!("Dest address is invalid.");
-        return threeiconstant::ELINDAPIABORTED; // Error: Invalid address
-    }
+//     // Validate destination address, and we will try to map if we don't the memory region
+//     // unmapping
+//     if !check_addr(destcage, destaddr, len as usize, PROT_WRITE as i32).unwrap_or(false) {
+//         eprintln!("Dest address is invalid.");
+//         return threeiconstant::ELINDAPIABORTED; // Error: Invalid address
+//     }
 
-    // TODO:
-    //  - Do we need to consider the permission relationship between cages..?
-    //      ie: only parent cage can perfrom copy..?
-    // if !_has_permission(srccage, destcage) {
-    //     eprintln!("Permission denied between cages.");
-    //     return threeiconstant::ELINDAPIABORTED; // Error: Permission denied
-    // }
+//     // TODO:
+//     //  - Do we need to consider the permission relationship between cages..?
+//     //      ie: only parent cage can perfrom copy..?
+//     // if !_has_permission(srccage, destcage) {
+//     //     eprintln!("Permission denied between cages.");
+//     //     return threeiconstant::ELINDAPIABORTED; // Error: Permission denied
+//     // }
 
-    // Perform the data copy
-    unsafe {
-        let src_ptr = srcaddr as *const u8;
-        let dest_ptr = destaddr as *mut u8;
-        std::ptr::copy_nonoverlapping(src_ptr, dest_ptr, len as usize);
-    }
+//     // Perform the data copy
+//     unsafe {
+//         let src_ptr = srcaddr as *const u8;
+//         let dest_ptr = destaddr as *mut u8;
+//         std::ptr::copy_nonoverlapping(src_ptr, dest_ptr, len as usize);
+//     }
 
-    0
-}
+//     0
+// }
 
 // -- Check if permissions allow data copying between cages
 // TODO:
