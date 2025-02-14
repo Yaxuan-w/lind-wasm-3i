@@ -9,7 +9,7 @@ use fdtables;
 use sysdefs::constants::err_const::{get_errno, handle_errno, syscall_error, Errno};
 use sysdefs::constants::fs_const;
 use sysdefs::constants::fs_const::*;
-use libc::
+use libc::*;
 
 /// Helper function for close_syscall
 ///
