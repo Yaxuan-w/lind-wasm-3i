@@ -11,11 +11,11 @@ use std::sync::Arc;
 use crate::syscalls::fs_calls::kernel_close;
 use cage::memory::mem_helper::*;
 use cage::memory::vmmap::{VmmapOps, *};
-use cage::{Cage, get_cage, add_cage, cagetable_clear};
+use cage::{Cage, get_cage, add_cage, cagetable_clear, Zombie};
 use fdtables;
 use sysdefs::constants::err_const::{get_errno, handle_errno, syscall_error, Errno};
 use sysdefs::constants::fs_const::*;
-use sysdefs::constants::EXIT_SUCCESS;
+use sysdefs::constants::{EXIT_SUCCESS, VERBOSE};
 
 /// Reference to Linux: https://man7.org/linux/man-pages/man2/fork.2.html
 ///
