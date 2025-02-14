@@ -8,10 +8,8 @@ use std::sync::{Arc, Mutex};
 
 // use cage::cage::get_cage;
 // use cage::memory::mem_helper::*;
-use sysdefs::constants::threeiconstant;
-use sysdefs::constants::Errno;
-use sysdefs::constants::{PROT_READ, PROT_WRITE};
-use std::io;
+use sysdefs::constants::threei_const;
+// use sysdefs::constants::{PROT_READ, PROT_WRITE}; // might be used on memcp, so keep them for now
 
 const exit_syscallnum: u64 = 30; // Develop purpose only
 
@@ -116,13 +114,13 @@ pub fn register_handler(
 ) -> u64 {
     // Make sure that both the cage that registers the handler and the cage being registered are valid (not in exited state)
     if EXITING_TABLE.contains(&targetcage) && EXITING_TABLE.contains(&handlefunccage) {
-        return threeiconstant::ELINDESRCH;
+        return threei_const::ELINDESRCH;
     }
 
     let mut handler_table = HANDLERTABLE.lock().unwrap();
 
-    if handlefunccage == threeiconstant::THREEI_DEREGISTER {
-        if targetcallnum == threeiconstant::THREEI_MATCHALL {
+    if handlefunccage == threei_const::THREEI_DEREGISTER {
+        if targetcallnum == threei_const::THREEI_MATCHALL {
             // Remove all handlers where dest_cageid == targetcage
             handler_table.retain(|_self_cageid, inner_map| {
                 inner_map.retain(|_callnum, cage_call_table| {
@@ -179,7 +177,7 @@ pub fn register_handler(
             .entry(handlefunccage)
             .or_insert_with(HashMap::new);
 
-        if targetcallnum == threeiconstant::THREEI_MATCHALL {
+        if targetcallnum == threei_const::THREEI_MATCHALL {
             // Get the entry
             let cage_call_table = cage_handlers
                 .entry(targetcallnum)
@@ -199,7 +197,7 @@ pub fn register_handler(
                 "Syscall number {} not found in SYSCALL_TABLE!",
                 targetcallnum
             );
-            return threeiconstant::ELINDAPIABORTED; // Error: Syscall not found
+            return threei_const::ELINDAPIABORTED; // Error: Syscall not found
         }
     }
     // eprintln!("HANDLERTABLE: {:?}", *handler_table);
@@ -261,7 +259,7 @@ pub fn copy_handler_table_to_cage(
         );
     } else {
         println!("No entries found for srccage {} in HANDLERTABLE", srccage);
-        return threeiconstant::ELINDAPIABORTED;
+        return threei_const::ELINDAPIABORTED;
     }
     0
 }
@@ -310,7 +308,7 @@ pub fn make_syscall(
     // Return error if the target cage/grate is exiting. We need to add this check beforehead, because make_syscall will also
     // contain cases that can directly redirect a syscall when self_cageid == target_id, which will bypass the handlertable check
     if EXITING_TABLE.contains(&target_cageid) && syscall_num != exit_syscallnum {
-        return threeiconstant::ELINDESRCH as i32;
+        return threei_const::ELINDESRCH as i32;
     }
 
     if self_cageid == target_cageid || syscall_num == exit_syscallnum {
@@ -336,7 +334,7 @@ pub fn make_syscall(
             return ret;
         } else {
             eprintln!("Syscall number {} not found!", syscall_num);
-            return threeiconstant::ELINDAPIABORTED as i32;
+            return threei_const::ELINDAPIABORTED as i32;
         }
     }
 
@@ -371,21 +369,21 @@ pub fn make_syscall(
                     arg6_cageid,
                 );
             } else {
-                return threeiconstant::ELINDESRCH as i32;
+                return threei_const::ELINDESRCH as i32;
             };
         } else {
             eprintln!(
                 "NO target syscall {} found for self cage {}",
                 syscall_num, self_cageid
             );
-            return threeiconstant::ELINDAPIABORTED as i32;
+            return threei_const::ELINDAPIABORTED as i32;
         }
     } else {
         eprintln!(
             "Permission denied! No syscalls alllowed for self cage {}",
             self_cageid
         );
-        return threeiconstant::ELINDAPIABORTED as i32;
+        return threei_const::ELINDAPIABORTED as i32;
     }
 }
 
@@ -527,14 +525,14 @@ pub fn harsh_cage_exit(
 //     // Validate source address
 //     if !check_addr(srccage, srcaddr, len as usize, PROT_READ as i32).unwrap_or(false) {
 //         eprintln!("Source address is invalid.");
-//         return threeiconstant::ELINDAPIABORTED; // Error: Invalid address
+//         return threei_const::ELINDAPIABORTED; // Error: Invalid address
 //     }
 
 //     // Validate destination address, and we will try to map if we don't the memory region
 //     // unmapping
 //     if !check_addr(destcage, destaddr, len as usize, PROT_WRITE as i32).unwrap_or(false) {
 //         eprintln!("Dest address is invalid.");
-//         return threeiconstant::ELINDAPIABORTED; // Error: Invalid address
+//         return threei_const::ELINDAPIABORTED; // Error: Invalid address
 //     }
 
 //     // TODO:
@@ -542,7 +540,7 @@ pub fn harsh_cage_exit(
 //     //      ie: only parent cage can perfrom copy..?
 //     // if !_has_permission(srccage, destcage) {
 //     //     eprintln!("Permission denied between cages.");
-//     //     return threeiconstant::ELINDAPIABORTED; // Error: Permission denied
+//     //     return threei_const::ELINDAPIABORTED; // Error: Permission denied
 //     // }
 
 //     // Perform the data copy
