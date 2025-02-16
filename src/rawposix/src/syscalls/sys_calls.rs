@@ -11,7 +11,7 @@ use std::sync::Arc;
 use crate::syscalls::fs_calls::kernel_close;
 use cage::memory::mem_helper::*;
 use cage::memory::vmmap::{VmmapOps, *};
-use cage::{Cage, get_cage, add_cage, cagetable_clear, Zombie, remove_cage;};
+use cage::{Cage, get_cage, add_cage, cagetable_clear, Zombie, remove_cage};
 use fdtables;
 use sysdefs::constants::err_const::{get_errno, handle_errno, syscall_error, Errno};
 use sysdefs::constants::fs_const::*;
