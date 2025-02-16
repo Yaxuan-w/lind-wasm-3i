@@ -77,7 +77,7 @@ pub fn sc_convert_path_to_host(
 
     #[cfg(feature = "secure")]
     {
-        let total_length = fs_const::LIND_ROOT.len() + relative_path.len();
+        let total_length = LIND_ROOT.len() + relative_path.len();
 
         if total_length >= PATH_MAX {
             panic!("Path exceeds PATH_MAX (4096)");
@@ -86,7 +86,7 @@ pub fn sc_convert_path_to_host(
 
     // CString will handle the case when string is not terminated by `\0`, but will return error if `\0` is
     // contained within the string.
-    let full_path = format!("{}{}", fs_const::LIND_ROOT, relative_path);
+    let full_path = format!("{}{}", LIND_ROOT, relative_path);
     match CString::new(full_path) {
         Ok(c_path) => c_path,
         Err(_) => panic!("String contains internal null byte"),
