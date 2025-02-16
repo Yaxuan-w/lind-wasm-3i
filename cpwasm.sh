@@ -16,7 +16,7 @@ for arg in "$@"; do
   esac
 done
 
-cd /home/lind/lind-wasm-3i/src/
+cd /home/lind/lind-wasm-3i/src/wasmtime
 export LIND_ROOT
 echo "LIND_ROOT is set to: $LIND_ROOT"
 cargo build

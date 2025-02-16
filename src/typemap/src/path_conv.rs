@@ -11,6 +11,14 @@ pub use std::{mem, ptr};
 
 pub use sysdefs::constants::fs_const;
 
+use std::env;
+/// If the `LIND_ROOT` environment variable is present at compile time, this will expand into an expression 
+/// of type Option<&'static str> whose value is Some of the value of the environment variable (a compilation 
+/// error will be emitted if the environment variable is not a valid Unicode string). If the environment 
+/// variable is not present, then this will expand to None, and will be set to default path.
+pub const LIND_ROOT: &str = option_env!("LIND_ROOT").unwrap_or("/home/lind/lind-wasm/src/RawPOSIX/tmp");
+
+
 /// Convert data type from `&str` to `PathBuf`
 pub fn convpath(cpath: &str) -> PathBuf {
     PathBuf::from(cpath)
@@ -59,7 +67,7 @@ pub fn add_lind_root(cageid: u64, path: &str) -> CString {
     let relpath = normpath(convpath(path), cageid);
     let relative_path = relpath.to_str().unwrap();
 
-    let full_path = format!("{}{}", fs_const::LIND_ROOT, relative_path);
+    let full_path = format!("{}{}", LIND_ROOT, relative_path);
     let c_path = CString::new(full_path).unwrap();
     c_path
 }
