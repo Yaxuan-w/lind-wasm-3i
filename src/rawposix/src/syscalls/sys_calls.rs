@@ -45,7 +45,7 @@ pub fn fork_syscall(
         && sc_unusedarg(arg5, arg5_cageid)
         && sc_unusedarg(arg6, arg6_cageid))
     {
-        return syscall_error(Errno::EFAULT, "munmap_syscall", "Invalide Cage ID");
+        return syscall_error(Errno::EFAULT, "fork", "Invalide Cage ID");
     }
 
     // Modify the fdtable manually
@@ -106,7 +106,7 @@ pub fn exit_syscall(
         && sc_unusedarg(arg5, arg5_cageid)
         && sc_unusedarg(arg6, arg6_cageid))
     {
-        return syscall_error(Errno::EFAULT, "munmap_syscall", "Invalide Cage ID");
+        return syscall_error(Errno::EFAULT, "exit", "Invalide Cage ID");
     }
 
     let _ = fdtables::remove_cage_from_fdtable(status_cageid);
@@ -157,7 +157,107 @@ pub fn exec_syscall(
     arg6: u64,
     arg6_cageid: u64,
 ) -> i32 {
+    // would sometimes check, sometimes be a no-op depending on the compiler settings
+    if !(sc_unusedarg(arg1, arg1_cageid)
+        && sc_unusedarg(arg2, arg2_cageid)
+        && sc_unusedarg(arg3, arg3_cageid)
+        && sc_unusedarg(arg4, arg4_cageid)
+        && sc_unusedarg(arg5, arg5_cageid)
+        && sc_unusedarg(arg6, arg6_cageid))
+    {
+        return syscall_error(Errno::EFAULT, "exec", "Invalide Cage ID");
+    }
+
+    // Empty fd with flag should_cloexec 
+    fdtables::empty_fds_for_exec(cageid);
+
+    // Copy necessary data from current cage 
+    let selfcage = get_cage(cageid).unwrap();
+
+    let zombies = selfcage.zombies.read();
+    let cloned_zombies = zombies.clone();
+    let child_num = selfcage.child_num.load(interface::RustAtomicOrdering::Relaxed);
+    drop(zombies);
+
+    let newcage = Cage {
+        cageid: cageid,
+        cwd: RwLock::new(selfcage.cwd.read().clone()),
+        parent: selfcage.parent,
+        gid: AtomicI32::new(-1),
+        uid: AtomicI32::new(-1),
+        egid: AtomicI32::new(-1),
+        euid: AtomicI32::new(-1),
+        main_threadid: AtomicU64::new(0),
+        zombies: RwLock::new(cloned_zombies),   // When a process exec-ed, its child relationship should be perserved 
+        child_num: AtomicU64::new(0),
+        vmmap: RwLock::new(Vmmap::new()), // Memory is cleared after exec
+    };
+
+    // Remove the original cage
+    remove_cage(cageid);
+    // Insert the new cage with same cageid
+    add_cage(cageid, newcage);
     0
+}
+
+pub fn getpid_syscall(cageid: u64,
+    arg1: u64,
+    arg1_cageid: u64,
+    arg2: u64,
+    arg2_cageid: u64,
+    arg3: u64,
+    arg3_cageid: u64,
+    arg4: u64,
+    arg4_cageid: u64,
+    arg5: u64,
+    arg5_cageid: u64,
+    arg6: u64,
+    arg6_cageid: u64,
+) -> i32 {
+    // would sometimes check, sometimes be a no-op depending on the compiler settings
+    if !(sc_unusedarg(arg1, arg1_cageid)
+        && sc_unusedarg(arg2, arg2_cageid)
+        && sc_unusedarg(arg3, arg3_cageid)
+        && sc_unusedarg(arg4, arg4_cageid)
+        && sc_unusedarg(arg5, arg5_cageid)
+        && sc_unusedarg(arg6, arg6_cageid))
+    {
+        return syscall_error(Errno::EFAULT, "exec", "Invalide Cage ID");
+    }
+
+    let cage = get_cage(cageid).unwrap();
+
+    return cage.cageid as i32;
+}
+
+pub fn getppid_syscall(cageid: u64,
+    arg1: u64,
+    arg1_cageid: u64,
+    arg2: u64,
+    arg2_cageid: u64,
+    arg3: u64,
+    arg3_cageid: u64,
+    arg4: u64,
+    arg4_cageid: u64,
+    arg5: u64,
+    arg5_cageid: u64,
+    arg6: u64,
+    arg6_cageid: u64,
+) -> i32 {
+    // would sometimes check, sometimes be a no-op depending on the compiler settings
+    if !(sc_unusedarg(arg1, arg1_cageid)
+        && sc_unusedarg(arg2, arg2_cageid)
+        && sc_unusedarg(arg3, arg3_cageid)
+        && sc_unusedarg(arg4, arg4_cageid)
+        && sc_unusedarg(arg5, arg5_cageid)
+        && sc_unusedarg(arg6, arg6_cageid))
+    {
+        return syscall_error(Errno::EFAULT, "exec", "Invalide Cage ID");
+    }
+
+    let cage = get_cage(cageid).unwrap();
+    
+    return cage.parent as i32;
 }
 
 /// Those functions are required by wasmtime to create the first cage. `verbosity` indicates whether

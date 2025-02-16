@@ -7,7 +7,6 @@
 #![allow(unused_variables)]
 
 // ===== Lind File System Root =====
-pub const LIND_ROOT: &str = "/home/lind/lind-wasm/src/RawPOSIX/tmp";
 pub const PATH_MAX: usize = 4096;
 
 // ===== Lind specific
