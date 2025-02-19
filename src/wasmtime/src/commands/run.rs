@@ -43,6 +43,21 @@ fn parse_preloads(s: &str) -> Result<(String, PathBuf)> {
     Ok((parts[0].into(), parts[1].into()))
 }
 
+// -------------- AW --------------
+fn wrap_test_func(mut caller: Caller<'_, Host>, _add: i32) {
+    let table = caller.get_export("__indirect_function_table").unwrap().into_table().unwrap();
+    let func = table.get(&mut caller, 1).unwrap()
+                                        .funcref().unwrap().unwrap()
+                                        .typed::<(i32, i32), i32, _>(&caller).unwrap();
+    let res = func.call(&mut caller, (1, 2)).unwrap();
+    println!("res: {}", res);
+    // unsafe{
+    //     // how can I construct the param?
+    //     test_func(??);
+    // }
+}
+// -------------- AW --------------
+
 /// Runs a WebAssembly module
 #[derive(Parser, PartialEq, Clone)]
 pub struct RunCommand {
@@ -114,12 +129,26 @@ impl RunCommand {
         }
 
         let mut linker = match &main {
-            RunTarget::Core(_) => CliLinker::Core(wasmtime::Linker::new(&engine)),
+            RunTarget::Core(_) =>{
+                // -------------- AW --------------
+                let mut linker = wasmtime::Linker::new(&engine);
+                // Register wrap_test_func
+                linker.func_wrap(
+                    "env",       
+                    "test_func", 
+                    |mut caller: Caller<'_, Host>, add_ptr: i32| {
+                        wrap_test_func(caller, add_ptr);
+                    },
+                )?;
+                // -------------- AW --------------
+                CliLinker::Core(linker)
+            },
             #[cfg(feature = "component-model")]
             RunTarget::Component(_) => {
                 CliLinker::Component(wasmtime::component::Linker::new(&engine))
             }
         };
+
         if let Some(enable) = self.run.common.wasm.unknown_exports_allow {
             match &mut linker {
                 CliLinker::Core(l) => {
