@@ -51,12 +51,10 @@ fn wrap_test_func(mut caller: Caller<'_, Host>, _add: i32) {
         .into_table()
         .unwrap();
 
-    let func = table.get(&mut caller, 1)
-        .unwrap()
-        .into_func()
-        .unwrap()
-        .typed::<(i32, i32), i32, _>(&caller)
-        .unwrap();
+    let func = val.ref_().unwrap().downcast_ref::<Func>().unwrap();
+
+    let func = func.typed::<(i32, i32), i32, _>(&caller).unwrap();
+    
     let res = func.call(&mut caller, (1, 2)).unwrap();
     println!("res: {}", res);
     // unsafe{
