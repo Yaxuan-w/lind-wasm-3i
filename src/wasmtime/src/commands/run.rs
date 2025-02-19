@@ -50,10 +50,10 @@ fn wrap_test_func(mut caller: Caller<'_, Host>, _add: i32) {
         .unwrap()
         .into_table()
         .unwrap();
-    
+
     let val = table.get(&mut caller, 1).unwrap();
 
-    let func = val.ref_().unwrap().downcast_ref::<Func>().unwrap();
+    let func = val.is_func().unwrap().downcast_ref::<Func>().unwrap();
 
     let func = func.typed::<(i32, i32), i32, _>(&caller).unwrap();
     
