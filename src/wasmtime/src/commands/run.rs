@@ -44,11 +44,19 @@ fn parse_preloads(s: &str) -> Result<(String, PathBuf)> {
 }
 
 // -------------- AW --------------
+use wasmtime::Caller;
 fn wrap_test_func(mut caller: Caller<'_, Host>, _add: i32) {
-    let table = caller.get_export("__indirect_function_table").unwrap().into_table().unwrap();
-    let func = table.get(&mut caller, 1).unwrap()
-                                        .funcref().unwrap().unwrap()
-                                        .typed::<(i32, i32), i32, _>(&caller).unwrap();
+    let table = caller.get_export("__indirect_function_table")
+        .unwrap()
+        .into_table()
+        .unwrap();
+
+    let func = table.get(&mut caller, 1)
+        .unwrap()
+        .into_func()
+        .unwrap()
+        .typed::<(i32, i32), i32, _>(&caller)
+        .unwrap();
     let res = func.call(&mut caller, (1, 2)).unwrap();
     println!("res: {}", res);
     // unsafe{
