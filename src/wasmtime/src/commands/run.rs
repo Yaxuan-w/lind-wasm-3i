@@ -571,7 +571,7 @@ impl RunCommand {
                 }
 
                 // -------------- AW --------------
-                if let Some(func) = instance.get_typed_func::<(), i32>(&mut *store, "c_test_func").ok() {
+                if let Some(func) = instance.get_typed_func::<(), i32>(&mut *store, "c_test_func.command_export").ok() {
                     match func.call(&mut *store, ()) {
                         Ok(result) => println!("c_test_func() returned: {}", result),
                         Err(e) => eprintln!("Error calling c_test_func: {:?}", e),
