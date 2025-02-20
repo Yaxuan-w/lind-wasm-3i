@@ -580,7 +580,7 @@ impl RunCommand {
                 //     eprintln!("c_test_func not found in Wasm instance!");
                 // }
                 let table = instance
-                    .get_export(&mut store, "__indirect_function_table")
+                    .get_export(&mut *store, "__indirect_function_table")
                     .and_then(|e| e.into_table())
                     .expect("Table not found");
 
