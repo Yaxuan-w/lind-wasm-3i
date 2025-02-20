@@ -7,7 +7,7 @@ use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 
 /// ------------------------------------------------------------
-pub fn threei_test_func(mut callback: Box<dyn FnMut() -> i32 + 'a>) {
+pub fn threei_test_func<'a>(mut callback: Box<dyn FnMut() -> i32 + 'a>) {
     let result = callback();
     println!("Wasm function returned in 3i: {}", result);
 }
