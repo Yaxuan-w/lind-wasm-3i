@@ -1,11 +1,29 @@
 #![allow(dead_code)]
 
 use anyhow::Result;
-use threei::threei::make_syscall;
+use threei::threei::{make_syscall, threei_test_func};
 use wasmtime_lind_multi_process::{get_memory_base, LindHost, clone_constants::CloneArgStruct};
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
-use wasmtime::Caller;
+use wasmtime::{Caller, Func};
+
+// -------------- AW --------------
+pub struct WasmCallback<'a, T> {
+    caller: &'a mut Caller<'_, T>,
+    func: Func, // Store `c_test_func` from Wasm
+}
+
+impl<'a, T> MyCallback for WasmCallback<'a, T> {
+    fn add(&self, input: i32) -> i32 {
+        let mut result = [0i32; 1];
+        
+        // Call `c_test_func` from Wasm
+        self.func.call(self.caller, &[input.into()], &mut result).unwrap();
+
+        result[0] // return results
+    }
+}
+// -------------- AW --------------
 
 // lind-common serves as the main entry point when lind_syscall. Any syscalls made in glibc would reach here first,
 // then the syscall would be dispatched into rawposix, or other crates under wasmtime, depending on the syscall, to perform its job
@@ -120,6 +138,22 @@ impl LindCommonCtx {
 
         return forked_ctx;
     }
+
+    // -------------- AW --------------
+    pub fn wasmtime_test_func<T: LindHost<T, U> + Clone + Send + 'static + std::marker::Sync, U: Clone + Send + 'static + std::marker::Sync>
+            (&self, caller: &mut Caller<'_, T>) -> i32 {
+        let func = match caller.get_export("c_test_func") {
+            Some(wasmtime::Extern::Func(f)) => f,
+            _ => panic!("Function not found in Wasm"),
+        };
+    
+        // Create `WasmCallback`
+        let wasm_cb = WasmCallback { caller, func };
+    
+        // Send to `threei_test_func`
+        threei_test_func(&wasm_cb);
+    }
+    // -------------- AW --------------
 }
 
 // function to expose the handler to wasm module
@@ -129,6 +163,19 @@ pub fn add_to_linker<T: LindHost<T, U> + Clone + Send + 'static + std::marker::S
     linker: &mut wasmtime::Linker<T>,
     get_cx: impl Fn(&T) -> &LindCommonCtx + Send + Sync + Copy + 'static,
 ) -> anyhow::Result<()> {
+    // -------------- AW --------------
+    // Grate's tmp call num to indicate calling from 3i
+    linker.func_wrap(
+        "lind",
+        "c_test_func",
+        move |mut caller: Caller<'_, T>| -> i32 {
+            let host = caller.data().clone();
+            let ctx = get_cx(&host);
+
+            ctx.wasmtime_test_func(&mut caller)
+        },
+    )
+    // -------------- AW --------------
     // attach lind_syscall to wasmtime
     linker.func_wrap(
         "lind",

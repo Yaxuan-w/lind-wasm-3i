@@ -6,6 +6,19 @@ use once_cell::sync::Lazy;
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 
+/// ------------------------------------------------------------
+pub trait MyCallback {
+    fn add(&self, input: i32) -> i32;
+}
+
+pub fn threei_test_func(cb: &dyn MyCallback) {
+    let r = cb.add(123);
+    println!("[external_lib] cb.do_something(123) => {r}");
+    let r2 = cb.add(-1);
+    println!("[external_lib] cb.do_something(-1) => {r2}");
+}
+/// ------------------------------------------------------------
+
 // use cage::cage::get_cage;
 // use cage::memory::mem_helper::*;
 use sysdefs::constants::threei_const;
