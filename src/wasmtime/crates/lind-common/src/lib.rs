@@ -21,7 +21,7 @@ impl<'a, T> MyCallback for WasmCallback<'a, T> {
         let params = &[Val::I32(input)];
 
         // Call `c_test_func` from Wasm
-        self.func.call(&mut self.caller, params, &mut result).unwrap();
+        self.func.call(&mut *self.caller, params, &mut result).unwrap();
 
         if let Val::I32(res) = result[0] {
             res
