@@ -1,7 +1,7 @@
 #![allow(dead_code)]
 
 use anyhow::Result;
-use threei::threei::{make_syscall, threei_test_func, MyCallback};
+use threei::threei::{make_syscall, threei_test_func};
 use wasmtime_lind_multi_process::{get_memory_base, LindHost, clone_constants::CloneArgStruct};
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
@@ -9,6 +9,7 @@ use wasmtime::{Caller, Func};
 
 // -------------- AW --------------
 use wasmtime::Val;
+use wasmtime::AsContextMut;
 // -------------- AW --------------
 
 // lind-common serves as the main entry point when lind_syscall. Any syscalls made in glibc would reach here first,
