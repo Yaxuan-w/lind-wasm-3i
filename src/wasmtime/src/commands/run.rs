@@ -579,7 +579,7 @@ impl RunCommand {
                 // } else {
                 //     eprintln!("c_test_func not found in Wasm instance!");
                 // }
-                for export in instance.exports(&mut store) {
+                for export in instance.exports(&mut *store) {
                     if let Some(func) = export.into_func() {
                         println!("Exported function (potential syscall): {}", export.name());
                     }
