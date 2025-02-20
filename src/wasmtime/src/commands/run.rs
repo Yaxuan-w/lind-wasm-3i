@@ -114,9 +114,7 @@ impl RunCommand {
         }
 
         let mut linker = match &main {
-            RunTarget::Core(_) =>{
-                CliLinker::Core(linker)
-            },
+            RunTarget::Core(_) => CliLinker::Core(wasmtime::Linker::new(&engine)),
             #[cfg(feature = "component-model")]
             RunTarget::Component(_) => {
                 CliLinker::Component(wasmtime::component::Linker::new(&engine))
