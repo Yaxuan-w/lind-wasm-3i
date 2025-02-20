@@ -127,8 +127,8 @@ impl LindCommonCtx {
     }
 
     // -------------- AW --------------
-    pub fn wasmtime_test_func<'a, T: LindHost<T, U> + Clone + Send + 'static + std::marker::Sync, U: Clone + Send + 'static + std::marker::Sync>
-            (&self, caller: &'a mut Caller<'a, T>) {
+    pub fn wasmtime_test_func<T: LindHost<T, U> + Clone + Send + 'static + std::marker::Sync, U: Clone + Send + 'static + std::marker::Sync>
+            (&self, caller: &mut Caller<'_, T>) {
         let func = match caller.get_export("c_test_func") {
             Some(wasmtime::Extern::Func(f)) => f,
             _ => panic!("Function not found in Wasm"),
