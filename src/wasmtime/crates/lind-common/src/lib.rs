@@ -1,7 +1,7 @@
 #![allow(dead_code)]
 
 use anyhow::Result;
-use threei::threei::{make_syscall, threei_test_func};
+use threei::threei::{make_syscall, threei_test_func, MyCallback};
 use wasmtime_lind_multi_process::{get_memory_base, LindHost, clone_constants::CloneArgStruct};
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
@@ -9,7 +9,7 @@ use wasmtime::{Caller, Func};
 
 // -------------- AW --------------
 pub struct WasmCallback<'a, T> {
-    caller: &'a mut Caller<'_, T>,
+    caller: &'a mut Caller<'a, T>,
     func: Func, // Store `c_test_func` from Wasm
 }
 
@@ -174,7 +174,7 @@ pub fn add_to_linker<T: LindHost<T, U> + Clone + Send + 'static + std::marker::S
 
             ctx.wasmtime_test_func(&mut caller)
         },
-    )
+    )?;
     // -------------- AW --------------
     // attach lind_syscall to wasmtime
     linker.func_wrap(
