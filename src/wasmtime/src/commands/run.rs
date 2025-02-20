@@ -571,14 +571,14 @@ impl RunCommand {
                 }
 
                 // -------------- AW --------------
-                // if let Some(func) = instance.get_typed_func::<(), i32>(&mut *store, "c_test_func.command_export").ok() {
-                //     match func.call(&mut *store, ()) {
-                //         Ok(result) => println!("c_test_func() returned: {}", result),
-                //         Err(e) => eprintln!("Error calling c_test_func: {:?}", e),
-                //     }
-                // } else {
-                //     eprintln!("c_test_func not found in Wasm instance!");
-                // }
+                if let Some(func) = instance.get_typed_func::<(), i32>(&mut *store, "c_test_func.command_export").ok() {
+                    match func.call(&mut *store, ()) {
+                        Ok(result) => println!("c_test_func() returned: {}", result),
+                        Err(e) => eprintln!("Error calling c_test_func: {:?}", e),
+                    }
+                } else {
+                    eprintln!("c_test_func not found in Wasm instance!");
+                }
                 let table = instance
                     .get_export(&mut *store, "__indirect_function_table")
                     .and_then(|e| e.into_table())
