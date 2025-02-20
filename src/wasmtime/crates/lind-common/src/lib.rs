@@ -21,7 +21,7 @@ impl<'a, T> MyCallback for WasmCallback<'a, T> {
         let params = &[Val::I32(input)];
 
         // Call `c_test_func` from Wasm
-        self.func.call(self.caller, params, &mut result).unwrap();
+        self.func.call(&mut self.caller, params, &mut result).unwrap();
 
         if let Val::I32(res) = result[0] {
             res
@@ -175,10 +175,11 @@ pub fn add_to_linker<T: LindHost<T, U> + Clone + Send + 'static + std::marker::S
     linker.func_wrap(
         "lind",
         "c_test_func",
-        move |mut caller: Caller<'_, T>| {
+        move |caller: Caller<'_, T>| {
             let host = caller.data().clone();
             let ctx = get_cx(&host);
 
+            let mut caller = caller;
             ctx.wasmtime_test_func(&mut caller)
         },
     )?;
