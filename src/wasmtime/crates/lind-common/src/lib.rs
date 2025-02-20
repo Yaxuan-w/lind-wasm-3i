@@ -15,12 +15,18 @@ pub struct WasmCallback<'a, T> {
 
 impl<'a, T> MyCallback for WasmCallback<'a, T> {
     fn add(&self, input: i32) -> i32 {
-        let mut result = [0i32; 1];
+        let mut result = [Val::I32(0)];
         
-        // Call `c_test_func` from Wasm
-        self.func.call(self.caller, &[input.into()], &mut result).unwrap();
+        let params = &[Val::I32(input)];
 
-        result[0] // return results
+        // Call `c_test_func` from Wasm
+        self.func.call(self.caller, params, &mut result).unwrap();
+
+        if let Val::I32(res) = result[0] {
+            res
+        } else {
+            panic!("Unexpected return type");
+        }
     }
 }
 // -------------- AW --------------
@@ -141,7 +147,7 @@ impl LindCommonCtx {
 
     // -------------- AW --------------
     pub fn wasmtime_test_func<T: LindHost<T, U> + Clone + Send + 'static + std::marker::Sync, U: Clone + Send + 'static + std::marker::Sync>
-            (&self, caller: &mut Caller<'_, T>) -> i32 {
+            (&self, caller: &mut Caller<'_, T>) {
         let func = match caller.get_export("c_test_func") {
             Some(wasmtime::Extern::Func(f)) => f,
             _ => panic!("Function not found in Wasm"),
