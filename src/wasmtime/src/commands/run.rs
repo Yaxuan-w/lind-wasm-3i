@@ -205,6 +205,19 @@ impl RunCommand {
                 })
         });
 
+        // -------------- AW --------------
+        if let Ok(instance) = store.data().get_wasm_instance() {
+            if let Some(func) = instance.get_typed_func::<(), i32>(&mut store, "c_test_func").ok() {
+                match func.call(&mut store, ()) {
+                    Ok(result) => println!("c_test_func() returned: {}", result),
+                    Err(e) => eprintln!("Error calling c_test_func: {:?}", e),
+                }
+            } else {
+                eprintln!("c_test_func not found in Wasm instance!");
+            }
+        }
+        // -------------- AW --------------
+        
         // Load the main wasm module.
         match result {
             Ok(res) => {

@@ -127,35 +127,35 @@ impl LindCommonCtx {
     }
 
     // -------------- AW --------------
-    pub fn wasmtime_test_func<T: LindHost<T, U> + Clone + Send + 'static + std::marker::Sync, U: Clone + Send + 'static + std::marker::Sync>
-            (&self, caller: &mut Caller<'_, T>) {
-        let func = match caller.get_export("c_test_func") {
-            Some(wasmtime::Extern::Func(f)) => f,
-            _ => panic!("Function not found in Wasm"),
-        };
+    // pub fn wasmtime_test_func<T: LindHost<T, U> + Clone + Send + 'static + std::marker::Sync, U: Clone + Send + 'static + std::marker::Sync>
+    //         (&self, caller: &mut Caller<'_, T>) {
+    //     let func = match caller.get_export("c_test_func") {
+    //         Some(wasmtime::Extern::Func(f)) => f,
+    //         _ => panic!("Function not found in Wasm"),
+    //     };
     
-        // Send to `threei_test_func`
-        threei_test_func(Box::new(move || -> i32 {
-            let mut store = caller.as_context_mut();
+    //     // Send to `threei_test_func`
+    //     threei_test_func(Box::new(move || -> i32 {
+    //         let mut store = caller.as_context_mut();
     
-            // Define return value
-            let mut results = [Val::I32(0)];
+    //         // Define return value
+    //         let mut results = [Val::I32(0)];
     
-            match func.call(&mut store, &[], &mut results) {
-                Ok(_) => {
-                    if let Val::I32(value) = results[0] {
-                        value
-                    } else {
-                        panic!("Unexpected return type from Wasm function");
-                    }
-                }
-                Err(e) => {
-                    eprintln!("Error calling Wasm function: {:?}", e);
-                    -1
-                }
-            }
-        }));
-    }
+    //         match func.call(&mut store, &[], &mut results) {
+    //             Ok(_) => {
+    //                 if let Val::I32(value) = results[0] {
+    //                     value
+    //                 } else {
+    //                     panic!("Unexpected return type from Wasm function");
+    //                 }
+    //             }
+    //             Err(e) => {
+    //                 eprintln!("Error calling Wasm function: {:?}", e);
+    //                 -1
+    //             }
+    //         }
+    //     }));
+    // }
     // -------------- AW --------------
 }
 
@@ -166,20 +166,6 @@ pub fn add_to_linker<T: LindHost<T, U> + Clone + Send + 'static + std::marker::S
     linker: &mut wasmtime::Linker<T>,
     get_cx: impl Fn(&T) -> &LindCommonCtx + Send + Sync + Copy + 'static,
 ) -> anyhow::Result<()> {
-    // -------------- AW --------------
-    // Grate's tmp call num to indicate calling from 3i
-    linker.func_wrap(
-        "lind",
-        "c_test_func",
-        move |caller: Caller<'_, T>| {
-            let host = caller.data().clone();
-            let ctx = get_cx(&host);
-
-            let mut caller = caller;
-            ctx.wasmtime_test_func(&mut caller)
-        },
-    )?;
-    // -------------- AW --------------
     // attach lind_syscall to wasmtime
     linker.func_wrap(
         "lind",
