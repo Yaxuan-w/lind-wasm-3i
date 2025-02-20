@@ -181,7 +181,7 @@ impl RunCommand {
                 }
             }
         }
-        println!("Modules in run.rs: {:?}", module);
+        println!("Modules in run.rs: {:?}", modules);
         // Initialize Lind here
         rawposix::lindrustinit(0);
         // new cage is created
