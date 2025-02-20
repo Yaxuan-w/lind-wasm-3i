@@ -7,15 +7,9 @@ use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 
 /// ------------------------------------------------------------
-pub trait MyCallback {
-    fn add(&self, input: i32) -> i32;
-}
-
-pub fn threei_test_func(cb: &dyn MyCallback) {
-    let r = cb.add(123);
-    println!("[external_lib] cb.do_something(123) => {r}");
-    let r2 = cb.add(-1);
-    println!("[external_lib] cb.do_something(-1) => {r2}");
+pub fn threei_test_func(callback: Box<dyn Fn() -> i32>) {
+    let result = callback();
+    println!("Wasm function returned in 3i: {}", result);
 }
 /// ------------------------------------------------------------
 

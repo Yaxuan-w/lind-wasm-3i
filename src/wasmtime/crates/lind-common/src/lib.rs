@@ -9,27 +9,6 @@ use wasmtime::{Caller, Func};
 
 // -------------- AW --------------
 use wasmtime::Val;
-pub struct WasmCallback<'a, T> {
-    caller: &'a mut Caller<'a, T>,
-    func: Func, // Store `c_test_func` from Wasm
-}
-
-impl<'a, T> MyCallback for WasmCallback<'a, T> {
-    fn add(&self, input: i32) -> i32 {
-        let mut result = [Val::I32(0)];
-        
-        let params = &[Val::I32(input)];
-
-        // Call `c_test_func` from Wasm
-        self.func.call(&mut *self.caller, params, &mut result).unwrap();
-
-        if let Val::I32(res) = result[0] {
-            res
-        } else {
-            panic!("Unexpected return type");
-        }
-    }
-}
 // -------------- AW --------------
 
 // lind-common serves as the main entry point when lind_syscall. Any syscalls made in glibc would reach here first,
@@ -154,11 +133,27 @@ impl LindCommonCtx {
             _ => panic!("Function not found in Wasm"),
         };
     
-        // Create `WasmCallback`
-        let wasm_cb = WasmCallback { caller, func };
-    
         // Send to `threei_test_func`
-        threei_test_func(&wasm_cb);
+        threei_test_func(Box::new(move || -> i32 {
+            let mut store = caller.as_context_mut();
+    
+            // Define return value
+            let mut results = [Val::I32(0)];
+    
+            match func.call(&mut store, &[], &mut results) {
+                Ok(_) => {
+                    if let Val::I32(value) = results[0] {
+                        value
+                    } else {
+                        panic!("Unexpected return type from Wasm function");
+                    }
+                }
+                Err(e) => {
+                    eprintln!("Error calling Wasm function: {:?}", e);
+                    -1
+                }
+            }
+        }));
     }
     // -------------- AW --------------
 }
