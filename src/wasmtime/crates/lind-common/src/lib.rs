@@ -8,6 +8,7 @@ use std::sync::Arc;
 use wasmtime::{Caller, Func};
 
 // -------------- AW --------------
+use wasmtime::Val;
 pub struct WasmCallback<'a, T> {
     caller: &'a mut Caller<'a, T>,
     func: Func, // Store `c_test_func` from Wasm
@@ -146,8 +147,8 @@ impl LindCommonCtx {
     }
 
     // -------------- AW --------------
-    pub fn wasmtime_test_func<T: LindHost<T, U> + Clone + Send + 'static + std::marker::Sync, U: Clone + Send + 'static + std::marker::Sync>
-            (&self, caller: &mut Caller<'_, T>) {
+    pub fn wasmtime_test_func<'a, T: LindHost<T, U> + Clone + Send + 'static + std::marker::Sync, U: Clone + Send + 'static + std::marker::Sync>
+            (&self, caller: &'a mut Caller<'a, T>) {
         let func = match caller.get_export("c_test_func") {
             Some(wasmtime::Extern::Func(f)) => f,
             _ => panic!("Function not found in Wasm"),
@@ -174,7 +175,7 @@ pub fn add_to_linker<T: LindHost<T, U> + Clone + Send + 'static + std::marker::S
     linker.func_wrap(
         "lind",
         "c_test_func",
-        move |mut caller: Caller<'_, T>| -> i32 {
+        move |mut caller: Caller<'_, T>| {
             let host = caller.data().clone();
             let ctx = get_cx(&host);
 
