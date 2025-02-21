@@ -296,7 +296,7 @@ impl Instance {
         // -------------- AW --------------
         if let Some(func) = instance.get_func(&mut *store, "pass_fptr_to_wt") {
             println!("pass_fptr_to_wt()!");
-            let _res = threei_test_func(Box::new(move || -> i32 {
+            let _res = threei_test_func(Box::new(move |_, _| -> i32 {
                 let func_typed = match func.typed::<(i32, i32), i32>(&store) {
                     Ok(typed_func) => typed_func,
                     Err(e) => {
@@ -305,7 +305,7 @@ impl Instance {
                     }
                 };
         
-                let result = match func_typed.call(&mut *store, ()) {
+                let result = match func_typed.call(&mut *store, (i32, i32)) {
                     Ok(value) => value,
                     Err(e) => {
                         eprintln!("Error calling pass_fptr_to_wt: {:?}", e);
