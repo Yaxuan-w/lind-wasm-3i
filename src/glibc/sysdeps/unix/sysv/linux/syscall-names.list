@@ -673,4 +673,3 @@ waitid
 waitpid
 write
 writev
-registerhandler
