@@ -50,18 +50,18 @@ impl LindCommonCtx {
                 register_handler(
                     0,
                     arg1,    // Cage to modify
-                    targetcallnum: u64, // Syscall number or match-all indicator
-                    _arg1cage: u64,
-                    handlefunc: u64,     // Function to register or 0 for deregister !!!!
-                    handlefunccage: u64, // Deregister flag or additional information
-                    _arg3: u64,
-                    _arg3cage: u64,
-                    _arg4: u64,
-                    _arg4cage: u64,
-                    _arg5: u64,
-                    _arg5cage: u64,
-                    _arg6: u64,
-                    _arg6cage: u64,
+                    arg2, // Syscall number or match-all indicator
+                    0,
+                    arg3,     // Function to register or 0 for deregister !!!!
+                    arg4, // Deregister flag or additional information
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
                 )
             }
             // clone syscall
