@@ -572,10 +572,7 @@ impl RunCommand {
 
                 // -------------- AW --------------
                 if let Some(func) = instance.get_func(&mut *store, "c_test_func") {
-                    match func.typed::<(), ()>(&store)?.call(&mut *store, ()) {
-                        Ok(result) => println!("c_test_func() returned: {}", result),
-                        Err(e) => eprintln!("Error calling c_test_func: {:?}", e),
-                    }
+                    println!("c_test_func()!");
                 } else {
                     eprintln!("c_test_func not found in Wasm instance!");
                 }
