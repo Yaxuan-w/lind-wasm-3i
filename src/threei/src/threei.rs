@@ -76,6 +76,12 @@ impl CageCallTable {
 // Keys are the cage, the value is a HashMap with a key of the callnum
 // and the values are a (addr, cage) tuple for the actual handlers...
 // Added mutex to avoid race condition
+// lazy_static::lazy_static! {
+//     #[derive(Debug)]
+//     // <self_cageid, <callnum, (addr, dest_cageid)>
+//     // callnum is mapped to addr, not self
+//     pub static ref HANDLERTABLE: Mutex<HashMap<u64, HashMap<u64, Arc<Mutex<CageCallTable>>>>> = Mutex::new(HashMap::new());
+// }
 lazy_static::lazy_static! {
     #[derive(Debug)]
     // <self_cageid, <callnum, (addr, dest_cageid)>
@@ -101,8 +107,16 @@ static EXITING_TABLE: Lazy<DashSet<u64>> = Lazy::new(|| DashSet::new());
 ///
 /// If THREEI_MATCHALL is not set, the thief adds the corresponding items according to the passed arguments
 ///
-/// TODO:
-/// Differences between callnum and handlefunc...?
+/// I want cage 7 to have system call 34 call into my cage's function foo 
+/// ```
+///     register_handler(
+///     NOTUSED, 7,  34, NOTUSED,
+///     foo, mycagenum,
+///     ...)
+/// ```
+/// 
+/// Return:
+///     return 1 if succeed
 pub fn register_handler(
     _callnum: u64,
     targetcage: u64,    // Cage to modify
@@ -119,97 +133,115 @@ pub fn register_handler(
     _arg6: u64,
     _arg6cage: u64,
 ) -> u64 {
-    // Make sure that both the cage that registers the handler and the cage being registered are valid (not in exited state)
-    if EXITING_TABLE.contains(&targetcage) && EXITING_TABLE.contains(&handlefunccage) {
-        return threei_const::ELINDESRCH;
-    }
-
-    let mut handler_table = HANDLERTABLE.lock().unwrap();
-
-    if handlefunccage == threei_const::THREEI_DEREGISTER {
-        if targetcallnum == threei_const::THREEI_MATCHALL {
-            // Remove all handlers where dest_cageid == targetcage
-            handler_table.retain(|_self_cageid, inner_map| {
-                inner_map.retain(|_callnum, cage_call_table| {
-                    let mut cage_call_table = cage_call_table.lock().unwrap();
-
-                    // Remove entries from `thiscalltable`
-                    cage_call_table
-                        .thiscalltable
-                        .retain(|&key, _| key != targetcage);
-
-                    // Remove entries from `defaultcallfunc`
-                    if let Some(default_callfunc_map) = &mut cage_call_table.defaultcallfunc {
-                        default_callfunc_map.retain(|&key, _| key != targetcage);
-                    }
-
-                    // Retain `cage_call_table` only if it still has relevant entries
-                    !cage_call_table.thiscalltable.is_empty()
-                        || cage_call_table
-                            .defaultcallfunc
-                            .as_ref()
-                            .map_or(false, |map| !map.is_empty())
-                });
-                // Retain `inner_map` only if it still has relevant entries
-                !inner_map.is_empty()
-            });
-        } else {
-            // Remove specific handler by keeping the item whose callnum != targetcallnum && dest_cageid != targetcage
-            handler_table.retain(|_self_cageid, inner_map| {
-                inner_map.retain(|&callnum, cage_call_table| {
-                    let mut cage_call_table = cage_call_table.lock().unwrap();
-                    // Check the `thiscalltable` for entries matching `targetcallnum` and `targetcage`
-                    let should_retain_this =
-                        !cage_call_table.thiscalltable.contains_key(&targetcage)
-                            || callnum != targetcallnum;
-                    if !should_retain_this {
-                        cage_call_table.thiscalltable.remove(&targetcage);
-                    }
-                    if let Some(default_callfunc_map) = &mut cage_call_table.defaultcallfunc {
-                        default_callfunc_map.retain(|&key, _| key != targetcage);
-                    }
-                    // Retain only if `thiscalltable` and `defaultcallfunc` are both not empty
-                    !cage_call_table.thiscalltable.is_empty()
-                        || cage_call_table
-                            .defaultcallfunc
-                            .as_ref()
-                            .map_or(false, |map| !map.is_empty())
-                });
-                // Remove the outer entry if the inner map is empty
-                !inner_map.is_empty()
-            });
-        }
-    } else {
-        let cage_handlers = handler_table
-            .entry(handlefunccage)
-            .or_insert_with(HashMap::new);
-
-        if targetcallnum == threei_const::THREEI_MATCHALL {
-            // Get the entry
-            let cage_call_table = cage_handlers
-                .entry(targetcallnum)
-                .or_insert_with(|| Arc::new(Mutex::new(CageCallTable::new(vec![]))));
-            let mut cage_call_table = cage_call_table.lock().unwrap();
-            cage_call_table.set_default_handler(targetcage);
-        }
-
-        // Find the corresponding CallFunc pointer from SYSCALL_TABLE
-        if let Some(&(_, syscall_func)) =
-            SYSCALL_TABLE.iter().find(|&&(num, _)| num == targetcallnum)
-        {
-            let new_cagetable = CageCallTable::new(vec![(targetcage, syscall_func)]);
-            cage_handlers.insert(handlefunc, Arc::new(Mutex::new(new_cagetable)));
-        } else {
-            eprintln!(
-                "Syscall number {} not found in SYSCALL_TABLE!",
-                targetcallnum
-            );
-            return threei_const::ELINDAPIABORTED; // Error: Syscall not found
-        }
-    }
-    // eprintln!("HANDLERTABLE: {:?}", *handler_table);
-    0
+    1
 }
+// pub fn register_handler(
+//     _callnum: u64,
+//     targetcage: u64,    // Cage to modify
+//     targetcallnum: u64, // Syscall number or match-all indicator
+//     _arg1cage: u64,
+//     handlefunc: u64,     // Function to register or 0 for deregister !!!!
+//     handlefunccage: u64, // Deregister flag or additional information
+//     _arg3: u64,
+//     _arg3cage: u64,
+//     _arg4: u64,
+//     _arg4cage: u64,
+//     _arg5: u64,
+//     _arg5cage: u64,
+//     _arg6: u64,
+//     _arg6cage: u64,
+// ) -> u64 {
+//     // Make sure that both the cage that registers the handler and the cage being registered are valid (not in exited state)
+//     if EXITING_TABLE.contains(&targetcage) && EXITING_TABLE.contains(&handlefunccage) {
+//         return threei_const::ELINDESRCH;
+//     }
+
+//     let mut handler_table = HANDLERTABLE.lock().unwrap();
+
+//     if handlefunccage == threei_const::THREEI_DEREGISTER {
+//         if targetcallnum == threei_const::THREEI_MATCHALL {
+//             // Remove all handlers where dest_cageid == targetcage
+//             handler_table.retain(|_self_cageid, inner_map| {
+//                 inner_map.retain(|_callnum, cage_call_table| {
+//                     let mut cage_call_table = cage_call_table.lock().unwrap();
+
+//                     // Remove entries from `thiscalltable`
+//                     cage_call_table
+//                         .thiscalltable
+//                         .retain(|&key, _| key != targetcage);
+
+//                     // Remove entries from `defaultcallfunc`
+//                     if let Some(default_callfunc_map) = &mut cage_call_table.defaultcallfunc {
+//                         default_callfunc_map.retain(|&key, _| key != targetcage);
+//                     }
+
+//                     // Retain `cage_call_table` only if it still has relevant entries
+//                     !cage_call_table.thiscalltable.is_empty()
+//                         || cage_call_table
+//                             .defaultcallfunc
+//                             .as_ref()
+//                             .map_or(false, |map| !map.is_empty())
+//                 });
+//                 // Retain `inner_map` only if it still has relevant entries
+//                 !inner_map.is_empty()
+//             });
+//         } else {
+//             // Remove specific handler by keeping the item whose callnum != targetcallnum && dest_cageid != targetcage
+//             handler_table.retain(|_self_cageid, inner_map| {
+//                 inner_map.retain(|&callnum, cage_call_table| {
+//                     let mut cage_call_table = cage_call_table.lock().unwrap();
+//                     // Check the `thiscalltable` for entries matching `targetcallnum` and `targetcage`
+//                     let should_retain_this =
+//                         !cage_call_table.thiscalltable.contains_key(&targetcage)
+//                             || callnum != targetcallnum;
+//                     if !should_retain_this {
+//                         cage_call_table.thiscalltable.remove(&targetcage);
+//                     }
+//                     if let Some(default_callfunc_map) = &mut cage_call_table.defaultcallfunc {
+//                         default_callfunc_map.retain(|&key, _| key != targetcage);
+//                     }
+//                     // Retain only if `thiscalltable` and `defaultcallfunc` are both not empty
+//                     !cage_call_table.thiscalltable.is_empty()
+//                         || cage_call_table
+//                             .defaultcallfunc
+//                             .as_ref()
+//                             .map_or(false, |map| !map.is_empty())
+//                 });
+//                 // Remove the outer entry if the inner map is empty
+//                 !inner_map.is_empty()
+//             });
+//         }
+//     } else {
+//         let cage_handlers = handler_table
+//             .entry(handlefunccage)
+//             .or_insert_with(HashMap::new);
+
+//         if targetcallnum == threei_const::THREEI_MATCHALL {
+//             // Get the entry
+//             let cage_call_table = cage_handlers
+//                 .entry(targetcallnum)
+//                 .or_insert_with(|| Arc::new(Mutex::new(CageCallTable::new(vec![]))));
+//             let mut cage_call_table = cage_call_table.lock().unwrap();
+//             cage_call_table.set_default_handler(targetcage);
+//         }
+
+//         // Find the corresponding CallFunc pointer from SYSCALL_TABLE
+//         if let Some(&(_, syscall_func)) =
+//             SYSCALL_TABLE.iter().find(|&&(num, _)| num == targetcallnum)
+//         {
+//             let new_cagetable = CageCallTable::new(vec![(targetcage, syscall_func)]);
+//             cage_handlers.insert(handlefunc, Arc::new(Mutex::new(new_cagetable)));
+//         } else {
+//             eprintln!(
+//                 "Syscall number {} not found in SYSCALL_TABLE!",
+//                 targetcallnum
+//             );
+//             return threei_const::ELINDAPIABORTED; // Error: Syscall not found
+//         }
+//     }
+//     // eprintln!("HANDLERTABLE: {:?}", *handler_table);
+//     1
+// }
 
 /// This copies the handler table used by a cage to another cage.  
 /// This is often useful for calls like fork, so that a grate can later

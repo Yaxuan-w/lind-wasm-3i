@@ -186,6 +186,7 @@ extern int __ftruncate (int __fd, __off_t __length) attribute_hidden;
 extern int __ftruncate64 (int __fd, __off64_t __length) attribute_hidden;
 extern int __truncate (const char *path, __off_t __length);
 extern void *__sbrk (intptr_t __delta);
+extern int __registerhandler(int __targetcageid, int __targetcallnum, void *__handlefunc, int __handlefunccage);
 //libc_hidden_proto (__sbrk)
 
 extern int __tcsetpgrp (int fd, __pid_t pgrp);

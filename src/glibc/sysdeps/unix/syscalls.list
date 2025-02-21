@@ -92,3 +92,4 @@ utimes		-	utimes		i:sp	__utimes	utimes
 vhangup		-	vhangup		i:i	vhangup
 write		-	write		Ci:ibU	__libc_write	__write write
 writev		-	writev		Ci:ipi	__writev	writev
+registerhandler		-	registerhandler		i:iipi	__registerhandler	registerhandler
