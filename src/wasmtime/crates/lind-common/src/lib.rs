@@ -62,7 +62,7 @@ impl LindCommonCtx {
                     0,
                     0,
                     0,
-                )
+                ) as i32
             }
             // clone syscall
             171 => {
