@@ -570,14 +570,6 @@ impl RunCommand {
                     func.typed::<(), ()>(&store)?.call(&mut *store, ())?;
                 }
 
-                // -------------- AW --------------
-                if let Some(func) = instance.get_func(&mut *store, "c_test_func") {
-                    println!("c_test_func()!");
-                } else {
-                    eprintln!("c_test_func not found in Wasm instance!");
-                }
-                // -------------- AW --------------
-
                 // Look for the specific function provided or otherwise look for
                 // "" or "_start" exports to run as a "main" function.
                 let func = if let Some(name) = &self.invoke {

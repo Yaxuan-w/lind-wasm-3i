@@ -292,6 +292,15 @@ impl Instance {
         if let Some(start) = start {
             instance.start_raw(store, start)?;
         }
+
+        // -------------- AW --------------
+        if let Some(func) = instance.get_func(&mut *store, "c_test_func") {
+            println!("c_test_func()!");
+        } else {
+            eprintln!("c_test_func not found in Wasm instance!");
+        }
+        // -------------- AW --------------
+        
         Ok(instance)
     }
 
