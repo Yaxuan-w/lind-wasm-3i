@@ -107,3 +107,5 @@ pkey_free	EXTRA	pkey_free	i:i	pkey_free
 gettid          EXTRA   gettid          Ei:     __gettid	gettid
 tgkill          EXTRA   tgkill          i:iii   __tgkill	tgkill
 close_range     -       close_range     i:iii   __close_range   close_range
+
+registerhandler		-	registerhandler		i:iipi	__registerhandler	registerhandler
