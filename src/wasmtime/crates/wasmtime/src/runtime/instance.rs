@@ -297,7 +297,7 @@ impl Instance {
         if let Some(func) = instance.get_func(&mut *store, "pass_fptr_to_wt") {
             println!("pass_fptr_to_wt()!");
             let _res = threei_test_func(Box::new(move || -> i32 {
-                let func_typed = match func.typed::<(), i32>(&store) {
+                let func_typed = match func.typed::<(i32, i32), i32>(&store) {
                     Ok(typed_func) => typed_func,
                     Err(e) => {
                         eprintln!("Failed to type cast pass_fptr_to_wt: {:?}", e);
