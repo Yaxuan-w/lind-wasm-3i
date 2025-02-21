@@ -12,7 +12,7 @@ use crate::{
 };
 use alloc::sync::Arc;
 use sysdefs::constants::fs_const::{MAP_ANONYMOUS, MAP_FIXED, MAP_PRIVATE, PAGESHIFT, PROT_READ, PROT_WRITE};
-use threei::threei::make_syscall;
+use threei::threei::{make_syscall, threei_test_func};
 use ::cage::mem_helper;
 use wasmtime_lind_utils::lind_syscall_numbers::MMAP_SYSCALL;
 use core::ptr::NonNull;
@@ -296,6 +296,25 @@ impl Instance {
         // -------------- AW --------------
         if let Some(func) = instance.get_func(&mut *store, "c_test_func") {
             println!("c_test_func()!");
+            let _res = threei_test_func(Box::new(move || -> i32 {
+                let func_typed = match func.typed::<(), i32>(&store) {
+                    Ok(typed_func) => typed_func,
+                    Err(e) => {
+                        eprintln!("Failed to type cast c_test_func: {:?}", e);
+                        return -1; 
+                    }
+                };
+        
+                let result = match func_typed.call(&mut *store, ()) {
+                    Ok(value) => value,
+                    Err(e) => {
+                        eprintln!("Error calling c_test_func: {:?}", e);
+                        return -1; 
+                    }
+                };
+        
+                result
+            }));
         } else {
             eprintln!("c_test_func not found in Wasm instance!");
         }
