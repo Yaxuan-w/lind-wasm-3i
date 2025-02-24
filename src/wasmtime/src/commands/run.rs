@@ -261,7 +261,7 @@ impl RunCommand {
 
         // -------------- AW --------------
         lind_manager.increment();
-        rawposix::lindinitcage(400); // TODO: start from a large value
+        lindinitcage(400); // TODO: start from a large value
         for (i, (name, grate)) in grates_modules.iter().enumerate() {
             let mut grate_store = Store::new(&engine, Host::default());
             let _ = self.load_main_module(&mut grate_store, &mut linker, grate, modules.clone(), i as u64 + 2);
