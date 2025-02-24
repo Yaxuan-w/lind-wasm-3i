@@ -258,11 +258,12 @@ impl RunCommand {
                 })
         });
 
-        lind_manager.increment();
         // -------------- AW --------------
+        lind_manager.increment();
+        rawposix::lindrustinit(0);
         for (i, (name, grate)) in grates_modules.iter().enumerate() {
             let mut grate_store = Store::new(&engine, Host::default());
-            let _ = self.load_main_module(&mut store, &mut linker, grate, modules.clone(), i as u64 + 2);
+            let _ = self.load_main_module(&mut grate_store, &mut linker, grate, modules.clone(), i as u64 + 2);
         }
         // -------------- AW --------------
 
