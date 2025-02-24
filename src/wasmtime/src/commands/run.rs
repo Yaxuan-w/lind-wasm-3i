@@ -186,7 +186,6 @@ impl RunCommand {
             self.attach_lind(&mut linker, &mut grate_store, grate, lind_manager_grate.clone(), None, None)?;
             unsafe {println!("grate-host: {:?}", grate_store.data().lind_common_ctx);}
             grate_stores.push(grate_store);
-            // let _ = self.load_main_module(&mut grate_store, &mut linker, grate, modules.clone(), i as u64 + 2);
         }
         
         // -------------- AW --------------

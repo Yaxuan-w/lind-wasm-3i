@@ -7,10 +7,24 @@ use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 
 /// ------------------------------------------------------------
-pub fn threei_test_func<'a>(mut callback: Box<dyn FnMut(u64, u64, u64, u64, u64, u64, u64) -> i32 + 'a>) {
-    let open_result = callback(0, 0, 0, 0, 0, 0, 0);
+pub fn threei_test_func<'a>(mut callback: Box<dyn FnMut(u64, u64, u64, u64, u64, u64, u64, u64, u64, u64, u64, u64, u64, u64) -> i32 + 'a>) {
+    let filename = "testfile.txt\0";
+    let filename_ptr = filename.as_ptr();
+    let open_result = callback(
+        0, // syscall index
+        1, // cageid
+        filename_ptr as u64, // arg1
+        1, 
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
     println!("Wasm [open] function returned in 3i: {}", open_result);
-    let add_result = callback(1, 2, 3,  0, 0, 0, 0);
+    let add_result = callback(
+        1, // syscall index 
+        1, // cageid
+        2 as u64, // arg1
+        1, // arg1 cageid
+        3, // arg2
+        1, // arg2 cageid
+        0, 0, 0, 0, 0, 0, 0, 0);
     println!("Wasm [add] function returned in 3i: {}", add_result);
 }
 /// ------------------------------------------------------------
@@ -47,10 +61,12 @@ pub type CallFunc = fn(
 ) -> i32;
 
 #[derive(Debug, Clone)]
-pub struct CageCallTable {
-    pub defaultcallfunc: Option<HashMap<u64, CallFunc>>,
-    pub thiscalltable: HashMap<u64, CallFunc>, // <target_cageid, jump address>
+pub struct CageCallTable<'a> {
+    pub defaultcallfunc: Option<HashMap<u64, Box<dyn FnMut(u64, u64, u64, u64, u64, u64, u64, u64, u64, u64, u64, u64, u64, u64) -> i32 + 'a>>>,
+    // <target_cageid, jump address>
+    pub thiscalltable: HashMap<u64, Box<dyn FnMut(u64, u64, u64, u64, u64, u64, u64, u64, u64, u64, u64, u64, u64, u64) -> i32 + 'a>>, 
 }
+
 
 impl CageCallTable {
     pub fn new(initial_entries: Vec<(u64, CallFunc)>) -> Self {
@@ -103,8 +119,14 @@ static EXITING_TABLE: Lazy<DashSet<u64>> = Lazy::new(|| DashSet::new());
 ///
 /// If THREEI_MATCHALL is not set, the thief adds the corresponding items according to the passed arguments
 ///
-/// TODO:
-/// Differences between callnum and handlefunc...?
+/// I want cage 7 to have system call 34 call into my cage's function foo 
+/// 
+/// ```
+/// register_handler(
+///     NOTUSED, 7,  34, NOTUSED,
+///    foo, mycagenum,
+///    ...)
+/// ```
 pub fn register_handler(
     _callnum: u64,
     targetcage: u64,    // Cage to modify
