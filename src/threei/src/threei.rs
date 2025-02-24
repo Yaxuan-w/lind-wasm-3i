@@ -60,15 +60,52 @@ pub type CallFunc = fn(
     arg6_cageid: u64,
 ) -> i32;
 
-#[derive(Clone)]
-pub struct CageCallTable<'a> {
-    pub defaultcallfunc: Option<HashMap<u64, Box<dyn FnMut(u64, u64, u64, u64, u64, u64, u64, u64, u64, u64, u64, u64, u64, u64) -> i32 + 'a>>>,
-    // <target_cageid, jump address>
-    pub thiscalltable: HashMap<u64, Box<dyn FnMut(u64, u64, u64, u64, u64, u64, u64, u64, u64, u64, u64, u64, u64, u64) -> i32 + 'a>>, 
+
+#[derive(Debug, Clone)]
+pub struct CageCallTable {
+    pub defaultcallfunc: Option<HashMap<u64, CallFunc>>,
+    pub thiscalltable: HashMap<u64, CallFunc>, // <target_cageid, jump address>
 }
+// #[derive(Clone)]
+// pub struct CageCallTable<'a> {
+//     pub defaultcallfunc: Option<HashMap<u64, Box<dyn FnMut(u64, u64, u64, u64, u64, u64, u64, u64, u64, u64, u64, u64, u64, u64) -> i32 + 'a>>>,
+//     // <target_cageid, jump address>
+//     pub thiscalltable: HashMap<u64, Box<dyn FnMut(u64, u64, u64, u64, u64, u64, u64, u64, u64, u64, u64, u64, u64, u64) -> i32 + 'a>>, 
+// }
 
 
-impl CageCallTable<'_> {
+// impl CageCallTable<'_> {
+//     pub fn new(initial_entries: Vec<(u64, CallFunc)>) -> Self {
+//         let mut thiscalltable = HashMap::new();
+//         for (cageid, callfunc) in initial_entries {
+//             thiscalltable.insert(cageid, callfunc);
+//         }
+//         Self {
+//             defaultcallfunc: None,
+//             thiscalltable,
+//         }
+//     }
+
+//     // This function will only be called when MATCHALL flag has been set in register_handler function
+//     // to initialize default
+//     pub fn set_default_handler(&mut self, targetcage: u64) {
+//         let mut default_mapping = HashMap::new();
+//         for &(_, syscall_name) in SYSCALL_TABLE {
+//             default_mapping.insert(targetcage, syscall_name);
+//         }
+//         self.defaultcallfunc = Some(default_mapping)
+//     }
+// }
+
+// // Keys are the cage, the value is a HashMap with a key of the callnum
+// // and the values are a (addr, cage) tuple for the actual handlers...
+// // Added mutex to avoid race condition
+// lazy_static::lazy_static! {
+//     // <self_cageid, <callnum, (addr, dest_cageid)>
+//     // callnum is mapped to addr, not self
+//     pub static ref HANDLERTABLE: Mutex<HashMap<u64, HashMap<u64, Arc<Mutex<CageCallTable<'static>>>>>> = Mutex::new(HashMap::new());
+// }
+impl CageCallTable {
     pub fn new(initial_entries: Vec<(u64, CallFunc)>) -> Self {
         let mut thiscalltable = HashMap::new();
         for (cageid, callfunc) in initial_entries {
@@ -95,10 +132,12 @@ impl CageCallTable<'_> {
 // and the values are a (addr, cage) tuple for the actual handlers...
 // Added mutex to avoid race condition
 lazy_static::lazy_static! {
+    #[derive(Debug)]
     // <self_cageid, <callnum, (addr, dest_cageid)>
     // callnum is mapped to addr, not self
-    pub static ref HANDLERTABLE: Mutex<HashMap<u64, HashMap<u64, Arc<Mutex<CageCallTable<'static>>>>>> = Mutex::new(HashMap::new());
+    pub static ref HANDLERTABLE: Mutex<HashMap<u64, HashMap<u64, Arc<Mutex<CageCallTable>>>>> = Mutex::new(HashMap::new());
 }
+
 
 /// EXITING_TABLE
 /// A grate/cage does not need to know the upper-level grate/cage information, but only needs to manage where the call goes.
