@@ -1,3 +1,3 @@
 pub mod rawposix;
 
-pub use rawposix::{lindrustfinalize, lindrustinit};
+pub use rawposix::{lindrustfinalize, lindrustinit, lindinitcage};
