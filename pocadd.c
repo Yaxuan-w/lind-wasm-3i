@@ -11,7 +11,7 @@ func_ptr_t func_array[2] = {open_grate, add};
 
 int pass_fptr_to_wt(uint64_t index, uint64_t arg1, uint64_t arg2, uint64_t arg3, uint64_t arg4, uint64_t arg5, uint64_t arg6) {
     if (index < 0 || index >= 2) {
-        fprintf(stderr, "Invalid index: %d\n", index);
+        fprintf(stderr, "Invalid index: %llu\n", index);
         return -1; 
     }
     

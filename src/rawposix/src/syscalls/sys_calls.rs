@@ -392,6 +392,62 @@ pub fn lindrustinit(verbosity: isize) {
     .unwrap();
 }
 
+pub fn lindinitcage(cageid: u64) {
+    //init cage is its own parent
+    let initcage = Cage {
+        cageid: cageid,
+        cwd: RwLock::new(Arc::new(PathBuf::from("/"))),
+        parent: cageid,
+        gid: AtomicI32::new(-1),
+        uid: AtomicI32::new(-1),
+        egid: AtomicI32::new(-1),
+        euid: AtomicI32::new(-1),
+        main_threadid: AtomicU64::new(0),
+        zombies: RwLock::new(vec![]),
+        child_num: AtomicU64::new(0),
+        vmmap: RwLock::new(Vmmap::new()),
+    };
+
+    // Add cage to cagetable
+    add_cage(
+        cageid, // cageid
+        initcage,
+    );
+
+    fdtables::init_empty_cage(cageid);
+    // Set the first 3 fd to STDIN / STDOUT / STDERR
+    // STDIN
+    fdtables::get_specific_virtual_fd(
+        cageid,
+        STDIN_FILENO as u64,
+        FDKIND_KERNEL,
+        STDIN_FILENO as u64,
+        false,
+        0,
+    )
+    .unwrap();
+    // STDOUT
+    fdtables::get_specific_virtual_fd(
+        cageid,
+        STDOUT_FILENO as u64,
+        FDKIND_KERNEL,
+        STDOUT_FILENO as u64,
+        false,
+        0,
+    )
+    .unwrap();
+    // STDERR
+    fdtables::get_specific_virtual_fd(
+        cageid,
+        STDERR_FILENO as u64,
+        FDKIND_KERNEL,
+        STDERR_FILENO as u64,
+        false,
+        0,
+    )
+    .unwrap();
+}
+
 pub fn lindrustfinalize() {
     let exitvec = cagetable_clear();
 
