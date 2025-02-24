@@ -298,7 +298,8 @@ impl RunCommand {
                     
                     // main cage exits
                     lind_manager.decrement();
-                }
+                },
+                Err(_) => todo!()
             }
         }
         // -------------- AW --------------
