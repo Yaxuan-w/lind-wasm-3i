@@ -1045,9 +1045,9 @@ impl RunCommand {
                 CliLinker::Core(linker) => linker,
                 _ => bail!("lind does not support components yet"),
             };
-            wasmtime_lind_common::add_to_linker::<Host, RunCommand>(linker, |host| {
-                host.lind_common_ctx.as_ref().unwrap()
-            })?;
+            // wasmtime_lind_common::add_to_linker::<Host, RunCommand>(linker, |host| {
+            //     host.lind_common_ctx.as_ref().unwrap()
+            // })?;
             if let Some(pid) = pid {
                 store.data_mut().lind_common_ctx = Some(LindCommonCtx::new_with_pid(
                     pid,
