@@ -1031,29 +1031,6 @@ impl RunCommand {
         pid: Option<i32>,
         next_cageid: Option<Arc<AtomicU64>>
     ) -> Result<()> {
-        let mut cli = self.run.common.wasi.cli;
-
-        // attach Lind-Common-Context to the host
-        let shared_next_cageid = Arc::new(AtomicU64::new(1));
-
-        {
-            let linker = match linker {
-                CliLinker::Core(linker) => linker,
-                _ => bail!("lind does not support components yet"),
-            };
-            wasmtime_lind_common::add_to_linker::<Host, RunCommand>(linker, |host| {
-                host.lind_common_ctx.as_ref().unwrap()
-            })?;
-            if let Some(pid) = pid {
-                store.data_mut().lind_common_ctx = Some(LindCommonCtx::new_with_pid(
-                    pid,
-                    next_cageid.clone().unwrap(),
-                )?);
-            } else {
-                store.data_mut().lind_common_ctx = Some(LindCommonCtx::new(shared_next_cageid.clone())?);
-            }
-        }
-
         // attach Lind-Multi-Process-Context to the host
         {
             let linker = match linker {
@@ -1118,6 +1095,20 @@ impl RunCommand {
                     }
                 )?);
             }
+        }
+
+        // must create wasi_threads context here, because pre_instance requires all
+        // imports are fully imported/linked to be created
+        if self.run.common.wasi.threads == Some(true) {
+            let linker = match linker {
+                CliLinker::Core(linker) => linker,
+                _ => bail!("wasi-threads does not support components yet"),
+            };
+            let module = module.unwrap_core();
+            store.data_mut().wasi_threads = Some(Arc::new(WasiThreadsCtx::new(
+                module.clone(),
+                Arc::new(linker.clone()),
+            )?));
         }
 
         Ok(())
