@@ -176,7 +176,7 @@ impl RunCommand {
         self.populate_with_wasi(&mut linker, &mut store, &main, lind_manager.clone(), None, None)?;
         unsafe {println!("host-host: {:?}", store.data().lind_common_ctx);}
         // -------------- AW --------------
-        let grate_stores = Vec::new();
+        let mut grate_stores = Vec::new();
         for (i, (name, grate)) in grates_modules.iter().enumerate() {
             let grate_host = Host::default();
             let mut grate_store = Store::new(&engine, grate_host);
