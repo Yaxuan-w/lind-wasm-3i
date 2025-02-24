@@ -1,6 +1,6 @@
 pub mod rawposix;
-pub mod sys_calls;
+pub mod syscalls;
 
-pub use sys_calls::*;
+pub use syscalls::*;
 
 pub use rawposix::{lindrustfinalize, lindrustinit, lindinitcage};
