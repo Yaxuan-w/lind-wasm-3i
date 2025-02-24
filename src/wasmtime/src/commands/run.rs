@@ -170,20 +170,20 @@ impl RunCommand {
         }
 
         let host = Host::default();
-        unsafe {println!("host-host: {:?}", &host as *const _);}
+        
         let mut store = Store::new(&engine, host);
         let lind_manager = Arc::new(LindCageManager::new(0));
         self.populate_with_wasi(&mut linker, &mut store, &main, lind_manager.clone(), None, None)?;
-
+        unsafe {println!("host-host: {:?}", store.data().lind_common_ctx);}
         // -------------- AW --------------
         for (i, (name, grate)) in grates_modules.iter().enumerate() {
             let grate_host = Host::default();
-            unsafe {println!("grate-host: {:?}", &grate_host as *const _);}
             let mut grate_store = Store::new(&engine, grate_host);
             
             // TODO: tmp grate id start from 400
             let lind_manager_grate = Arc::new(LindCageManager::new(400));
             self.attach_lind(&mut linker, &mut grate_store, grate, lind_manager_grate.clone(), None, None)?;
+            unsafe {println!("grate-host: {:?}", grate_store.data().lind_common_ctx);}
         
             // let _ = self.load_main_module(&mut grate_store, &mut linker, grate, modules.clone(), i as u64 + 2);
         }

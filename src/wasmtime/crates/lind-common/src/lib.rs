@@ -15,7 +15,7 @@ use wasmtime::AsContextMut;
 // lind-common serves as the main entry point when lind_syscall. Any syscalls made in glibc would reach here first,
 // then the syscall would be dispatched into rawposix, or other crates under wasmtime, depending on the syscall, to perform its job
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 // stores some attributes associated with current runnning wasm instance (i.e. cage)
 // each cage has its own lind-common context 
 pub struct LindCommonCtx {
@@ -171,7 +171,7 @@ pub fn add_to_linker<T: LindHost<T, U> + Clone + Send + 'static + std::marker::S
         "lind",
         "lind-syscall",
         move |mut caller: Caller<'_, T>, call_number: u32, call_name: u64, arg1: u64, arg2: u64, arg3: u64, arg4: u64, arg5: u64, arg6: u64| -> i32 {
-            unsafe {println!("bug-host: {:?}", &caller.data() as *const _);}
+            unsafe {println!("bug-host: {:?}", caller.data().lind_common_ctx);}
             let host = caller.data().clone();
             let ctx = get_cx(&host);
 
