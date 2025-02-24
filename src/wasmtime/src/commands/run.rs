@@ -1040,6 +1040,45 @@ impl RunCommand {
         pid: Option<i32>,
         next_cageid: Option<Arc<AtomicU64>>
     ) -> Result<()> {
+        let mut cli = self.run.common.wasi.cli;
+
+        // Accept -Scommon as a deprecated alias for -Scli.
+        if let Some(common) = self.run.common.wasi.common {
+            if cli.is_some() {
+                bail!(
+                    "The -Scommon option should not be use with -Scli as it is a deprecated alias"
+                );
+            } else {
+                // In the future, we may add a warning here to tell users to use
+                // `-S cli` instead of `-S common`.
+                cli = Some(common);
+            }
+        }
+
+        if cli != Some(false) {
+            match linker {
+                CliLinker::Core(linker) => {
+                    match (self.run.common.wasi.preview2, self.run.common.wasi.threads) {
+                        // If preview2 is explicitly disabled, or if threads
+                        // are enabled, then use the historical preview1
+                        // implementation.
+                        (Some(false), _) | (None, Some(true)) => {
+                            self.set_preview1_ctx(store)?;
+                        }
+                        // If preview2 was explicitly requested, always use it.
+                        // Otherwise use it so long as threads are disabled.
+                        //
+                        // Note that for now `preview0` is currently
+                        // default-enabled but this may turn into
+                        // default-disabled in the future.
+                        (Some(true), _) | (None, Some(false) | None) => {
+                            self.set_preview2_ctx(store)?;
+                        }
+                    }
+                }
+            }
+        }
+
         // start from 2 bc should be after main module
         // TODO: only support one grate tmp
         let shared_next_cageid = Arc::new(AtomicU64::new(400)); 
