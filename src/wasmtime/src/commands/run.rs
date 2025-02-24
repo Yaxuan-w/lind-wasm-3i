@@ -1036,8 +1036,28 @@ impl RunCommand {
         next_cageid: Option<Arc<AtomicU64>>
     ) -> Result<()> {
         // start from 2 bc should be after main module
-        // TODO: only support one grate
-        let shared_next_cageid = Arc::new(AtomicU64::new(2)); 
+        // TODO: only support one grate tmp
+        let shared_next_cageid = Arc::new(AtomicU64::new(400)); 
+
+        // attach Lind-Common-Context to the host
+        {
+            let linker = match linker {
+                CliLinker::Core(linker) => linker,
+                _ => bail!("lind does not support components yet"),
+            };
+            wasmtime_lind_common::add_to_linker::<Host, RunCommand>(linker, |host| {
+                host.lind_common_ctx.as_ref().unwrap()
+            })?;
+            if let Some(pid) = pid {
+                store.data_mut().lind_common_ctx = Some(LindCommonCtx::new_with_pid(
+                    pid,
+                    next_cageid.clone().unwrap(),
+                )?);
+            } else {
+                store.data_mut().lind_common_ctx = Some(LindCommonCtx::new(shared_next_cageid.clone())?);
+            }
+        }
+
         // attach Lind-Multi-Process-Context to the host
         {
             let linker = match linker {
