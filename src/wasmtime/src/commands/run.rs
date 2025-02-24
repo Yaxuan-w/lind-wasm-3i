@@ -177,7 +177,8 @@ impl RunCommand {
         // -------------- AW --------------
         for (i, (name, grate)) in grates_modules.iter().enumerate() {
             let mut grate_store = Store::new(&engine, Host::default());
-        
+            // TODO: tmp grate id start from 400
+            let lind_manager = Arc::new(LindCageManager::new(400));
             self.attach_lind(&mut linker, &mut grate_store, grate, lind_manager.clone(), None, None)?;
         
             // let _ = self.load_main_module(&mut grate_store, &mut linker, grate, modules.clone(), i as u64 + 2);
