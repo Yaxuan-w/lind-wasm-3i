@@ -237,7 +237,7 @@ impl RunCommand {
         // operations that block in the CLI since the CLI doesn't use async to
         // invoke WebAssembly.
         let result = wasmtime_wasi::runtime::with_ambient_tokio_runtime(|| {
-            self.load_main_module(&mut store, &mut linker, &main, modules, 1)
+            self.load_main_module(&mut store, &mut linker, &main, modules.clone(), 1)
                 .with_context(|| {
                     format!(
                         "failed to run main module `{}`",
