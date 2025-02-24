@@ -176,6 +176,7 @@ impl RunCommand {
         self.populate_with_wasi(&mut linker, &mut store, &main, lind_manager.clone(), None, None)?;
         unsafe {println!("host-host: {:?}", store.data().lind_common_ctx);}
         // -------------- AW --------------
+        let grate_stores = Vec::new();
         for (i, (name, grate)) in grates_modules.iter().enumerate() {
             let grate_host = Host::default();
             let mut grate_store = Store::new(&engine, grate_host);
@@ -184,7 +185,7 @@ impl RunCommand {
             let lind_manager_grate = Arc::new(LindCageManager::new(400));
             self.attach_lind(&mut linker, &mut grate_store, grate, lind_manager_grate.clone(), None, None)?;
             unsafe {println!("grate-host: {:?}", grate_store.data().lind_common_ctx);}
-        
+            grate_stores.push(grate_store);
             // let _ = self.load_main_module(&mut grate_store, &mut linker, grate, modules.clone(), i as u64 + 2);
         }
         
@@ -268,7 +269,7 @@ impl RunCommand {
         lind_manager.increment();
         lindinitcage(400); // TODO: start from a large value
         for (i, (name, grate)) in grates_modules.iter().enumerate() {
-            let mut grate_store = Store::new(&engine, Host::default());
+            let mut grate_store = Store::new(&engine, grate_stores.get(i));
             let _ = self.load_main_module(&mut grate_store, &mut linker, grate, modules.clone(), 400 as u64);
         }
         // -------------- AW --------------
