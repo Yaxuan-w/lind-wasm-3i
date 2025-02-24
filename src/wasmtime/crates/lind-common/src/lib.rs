@@ -171,6 +171,7 @@ pub fn add_to_linker<T: LindHost<T, U> + Clone + Send + 'static + std::marker::S
         "lind",
         "lind-syscall",
         move |mut caller: Caller<'_, T>, call_number: u32, call_name: u64, arg1: u64, arg2: u64, arg3: u64, arg4: u64, arg5: u64, arg6: u64| -> i32 {
+            unsafe {println!("bug-host: {:?}", &caller.data() as *const _);}
             let host = caller.data().clone();
             let ctx = get_cx(&host);
 
