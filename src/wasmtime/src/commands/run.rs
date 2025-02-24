@@ -43,6 +43,16 @@ fn parse_preloads(s: &str) -> Result<(String, PathBuf)> {
     Ok((parts[0].into(), parts[1].into()))
 }
 
+// -------------- AW --------------
+fn parse_grates(s: &str) -> Result<(String, PathBuf)> {
+    let parts: Vec<&str> = s.splitn(2, '=').collect();
+    if parts.len() != 2 {
+        bail!("must contain exactly one equals character ('=')");
+    }
+    Ok((parts[0].into(), parts[1].into()))
+}
+// -------------- AW --------------
+
 /// Runs a WebAssembly module
 #[derive(Parser, PartialEq, Clone)]
 pub struct RunCommand {
@@ -62,6 +72,16 @@ pub struct RunCommand {
         value_parser = parse_preloads,
     )]
     pub preloads: Vec<(String, PathBuf)>,
+
+    // -------------- AW --------------
+    #[arg(
+        long = "grate",
+        number_of_values = 1;,
+        value_name = "NAME=GRATE_PATH",
+        value_parser = parse_grates,
+    )]
+    pub grates: Vec<(String, PathBuf)>,
+    // -------------- AW --------------
 
     /// The WebAssembly module to run and arguments to pass to it.
     ///
@@ -106,6 +126,17 @@ impl RunCommand {
             .run
             .load_module(&engine, self.module_and_args[0].as_ref())?;
 
+        // -------------- AW --------------
+        let mut grates_modules = Vec::new();
+        let (name, path) in self.grates.iter() {
+            let grate = self
+                .run
+                .load_module(&engine, path)?;
+            grates_modules.push((name.clone(), grate));
+        }
+        
+        // -------------- AW --------------
+
         // Validate coredump-on-trap argument
         if let Some(path) = &self.run.common.debug.coredump {
             if path.contains("%") {
@@ -137,6 +168,12 @@ impl RunCommand {
         let lind_manager = Arc::new(LindCageManager::new(0));
         self.populate_with_wasi(&mut linker, &mut store, &main, lind_manager.clone(), None, None)?;
 
+        // -------------- AW --------------
+        for (name, grate) in &grates_modules {
+            self.populate_with_wasi(&mut linker, &mut store, grate, lind_manager.clone(), None, None)?;
+        }
+        // -------------- AW --------------
+
         store.data_mut().limits = self.run.store_limits();
         store.limiter(|t| &mut t.limits);
 
@@ -151,6 +188,13 @@ impl RunCommand {
         if let RunTarget::Core(m) = &main {
             modules.push((String::new(), m.clone()));
         }
+        // -------------- AW --------------
+        for (name, grate) in &grates_modules {
+            if let RunTarget::Core(g) = grate {
+                modules.push((name.clone(), g.clone()));
+            }
+        }
+        // -------------- AW --------------
         for (name, path) in self.preloads.iter() {
             // Read the wasm module binary either as `*.wat` or a raw binary
             let module = match self.run.load_module(&engine, path)? {
@@ -203,6 +247,12 @@ impl RunCommand {
                     )
                 })
         });
+
+        // -------------- AW --------------
+        for (i, (name, grate)) in grates_modules.iter().enumerate() {
+            let _ = self.load_main_module(&mut store, &mut linker, grate, modules.clone(), i as u64 + 2);
+        }
+        // -------------- AW --------------
 
         // Load the main wasm module.
         match result {
