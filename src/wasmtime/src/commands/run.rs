@@ -1031,6 +1031,9 @@ impl RunCommand {
         pid: Option<i32>,
         next_cageid: Option<Arc<AtomicU64>>
     ) -> Result<()> {
+        // start from 2 bc should be after main module
+        // TODO: only support one grate
+        let shared_next_cageid = Arc::new(AtomicU64::new(2)); 
         // attach Lind-Multi-Process-Context to the host
         {
             let linker = match linker {
