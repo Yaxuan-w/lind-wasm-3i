@@ -170,16 +170,19 @@ impl RunCommand {
         }
 
         let host = Host::default();
+        unsafe {println!("host-host: {:?}", host as * const i8);}
         let mut store = Store::new(&engine, host);
         let lind_manager = Arc::new(LindCageManager::new(0));
         self.populate_with_wasi(&mut linker, &mut store, &main, lind_manager.clone(), None, None)?;
 
         // -------------- AW --------------
         for (i, (name, grate)) in grates_modules.iter().enumerate() {
-            let mut grate_store = Store::new(&engine, Host::default());
+            let grate_host = Host::default();
+            let mut grate_store = Store::new(&engine, grate_host);
+            unsafe {println!("grate-host: {:?}", grate_host as * const i8);}
             // TODO: tmp grate id start from 400
-            let lind_manager = Arc::new(LindCageManager::new(400));
-            self.attach_lind(&mut linker, &mut grate_store, grate, lind_manager.clone(), None, None)?;
+            let lind_manager_grate = Arc::new(LindCageManager::new(400));
+            self.attach_lind(&mut linker, &mut grate_store, grate, lind_manager_grate.clone(), None, None)?;
         
             // let _ = self.load_main_module(&mut grate_store, &mut linker, grate, modules.clone(), i as u64 + 2);
         }
@@ -911,6 +914,7 @@ impl RunCommand {
                 _ => bail!("lind does not support components yet"),
             };
             wasmtime_lind_common::add_to_linker::<Host, RunCommand>(linker, |host| {
+                unsafe {println!("bug-host: {:?}", host as * const i8);}
                 host.lind_common_ctx.as_ref().unwrap()
             })?;
             if let Some(pid) = pid {
