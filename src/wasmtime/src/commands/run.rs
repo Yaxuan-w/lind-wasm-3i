@@ -258,6 +258,7 @@ impl RunCommand {
                 })
         });
 
+        lind_manager.increment();
         // -------------- AW --------------
         for (i, (name, grate)) in grates_modules.iter().enumerate() {
             let mut grate_store = Store::new(&engine, Host::default());
