@@ -269,7 +269,37 @@ impl RunCommand {
         lind_manager.increment();
         lindinitcage(400); // TODO: start from a large value
         for (i, (name, grate)) in grates_modules.iter().enumerate() {
-            let _ = self.load_main_module(&mut grate_stores.get_mut(i).unwrap(), &mut linker, grate, modules.clone(), 400 as u64);
+            let result_grate = self.load_main_module(&mut grate_stores.get_mut(i).unwrap(), &mut linker, grate, modules.clone(), 400 as u64);
+            match result_grate {
+                Ok(res) => {
+                    let mut code = 0;
+                    let retval = res.get(0).unwrap();
+                    if let Val::I32(res) = retval {
+                        code = *res;
+                    }
+                    // exit the cage
+                    make_syscall(
+                        400,
+                        EXIT_SYSCALL,
+                        400,
+                        code as u64, // Exit type
+                        400,
+                        0,
+                        0,
+                        0,
+                        0,
+                        0,
+                        0,
+                        0,
+                        0,
+                        0,
+                        0,
+                    );
+                    
+                    // main cage exits
+                    lind_manager.decrement();
+                }
+            }
         }
         // -------------- AW --------------
 
