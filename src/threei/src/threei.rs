@@ -60,7 +60,7 @@ pub type CallFunc = fn(
     arg6_cageid: u64,
 ) -> i32;
 
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct CageCallTable<'a> {
     pub defaultcallfunc: Option<HashMap<u64, Box<dyn FnMut(u64, u64, u64, u64, u64, u64, u64, u64, u64, u64, u64, u64, u64, u64) -> i32 + 'a>>>,
     // <target_cageid, jump address>
@@ -68,7 +68,7 @@ pub struct CageCallTable<'a> {
 }
 
 
-impl CageCallTable {
+impl CageCallTable<'_> {
     pub fn new(initial_entries: Vec<(u64, CallFunc)>) -> Self {
         let mut thiscalltable = HashMap::new();
         for (cageid, callfunc) in initial_entries {
@@ -95,10 +95,9 @@ impl CageCallTable {
 // and the values are a (addr, cage) tuple for the actual handlers...
 // Added mutex to avoid race condition
 lazy_static::lazy_static! {
-    #[derive(Debug)]
     // <self_cageid, <callnum, (addr, dest_cageid)>
     // callnum is mapped to addr, not self
-    pub static ref HANDLERTABLE: Mutex<HashMap<u64, HashMap<u64, Arc<Mutex<CageCallTable>>>>> = Mutex::new(HashMap::new());
+    pub static ref HANDLERTABLE: Mutex<HashMap<u64, HashMap<u64, Arc<Mutex<CageCallTable<'static>>>>>> = Mutex::new(HashMap::new());
 }
 
 /// EXITING_TABLE
