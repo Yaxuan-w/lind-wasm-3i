@@ -1075,7 +1075,8 @@ impl RunCommand {
                             self.set_preview2_ctx(store)?;
                         }
                     }
-                }
+                },
+                &mut CliLinker::Component(_) => todo!()
             }
         }
 
