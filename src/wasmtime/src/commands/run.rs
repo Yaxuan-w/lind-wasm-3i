@@ -915,6 +915,7 @@ impl RunCommand {
                 _ => bail!("lind does not support components yet"),
             };
             wasmtime_lind_common::add_to_linker::<Host, RunCommand>(linker, |host| {
+                unsafe {println!("bug-host: {:?}", host.lind_common_ctx);}
                 host.lind_common_ctx.as_ref().unwrap()
             })?;
             if let Some(pid) = pid {
