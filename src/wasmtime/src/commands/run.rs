@@ -174,9 +174,14 @@ impl RunCommand {
         self.populate_with_wasi(&mut linker, &mut store, &main, lind_manager.clone(), None, None)?;
 
         // -------------- AW --------------
-        for (name, grate) in &grates_modules {
-            self.populate_with_wasi(&mut linker, &mut store, grate, lind_manager.clone(), None, None)?;
+        for (i, (name, grate)) in grates_modules.iter().enumerate() {
+            let mut grate_store = Store::new(&engine, Host::default());
+        
+            self.populate_with_wasi(&mut linker, &mut grate_store, grate, lind_manager.clone(), None, None)?;
+        
+            // let _ = self.load_main_module(&mut grate_store, &mut linker, grate, modules.clone(), i as u64 + 2);
         }
+        
         // -------------- AW --------------
 
         store.data_mut().limits = self.run.store_limits();
@@ -255,6 +260,7 @@ impl RunCommand {
 
         // -------------- AW --------------
         for (i, (name, grate)) in grates_modules.iter().enumerate() {
+            let mut grate_store = Store::new(&engine, Host::default());
             let _ = self.load_main_module(&mut store, &mut linker, grate, modules.clone(), i as u64 + 2);
         }
         // -------------- AW --------------
