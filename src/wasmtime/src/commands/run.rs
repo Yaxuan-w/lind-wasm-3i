@@ -177,7 +177,7 @@ impl RunCommand {
         for (i, (name, grate)) in grates_modules.iter().enumerate() {
             let mut grate_store = Store::new(&engine, Host::default());
         
-            self.populate_with_wasi(&mut linker, &mut grate_store, grate, lind_manager.clone(), None, None)?;
+            self.attach_lind(&mut linker, &mut grate_store, grate, lind_manager.clone(), None, None)?;
         
             // let _ = self.load_main_module(&mut grate_store, &mut linker, grate, modules.clone(), i as u64 + 2);
         }
@@ -1016,6 +1016,107 @@ impl RunCommand {
                 }
 
                 store.data_mut().wasi_http = Some(Arc::new(WasiHttpCtx::new()));
+            }
+        }
+
+        Ok(())
+    }
+
+    fn attach_lind(
+        &self,
+        linker: &mut CliLinker,
+        store: &mut Store<Host>,
+        module: &RunTarget,
+        lind_manager: Arc<LindCageManager>,
+        pid: Option<i32>,
+        next_cageid: Option<Arc<AtomicU64>>
+    ) -> Result<()> {
+        let mut cli = self.run.common.wasi.cli;
+
+        // attach Lind-Common-Context to the host
+        let shared_next_cageid = Arc::new(AtomicU64::new(1));
+
+        {
+            let linker = match linker {
+                CliLinker::Core(linker) => linker,
+                _ => bail!("lind does not support components yet"),
+            };
+            wasmtime_lind_common::add_to_linker::<Host, RunCommand>(linker, |host| {
+                host.lind_common_ctx.as_ref().unwrap()
+            })?;
+            if let Some(pid) = pid {
+                store.data_mut().lind_common_ctx = Some(LindCommonCtx::new_with_pid(
+                    pid,
+                    next_cageid.clone().unwrap(),
+                )?);
+            } else {
+                store.data_mut().lind_common_ctx = Some(LindCommonCtx::new(shared_next_cageid.clone())?);
+            }
+        }
+
+        // attach Lind-Multi-Process-Context to the host
+        {
+            let linker = match linker {
+                CliLinker::Core(linker) => linker,
+                _ => bail!("lind-multi-process does not support components yet"),
+            };
+            let module = module.unwrap_core();
+
+            // if pid is set, that means this function is called by execute_with_lind (exec-ed wasm instance)
+            if let Some(pid) = pid {
+                store.data_mut().lind_fork_ctx = Some(LindCtx::new_with_pid(
+                    module.clone(),
+                    linker.clone(),
+                    lind_manager,
+                    self.clone(),
+                    pid,
+                    next_cageid.clone().unwrap(),
+                    |host| {
+                        host.lind_fork_ctx.as_mut().unwrap()
+                    },
+                    |host| {
+                        host.fork()
+                    },
+                    |run_command, path, args, pid, next_cageid, lind_manager, envs| {
+                        // entry point of exec call. Fork self and replace the argument, environment variables and
+                        // execution path and starts execution
+                        let mut new_run_command = run_command.clone();
+                        new_run_command.module_and_args = vec![OsString::from(path)];
+                        if let Some(envs) = envs {
+                            new_run_command.run.vars = envs.clone();
+                        }
+                        for arg in args.iter().skip(1) {
+                            new_run_command.module_and_args.push(OsString::from(arg));
+                        }
+                        new_run_command.execute_with_lind(lind_manager.clone(), pid, next_cageid.clone())
+                    }
+                )?);
+            // if pid is not set, then this function is called by the first wasm instance
+            } else {
+                store.data_mut().lind_fork_ctx = Some(LindCtx::new(
+                    module.clone(),
+                    linker.clone(),
+                    lind_manager,
+                    self.clone(),
+                    shared_next_cageid.clone(),
+                    |host| {
+                        host.lind_fork_ctx.as_mut().unwrap()
+                    },
+                    |host| {
+                        host.fork()
+                    },
+                    |run_command, path, args, pid, next_cageid, lind_manager, envs| {
+                        let mut new_run_command = run_command.clone();
+                        new_run_command.module_and_args = vec![OsString::from(path)];
+                        if let Some(envs) = envs {
+                            new_run_command.run.vars = envs.clone();
+                        }
+                        for arg in args.iter().skip(1) {
+                            new_run_command.module_and_args.push(OsString::from(arg));
+                        }
+                        new_run_command.execute_with_lind(lind_manager.clone(), pid, next_cageid.clone())
+                    }
+                )?);
             }
         }
 
