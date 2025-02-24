@@ -76,7 +76,7 @@ pub struct RunCommand {
     // -------------- AW --------------
     #[arg(
         long = "grate",
-        number_of_values = 1;,
+        number_of_values = 1,
         value_name = "NAME=GRATE_PATH",
         value_parser = parse_grates,
     )]
@@ -128,10 +128,8 @@ impl RunCommand {
 
         // -------------- AW --------------
         let mut grates_modules = Vec::new();
-        let (name, path) in self.grates.iter() {
-            let grate = self
-                .run
-                .load_module(&engine, path)?;
+        for (name, path) in self.grates.iter() {
+            let grate = self.run.load_module(&engine, path)?;
             grates_modules.push((name.clone(), grate));
         }
         
