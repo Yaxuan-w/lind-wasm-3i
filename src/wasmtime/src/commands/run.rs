@@ -74,6 +74,13 @@ pub struct RunCommand {
     pub preloads: Vec<(String, PathBuf)>,
 
     // -------------- AW --------------
+    /// Load the given wasm module as a grate before the main module.
+    ///
+    /// This option allows specifying additional wasm modules that will be loaded
+    /// with the same privileges and capabilities as the main module.
+    ///
+    /// The format is `NAME=GRATE_PATH`, where `NAME` is a unique identifier for
+    /// the grate and `GRATE_PATH` is the path to the wasm module.
     #[arg(
         long = "grate",
         number_of_values = 1,
