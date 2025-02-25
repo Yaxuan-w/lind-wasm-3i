@@ -10,10 +10,12 @@ use std::sync::{Arc, Mutex};
 pub fn threei_test_func<'a>(mut callback: Box<dyn FnMut(u64, u64, u64, u64, u64, u64, u64, u64, u64, u64, u64, u64, u64, u64) -> i32 + 'a>) {
     let filename = "testfile.txt\0";
     let filename_ptr = filename.as_ptr();
+    // println!("filename_ptr: {:?}", filename_ptr);
     let open_result = callback(
         0, // syscall index
         1, // cageid
-        filename_ptr as u64, // arg1
+        // filename_ptr as u64, // arg1
+        filename,
         1, 
         0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
     println!("Wasm [open] function returned in 3i: {}", open_result);
