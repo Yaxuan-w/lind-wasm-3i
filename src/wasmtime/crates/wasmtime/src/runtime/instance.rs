@@ -296,8 +296,8 @@ impl Instance {
         // -------------- AW --------------
         if let Some(func) = instance.get_func(&mut *store, "pass_fptr_to_wt") {
             println!("pass_fptr_to_wt()!");
-            let _res = threei_test_func(Box::new(move |arg1: u64, arg2: u64, arg3: u64, arg4: u64, arg5: u64, arg6: u64, arg7: u64| -> i32 {
-                let func_typed = match func.typed::<(u64, u64, u64, u64, u64, u64, u64), i32>(&store) {
+            let _res = threei_test_func(Box::new(move |index: u64, cageid: u64, arg1: u64, arg1cageid: u64, arg2: u64, arg2cageid: u64, arg3: u64, arg3cageid: u64, arg4: u64, arg4cageid: u64, arg5: u64, arg5cageid: u64, arg6: u64, arg6cageid: u64| -> i32 {
+                let func_typed = match func.typed::<(u64, u64, u64, u64, u64, u64, u64, u64, u64, u64, u64, u64, u64, u64), i32>(&store) {
                     Ok(typed_func) => typed_func,
                     Err(e) => {
                         eprintln!("Failed to type cast pass_fptr_to_wt: {:?}", e);
@@ -305,7 +305,7 @@ impl Instance {
                     }
                 };
         
-                let result = match func_typed.call(&mut *store, (arg1, arg2, arg3, arg4, arg5, arg6, arg7)) {
+                let result = match func_typed.call(&mut *store, (index, cageid, arg1, arg1cageid, arg2, arg2cageid, arg3, arg3cageid, arg4, arg4cageid, arg5, arg5cageid, arg6, arg6cageid)) {
                     Ok(value) => value,
                     Err(e) => {
                         eprintln!("Error calling pass_fptr_to_wt: {:?}", e);
