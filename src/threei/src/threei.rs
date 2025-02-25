@@ -12,7 +12,7 @@ pub fn threei_test_func<'a>(mut callback: Box<dyn FnMut(u64, u64, u64, u64, u64,
         0, // index
         0, // cageid
         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
-    println!("Wasm [open] function returned in 3i: {}", open_result);
+    println!("[3i|Wasm] -open- function returned in 3i: {}", open_result);
     let add_result = callback(
         1, // index
         1, // cageid
@@ -21,7 +21,7 @@ pub fn threei_test_func<'a>(mut callback: Box<dyn FnMut(u64, u64, u64, u64, u64,
         3, // arg2
         0, // arg2cageid
         0, 0, 0, 0, 0, 0, 0, 0);
-    println!("Wasm [add] function returned in 3i: {}", add_result);
+    println!("[3i|Wasm] -add- function returned in 3i: {}", add_result);
 }
 /// ------------------------------------------------------------
 
@@ -323,7 +323,7 @@ pub fn make_syscall(
     arg6: u64,
     arg6_cageid: u64,
 ) -> i32 {
-    println!("[make_syscall] syscallnum: {}, self_cageid: {}, target_cageid: {}", syscall_num, self_cageid, target_cageid);
+    println!("[3i|make_syscall] syscallnum: {}, self_cageid: {}, target_cageid: {}", syscall_num, self_cageid, target_cageid);
     // Return error if the target cage/grate is exiting. We need to add this check beforehead, because make_syscall will also
     // contain cases that can directly redirect a syscall when self_cageid == target_id, which will bypass the handlertable check
     if EXITING_TABLE.contains(&target_cageid) && syscall_num != exit_syscallnum {
@@ -349,7 +349,7 @@ pub fn make_syscall(
                 arg6,
                 arg6_cageid,
             );
-            println!("[make_syscall] syscallnum: {}, ret: {}, self_cageid: {}, target_cageid: {}", syscall_num, ret, self_cageid, target_cageid);
+            println!("[3i|make_syscall] syscallnum: {}, ret: {}, self_cageid: {}, target_cageid: {}", syscall_num, ret, self_cageid, target_cageid);
             return ret;
         } else {
             eprintln!("Syscall number {} not found!", syscall_num);
