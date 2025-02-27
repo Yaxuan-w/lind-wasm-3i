@@ -1,5 +1,5 @@
-/* Duplicate a file descriptor.  Linux version.
-   Copyright (C) 2011-2024 Free Software Foundation, Inc.
+/* Linux dup syscall implementation.
+   Copyright (C) 2017-2024 Free Software Foundation, Inc.
    This file is part of the GNU C Library.
 
    The GNU C Library is free software; you can redistribute it and/or
@@ -16,19 +16,10 @@
    License along with the GNU C Library.  If not, see
    <https://www.gnu.org/licenses/>.  */
 
-#include <fcntl.h>
 #include <unistd.h>
-#include <sysdep.h>
 #include <syscall-template.h>
 
-/* Duplicate FD to FD2, closing the old FD2 and making FD2 be
-   open the same file as FD is.  Return FD2 or -1.  */
-int
-__dup (int fd)
-{
-   return MAKE_SYSCALL(24, "syscall|dup", (uint64_t) fd, NOTUSED, NOTUSED, NOTUSED, NOTUSED, NOTUSED);
-}
+/* Duplicate FD to a new file descriptor.  */
+SYSCALL_TEMPLATE(dup, SYS_dup, int, (int fd))
 
-int dup (int fd) {
-   return MAKE_SYSCALL(24, "syscall|dup", (uint64_t) fd, NOTUSED, NOTUSED, NOTUSED, NOTUSED, NOTUSED);
-}
+libc_hidden_def (dup)

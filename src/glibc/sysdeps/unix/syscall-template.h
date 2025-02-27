@@ -1,7 +1,7 @@
 #include <sys/syscall.h>
 #include <stdint.h> // For uint64_t
 #include <unistd.h>
-#include <lind_syscall.h>
+#include "/home/lind-wasm-3i/src/glibc/lind_syscall/lind_syscall.h"
 
 // Define NOTUSED for unused arguments
 #define NOTUSED 0xdeadbeefdeadbeefULL
