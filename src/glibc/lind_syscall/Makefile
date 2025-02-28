@@ -1,7 +1,7 @@
 # Define environment variables with default values
-CLANG_PATH ?= /home/lind-wasm/clang+llvm-16.0.4-x86_64-linux-gnu-ubuntu-22.04/bin/clang
-LIBC_INCLUDE_PATH ?= /home/lind-wasm/src/glibc/build
-CLANG_INCLUDE_PATH ?= /home/lind-wasm/clang+llvm-16.0.4-x86_64-linux-gnu-ubuntu-22.04/lib/clang/16/include
+CLANG_PATH ?= /home/lind/lind-wasm/clang+llvm-16.0.4-x86_64-linux-gnu-ubuntu-22.04/bin/clang
+LIBC_INCLUDE_PATH ?= /home/lind/lind-wasm/src/glibc/build
+CLANG_INCLUDE_PATH ?= /home/lind/lind-wasm/clang+llvm-16.0.4-x86_64-linux-gnu-ubuntu-22.04/lib/clang/16/include
 
 # Compiler options
 COMMON_FLAGS := --target=wasm32-unkown-wasi -v -Wno-int-conversion -std=gnu11 -fgnu89-inline \
@@ -22,7 +22,7 @@ INCLUDE_PATHS := -I../include -I$(LIBC_INCLUDE_PATH)/nptl -I$(LIBC_INCLUDE_PATH)
     -I../sysdeps/ieee754/flt-32 -I../sysdeps/ieee754 -I../sysdeps/generic -I.. -I../libio -I.
 
 # Targets
-all: crt1.o lind_syscall.o
+all: crt1.o lind_syscall.o register_handler.o
 
 crt1.o: crt1/crt1.c
 	$(CLANG_PATH) $(COMMON_FLAGS) $(INCLUDE_PATHS) crt1/crt1.c -c -o crt1.o
@@ -30,5 +30,8 @@ crt1.o: crt1/crt1.c
 lind_syscall.o: lind_syscall.c
 	$(CLANG_PATH) $(COMMON_FLAGS) $(INCLUDE_PATHS) lind_syscall.c -c -o lind_syscall.o
 
+register_handler.o: register_handler.c
+	$(CLANG_PATH) $(COMMON_FLAGS) $(INCLUDE_PATHS) register_handler.c -c -o register_handler.o    
+
 clean:
-	rm -f crt1.o lind_syscall.o
+	rm -f crt1.o lind_syscall.o register_handler.o

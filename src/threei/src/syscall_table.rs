@@ -3,10 +3,10 @@ use rawposix::syscalls::fs_calls::{
     sbrk_syscall, write_syscall, clock_gettime_syscall, fcntl_syscall, dup2_syscall,
 };
 use rawposix::syscalls::sys_calls::{exec_syscall, exit_syscall, fork_syscall, getpid_syscall, wait_syscall, waitpid_syscall};
-use super::threei::CallFunc;
+use super::threei::Raw_CallFunc;
 
 /// Will replace syscall number with Linux Standard after confirming the refactoring details
-pub const SYSCALL_TABLE: &[(u64, CallFunc)] = &[
+pub const SYSCALL_TABLE: &[(u64, Raw_CallFunc)] = &[
     (13, write_syscall),
     (10, open_syscall),
     (21, mmap_syscall),

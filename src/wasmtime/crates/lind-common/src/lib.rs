@@ -1,16 +1,11 @@
 #![allow(dead_code)]
 
 use anyhow::Result;
-use threei::threei::{make_syscall, threei_test_func};
+use threei::threei::{make_syscall, register_handler};
 use wasmtime_lind_multi_process::{get_memory_base, LindHost, clone_constants::CloneArgStruct};
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
 use wasmtime::{Caller, Func};
-
-// -------------- AW --------------
-use wasmtime::Val;
-use wasmtime::AsContextMut;
-// -------------- AW --------------
 
 // lind-common serves as the main entry point when lind_syscall. Any syscalls made in glibc would reach here first,
 // then the syscall would be dispatched into rawposix, or other crates under wasmtime, depending on the syscall, to perform its job
@@ -58,6 +53,18 @@ impl LindCommonCtx {
             // exit syscall
             30 => {
                 wasmtime_lind_multi_process::exit_syscall(caller, arg1 as i32)
+            }
+            // register_handler
+            400 => {
+                register_handler(
+                    0,
+                    arg1,
+                    arg2,
+                    0,
+                    arg3,
+                    self.pid as u64,
+                    0, 0, 0, 0, 0, 0, 0, 0,
+                )
             }
             // other syscalls goes into rawposix
             _ => {
@@ -125,38 +132,6 @@ impl LindCommonCtx {
 
         return forked_ctx;
     }
-
-    // -------------- AW --------------
-    // pub fn wasmtime_test_func<T: LindHost<T, U> + Clone + Send + 'static + std::marker::Sync, U: Clone + Send + 'static + std::marker::Sync>
-    //         (&self, caller: &mut Caller<'_, T>) {
-    //     let func = match caller.get_export("c_test_func") {
-    //         Some(wasmtime::Extern::Func(f)) => f,
-    //         _ => panic!("Function not found in Wasm"),
-    //     };
-    
-    //     // Send to `threei_test_func`
-    //     threei_test_func(Box::new(move || -> i32 {
-    //         let mut store = caller.as_context_mut();
-    
-    //         // Define return value
-    //         let mut results = [Val::I32(0)];
-    
-    //         match func.call(&mut store, &[], &mut results) {
-    //             Ok(_) => {
-    //                 if let Val::I32(value) = results[0] {
-    //                     value
-    //                 } else {
-    //                     panic!("Unexpected return type from Wasm function");
-    //                 }
-    //             }
-    //             Err(e) => {
-    //                 eprintln!("Error calling Wasm function: {:?}", e);
-    //                 -1
-    //             }
-    //         }
-    //     }));
-    // }
-    // -------------- AW --------------
 }
 
 // function to expose the handler to wasm module
