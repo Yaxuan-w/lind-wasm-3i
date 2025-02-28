@@ -12,23 +12,28 @@ use parking_lot::RwLock;
 /// threei calling different functions by different indexes). 
 /// 
 /// In this function, threei will add the mapping (grateid -> entry dispatcher function) in the 
-pub fn threei_test_func<'a>(mut callback: Box<dyn FnMut(u64, u64, u64, u64, u64, u64, u64, u64, u64, u64, u64, u64, u64, u64) -> i32 + 'a>) {
-    // let open_result = callback(
-    //     0, // index
-    //     0, // cageid
-    //     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
-    // println!("[3i|Wasm] -open- function returned in 3i: {}", open_result);
-    // let add_result = callback(
-    //     1, // index
-    //     1, // cageid
-    //     2, // arg1
-    //     1, // arg1cageid
-    //     3, // arg2
-    //     0, // arg2cageid
-    //     0, 0, 0, 0, 0, 0, 0, 0);
-    // println!("[3i|Wasm] -add- function returned in 3i: {}", add_result);
+/// ## Arguments:
+/// - callback: <index, grateid, arg, argid ,...>
+pub fn threei_test_func<'a>(grateid: u64, mut callback: Box<dyn FnMut(
+        u64, u64, u64, u64, u64,
+        u64, u64, u64, u64, u64,
+        u64, u64, u64, u64
+) -> i32 + 'static>) {
+    let mut guard = GrateEntryTable.write();
 
-    // add to GrateEntryTable
+    let index = grateid as usize;
+    // Check if desired position is empty
+    match guard[index] {
+        Some(_) => {
+            // Each grate should have only 1 entry function
+            panic!("[3i|threei_test_func] Grateid {} in GrateEntryTable is already occupied!", index);
+        },
+        None => {
+            guard[index] = Some(call_func);
+        }
+    }
+
+    0
 }
 /// ------------------------------------------------------------
 
@@ -44,19 +49,17 @@ const exit_syscallnum: u64 = 30; // Develop purpose only
 /// 1. callnum is the call that have access to execute syscall in addr -- acheive per syscall filter
 /// 2. callnum is mapped to addr (callnum=addr) -- achieve per cage filter
 ///
-/// In the current implementation, I only implemented per cage system call filtering.
-/// Because in make_syscall, if we filter the system call based on per syscall, it will be difficult to track (because we
-/// don’t know what the syscall num is that currently issues make)
 /// 
 /// Use Send to send it to another thread.
 /// Use Sync to share between threads (T is Sync if and only if &T is Send).
-pub type CallFunc = Arc<Mutex<dyn FnMut(
+/// TODO: do we need lock here...? we should allow multiple access to same logic at same time??
+pub type CallFunc = Box<dyn FnMut(
     u64, // Call index
     u64, // self cage id
     u64, // arg1
     u64, // arg1 cageid
     u64, u64, u64, u64, u64, u64, u64, u64, u64, u64
-) -> i32 + Send + Sync>>;
+) -> i32 + 'static>;
 
 pub type Raw_CallFunc = fn(
     target_cageid: u64,
@@ -100,6 +103,23 @@ lazy_static::lazy_static! {
     // callnum is mapped to addr, not self
     pub static ref HANDLERTABLE: Mutex<HashMap<u64, HashMap<u64, HashMap<u64, u64>>>> = Mutex::new(HashMap::new());
 }
+
+/// Use functions to improve lock usage
+fn check_handler_exist(cageid: u64) -> bool {
+    let handler_table = HANDLERTABLE.lock().unwrap();
+    handler_table.contains_key(&cageid)
+}
+
+fn get_handler(self_cageid: u64, syscall_num: u64) -> Option<(u64, u64)> {
+    let handler_table = HANDLERTABLE.lock().unwrap();
+    
+    handler_table
+        .get(&self_cageid) // Get the first HashMap<u64, HashMap<u64, u64>>
+        .and_then(|sub_table| sub_table.get(&syscall_num)) // Get the second HashMap<u64, u64>
+        .and_then(|map| map.iter().next()) // Extract the first (key, value) pair
+        .map(|(&call_index, &grateid)| (call_index, grateid)) // Convert to (u64, u64)
+}
+
 
 /// EXITING_TABLE
 /// A grate/cage does not need to know the upper-level grate/cage information, but only needs to manage where the call goes.
@@ -165,6 +185,7 @@ pub fn register_handler(
         .entry(targetcallnum)
         .or_insert_with(HashMap::new)
         .insert(handlefunc, handlefunccage);
+    println!("[3i|register_handler] handler_table: {:?}", handler_table);
     0
 }
 
@@ -275,11 +296,46 @@ pub fn make_syscall(
         return threei_const::ELINDESRCH as i32;
     }
 
-    // Regular case (call from cage to rawposix)
-    if self_cageid == target_cageid || syscall_num == exit_syscallnum {
-        // println!("syscall num in make_syscall: {:?}", syscall_num);
-        if let Some(&(_, syscall_func)) = SYSCALL_TABLE.iter().find(|&&(num, _)| num == syscall_num)
-        {
+    if check_handler_exist(self_cageid) {
+        match get_handler(self_cageid, syscall_num) {
+            Some((call_index, grateid)) => {
+                // Theoretically, the complexity is O(1), shouldn't effect performance a lot
+                match get_grate_entry(grateid) {
+                    Some(grate_entry) => {
+                        // We need to attach original cageid to different args 
+                        let mut entry_func = grate_entry.lock().unwrap();
+                        let grate_ret = entry_func(
+                            call_index, // index
+                            target_cageid, // grateid
+                            arg1,
+                            self_cageid, // source cageid of the args (where the args come from)
+                            arg2,
+                            self_cageid,
+                            arg3,
+                            self_cageid,
+                            arg4,
+                            self_cageid,
+                            arg5,
+                            self_cageid,
+                            arg6,
+                            self_cageid,
+                        );
+                        eprintln!("[3i|make_syscall] grate call_index: {}, ret: {}, self_cageid: {}, target_cageid: {}", call_index, grate_ret, self_cageid, target_cageid);
+                        return grate_ret;
+                    }
+                    None => {
+                        panic!("[3i|make_syscall] grate has been registered in handler_table but entry function not provided!");
+                    }
+                }
+            }
+            None => {
+                panic!("Shouldn't execute");
+            }
+        }
+        
+    } else {
+        // Regular case (call from cage/grate to rawposix)
+        if let Some(&(_, syscall_func)) = SYSCALL_TABLE.iter().find(|&&(num, _)| num == syscall_num) {
             let ret = syscall_func(
                 target_cageid,
                 arg1,
@@ -295,19 +351,14 @@ pub fn make_syscall(
                 arg6,
                 arg6_cageid,
             );
-            eprintln!("[3i|make_syscall] syscallnum: {}, ret: {}, self_cageid: {}, target_cageid: {}", syscall_num, ret, self_cageid, target_cageid);
+            eprintln!("[3i|make_syscall] regular syscallnum: {}, ret: {}, self_cageid: {}, target_cageid: {}", syscall_num, ret, self_cageid, target_cageid);
             return ret;
         } else {
             eprintln!("[3i|make_syscall] Syscall number {} not found!", syscall_num);
             return threei_const::ELINDAPIABORTED as i32;
         }
     }
-
-    0
-    // let handler_table = HANDLERTABLE.lock().unwrap();
-    // If selfcageid != targetcageid --> check the syscall handler table (since here's the cage of grate / dependencies)
-    // let (call_index, grateid) = handler_table.get(&self_cageid).and_then(|sub_table| sub_table.get(&syscall_num)).copied().unwrap();
-    // get_grate_entry(grateid);
+    
 }
 
 /***************************** trigger_harsh_cage_exit & harsh_cage_exit *****************************/

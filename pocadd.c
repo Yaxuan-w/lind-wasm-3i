@@ -2,12 +2,14 @@
 #include <unistd.h>
 #include <stdint.h>
 #include <stdio.h>
+#include <register_handler.h>
+#include <stdlib.h>
 
 typedef int (*func_ptr_t)(uint64_t, uint64_t, uint64_t, uint64_t, uint64_t, uint64_t, uint64_t, uint64_t, uint64_t, uint64_t, uint64_t, uint64_t, uint64_t);
 int open_grate(uint64_t, uint64_t, uint64_t, uint64_t, uint64_t, uint64_t, uint64_t, uint64_t, uint64_t, uint64_t, uint64_t, uint64_t, uint64_t);
-int add(uint64_t, uint64_t, uint64_t, uint64_t, uint64_t, uint64_t, uint64_t, uint64_t, uint64_t, uint64_t, uint64_t, uint64_t, uint64_t);
+int dup_grate(uint64_t, uint64_t, uint64_t, uint64_t, uint64_t, uint64_t, uint64_t, uint64_t, uint64_t, uint64_t, uint64_t, uint64_t, uint64_t);
 
-func_ptr_t func_array[2] = {open_grate, add};
+func_ptr_t func_array[2] = {open_grate, dup_grate};
 
 int pass_fptr_to_wt(uint64_t index, uint64_t cageid, uint64_t arg1, uint64_t arg1cage, uint64_t arg2, uint64_t arg2cage, uint64_t arg3, uint64_t arg3cage, uint64_t arg4, uint64_t arg4cage, uint64_t arg5, uint64_t arg5cage, uint64_t arg6, uint64_t arg6cage) {
     if (index < 0 || index >= 2) {
@@ -27,11 +29,15 @@ int open_grate(uint64_t cageid, uint64_t arg1, uint64_t arg1cage, uint64_t arg2,
     return fd;
 }
 
-int add(uint64_t cageid, uint64_t a, uint64_t arg1cage, uint64_t b, uint64_t arg2cage, uint64_t arg3, uint64_t arg3cage, uint64_t arg4, uint64_t arg4cage, uint64_t arg5, uint64_t arg5cage, uint64_t arg6, uint64_t arg6cage) {
+int dup_grate(uint64_t cageid, uint64_t a, uint64_t arg1cage, uint64_t b, uint64_t arg2cage, uint64_t arg3, uint64_t arg3cage, uint64_t arg4, uint64_t arg4cage, uint64_t arg5, uint64_t arg5cage, uint64_t arg6, uint64_t arg6cage) {
     return a + b;
 }
 
 // Required to be loaded in wasmtime
-int main() {
+int main(int argc, char *argv[]) {
+    int cageid = atoi(argv[1]);
+    // <targetcage, targetcallnum, handlefunc_index_in_this_grate, this_grate_id>
+    int ret = register_handler(cageid, 83, 2, 1);
+    printf("register_handler ret: %d", ret);
     return 0;
 }

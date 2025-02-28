@@ -241,7 +241,8 @@ impl Instance {
         // initialize the memory
         // the memory initialization should happen inside microvisor, so we should discard the original
         // memory init in wasmtime and do our own initialization here
-        match instantiate_type {
+        // We need to store current_pid and pass to 3i to register entry function
+        let current_pid = match instantiate_type {
             // InstantiateFirst: this is the first wasm instance
             InstantiateType::InstantiateFirst(pid) => {
                 // if this is the first wasm instance, we need to
@@ -272,6 +273,7 @@ impl Instance {
                     0,
                     pid,
                 );
+                pid
             },
             // InstantiateChild: this is the child wasm instance forked by parent
             InstantiateType::InstantiateChild { parent_pid, child_pid } => {
@@ -286,8 +288,9 @@ impl Instance {
             
                 cage::memory::mem_helper::init_vmmap_helper(child_pid, child_address, None);
                 cage::memory::mem_helper::fork_vmmap_helper(parent_pid as u64, child_pid);
+                child_pid
             }
-        }
+        };
 
         if let Some(start) = start {
             instance.start_raw(store, start)?;
@@ -296,7 +299,8 @@ impl Instance {
         // -------------- AW --------------
         if let Some(func) = instance.get_func(&mut *store, "pass_fptr_to_wt") {
             println!("pass_fptr_to_wt()!");
-            let _res = threei_test_func(Box::new(move |index: u64, cageid: u64, arg1: u64, arg1cageid: u64, arg2: u64, arg2cageid: u64, arg3: u64, arg3cageid: u64, arg4: u64, arg4cageid: u64, arg5: u64, arg5cageid: u64, arg6: u64, arg6cageid: u64| -> i32 {
+            // We need to attach grate id here
+            let _res = threei_test_func(current_pid, Box::new(move |index: u64, cageid: u64, arg1: u64, arg1cageid: u64, arg2: u64, arg2cageid: u64, arg3: u64, arg3cageid: u64, arg4: u64, arg4cageid: u64, arg5: u64, arg5cageid: u64, arg6: u64, arg6cageid: u64| -> i32 {
                 let func_typed = match func.typed::<(u64, u64, u64, u64, u64, u64, u64, u64, u64, u64, u64, u64, u64, u64), i32>(&store) {
                     Ok(typed_func) => typed_func,
                     Err(e) => {
@@ -304,7 +308,7 @@ impl Instance {
                         return -1; 
                     }
                 };
-        
+
                 let result = match func_typed.call(&mut *store, (index, cageid, arg1, arg1cageid, arg2, arg2cageid, arg3, arg3cageid, arg4, arg4cageid, arg5, arg5cageid, arg6, arg6cageid)) {
                     Ok(value) => value,
                     Err(e) => {

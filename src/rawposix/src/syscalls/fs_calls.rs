@@ -895,3 +895,37 @@ pub fn clock_gettime_syscall(
 
     ret
 }
+
+pub fn nanosleep_time64_syscall(
+    cageid: u64, 
+    clockid_arg: u64,
+    clockid_cageid: u64,
+    flags_arg: u64,
+    flags_cageid: u64,
+    req_arg: u64,
+    req_cageid: u64,
+    rem_arg: u64,
+    rem_cageid: u64,
+    arg5: u64,
+    arg5_cageid: u64,
+    arg6: u64,
+    arg6_cageid: u64,
+) -> i32 {
+    // Type conversion
+    let clockid = sc_convert_sysarg_to_u32(clockid_arg, clockid_cageid, cageid);
+    let flags = sc_convert_sysarg_to_i32(flags_arg, flags_cageid, cageid);
+    let req = sc_convert_buf(req_arg, req_cageid, cageid);
+    let rem = sc_convert_buf(rem_arg, rem_cageid, cageid);
+    // would sometimes check, sometimes be a no-op depending on the compiler settings
+    if !(sc_unusedarg(arg5, arg5_cageid)
+        && sc_unusedarg(arg6, arg6_cageid))
+    {
+        return syscall_error(Errno::EFAULT, "nanosleep", "Invalide Cage ID");
+    }
+    let ret = unsafe { syscall(SYS_clock_nanosleep, clockid, flags, req, rem)  as i32 };
+    if ret < 0 {
+        let errno = get_errno();
+        return handle_errno(errno, "nanosleep");
+    }
+    ret
+}
