@@ -16,10 +16,21 @@
    License along with the GNU C Library.  If not, see
    <https://www.gnu.org/licenses/>.  */
 
+
+#include <fcntl.h>
 #include <unistd.h>
+#include <sysdep.h>
 #include <syscall-template.h>
-
+#include <lind_syscall_num.h>
 /* Duplicate FD to a new file descriptor.  */
-SYSCALL_TEMPLATE(dup, SYS_dup, int, (int fd))
+int
+__dup (int fd)
+{
+   return MAKE_SYSCALL(DUP_SYSCALL, "syscall|dup", (uint64_t) fd, NOTUSED, NOTUSED, NOTUSED, NOTUSED, NOTUSED);
+}
 
+int dup (int fd) {
+   return MAKE_SYSCALL(DUP_SYSCALL, "syscall|dup", (uint64_t) fd, NOTUSED, NOTUSED, NOTUSED, NOTUSED, NOTUSED);
+}
 libc_hidden_def (dup)
+

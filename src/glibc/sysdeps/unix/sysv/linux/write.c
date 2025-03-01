@@ -16,11 +16,22 @@
    License along with the GNU C Library.  If not, see
    <https://www.gnu.org/licenses/>.  */
 
-#include <sys/types.h>
 #include <unistd.h>
+#include <sysdep.h>
 #include <syscall-template.h>
+#include <lind_syscall_num.h>
+
 
 /* Write N bytes of BUF to FD. Return the number written, or -1.  */
-SYSCALL_TEMPLATE(write, SYS_write, ssize_t, (int fd, const void *buf, size_t n))
+ssize_t
+__write (int fd, const void *buf, size_t nbytes)
+{
+  return MAKE_SYSCALL(WRITE_SYSCALL, "syscall|write", (uint64_t) fd, (uint64_t) buf, (uint64_t) nbytes, NOTUSED, NOTUSED, NOTUSED);
+}
 
+ssize_t write (int fd, const void *buf, size_t nbytes) {
+  return MAKE_SYSCALL(WRITE_SYSCALL, "syscall|write", (uint64_t) fd, (uint64_t) buf, (uint64_t) nbytes, NOTUSED, NOTUSED, NOTUSED);
+}
+libc_hidden_def (__write)
+weak_alias (__write, write)
 libc_hidden_def (write)

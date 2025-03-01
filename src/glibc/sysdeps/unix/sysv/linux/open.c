@@ -16,34 +16,45 @@
    License along with the GNU C Library.  If not, see
    <https://www.gnu.org/licenses/>.  */
 
-#include <sys/types.h>
-#include <sys/stat.h>
 #include <fcntl.h>
 #include <stdarg.h>
+#include <unistd.h>
+#include <sysdep.h>
 #include <syscall-template.h>
-
+#include <lind_syscall_num.h>
 #ifndef __OFF_T_MATCHES_OFF64_T
 
 /* Open FILE with access OFLAG.  If O_CREAT or O_TMPFILE is in OFLAG,
    a third argument is the file protection.  */
 int
-__libc_open (const char *file, int oflag, ...)
+__open (const char *file, int oflag, ...)
 {
-  int mode = 0;
-  if (__OPEN_NEEDS_MODE (oflag))
+  mode_t mode = 0;
+  if (oflag & O_CREAT)
     {
       va_list arg;
       va_start (arg, oflag);
-      mode = va_arg (arg, int);
+      mode = va_arg (arg, mode_t);
       va_end (arg);
     }
-  
-  SYSCALL_TEMPLATE(open, SYS_open, int, (const char *file, int oflag, mode_t mode));
+
+  return MAKE_SYSCALL(OPEN_SYSCALL, "syscall|open", (uint64_t) file, (uint64_t) oflag, (uint64_t) mode, NOTUSED, NOTUSED, NOTUSED);
 }
 
-libc_hidden_def (__libc_open)
-weak_alias (__libc_open, __open)
-libc_hidden_weak (__open)
-weak_alias (__libc_open, open)
+int open (const char *file, int oflag, ...)
+{
+  mode_t mode = 0;
+  if (oflag & O_CREAT)
+    {
+      va_list arg;
+      va_start (arg, oflag);
+      mode = va_arg (arg, mode_t);
+      va_end (arg);
+    }
 
-#endif
+  return MAKE_SYSCALL(OPEN_SYSCALL, "syscall|open", (uint64_t) file, (uint64_t) oflag, (uint64_t) mode, NOTUSED, NOTUSED, NOTUSED);
+}
+libc_hidden_def (__open)
+weak_alias (__open, open)
+libc_hidden_def (open)
+
