@@ -20,12 +20,6 @@
 #include <fcntl.h>
 #include <sysdep.h>
 #include <syscall-template.h>
-
-/* Remove the link named NAME.  */
-#include <unistd.h>
-#include <fcntl.h>
-#include <sysdep.h>
-#include <syscall-template.h>
 #include <lind_syscall_num.h>
 
 /* Remove the link named NAME.  */

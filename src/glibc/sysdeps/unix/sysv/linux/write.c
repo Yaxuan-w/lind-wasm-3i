@@ -17,21 +17,19 @@
    <https://www.gnu.org/licenses/>.  */
 
 #include <unistd.h>
-#include <sysdep.h>
+#include <sysdep-cancel.h>
 #include <syscall-template.h>
 #include <lind_syscall_num.h>
-
-
-/* Write N bytes of BUF to FD. Return the number written, or -1.  */
+/* Write NBYTES of BUF to FD.  Return the number written, or -1.  */
 ssize_t
-__write (int fd, const void *buf, size_t nbytes)
+__libc_write (int fd, const void *buf, size_t nbytes)
 {
-  return MAKE_SYSCALL(WRITE_SYSCALL, "syscall|write", (uint64_t) fd, (uint64_t) buf, (uint64_t) nbytes, NOTUSED, NOTUSED, NOTUSED);
+  // Dennis Edit
+  return MAKE_SYSCALL(WRITE_SYSCALL, "syscall|write", (uint64_t) fd, (uint64_t)(uintptr_t) buf, (uint64_t) nbytes, NOTUSED, NOTUSED, NOTUSED);
 }
+libc_hidden_def (__libc_write)
 
-ssize_t write (int fd, const void *buf, size_t nbytes) {
-  return MAKE_SYSCALL(WRITE_SYSCALL, "syscall|write", (uint64_t) fd, (uint64_t) buf, (uint64_t) nbytes, NOTUSED, NOTUSED, NOTUSED);
-}
-libc_hidden_def (__write)
-weak_alias (__write, write)
-libc_hidden_def (write)
+weak_alias (__libc_write, __write)
+libc_hidden_weak (__write)
+weak_alias (__libc_write, write)
+libc_hidden_weak (write)

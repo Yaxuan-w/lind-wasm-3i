@@ -16,8 +16,6 @@
    License along with the GNU C Library.  If not, see
    <https://www.gnu.org/licenses/>.  */
 
-
-#include <fcntl.h>
 #include <unistd.h>
 #include <sysdep.h>
 #include <syscall-template.h>
@@ -28,9 +26,4 @@ __dup (int fd)
 {
    return MAKE_SYSCALL(DUP_SYSCALL, "syscall|dup", (uint64_t) fd, NOTUSED, NOTUSED, NOTUSED, NOTUSED, NOTUSED);
 }
-
-int dup (int fd) {
-   return MAKE_SYSCALL(DUP_SYSCALL, "syscall|dup", (uint64_t) fd, NOTUSED, NOTUSED, NOTUSED, NOTUSED, NOTUSED);
-}
 libc_hidden_def (dup)
-
