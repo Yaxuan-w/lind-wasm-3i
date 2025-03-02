@@ -8,6 +8,7 @@ use std::sync::{Arc, Mutex};
 use parking_lot::RwLock;
 use std::cell::RefCell;
 use std::rc::Rc;
+use std::iter;
 
 /// ------------------------------------------------------------
 /// `call_back` function is the dispatcher function for grate, so it's per grate bias (each grate will have same callback function, and 
@@ -21,8 +22,23 @@ pub fn threei_test_func(grateid: u64, mut callback: Box<dyn FnMut(
     u64, u64, u64, u64, u64,
     u64, u64, u64, u64
 ) -> i32 + 'static>) -> i32 {
-    callback(1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1);
-    println!("[3i|threei_test_func] Execute 'pass_fptr_to_wt'");
+    let index = grateid as usize;
+    unsafe {
+        if GLOBAL_GRATE.is_none() {
+            init_global_grate();
+        }
+
+        if let Some(ref mut vec) = GLOBAL_GRATE {
+            if index < vec.len() {
+                vec[index] = Some(callback);
+                println!("[3i|threei_test_func] Callback replaced with grateid {}", index);
+            } else {
+                println!("[3i|threei_test_func] Index out of bounds: {}", index);
+            }
+        }
+    }
+
+    println!("[3i|threei_test_func] Added grate entry func to global table");
     0
 }
 /// ------------------------------------------------------------
@@ -69,56 +85,80 @@ pub type Raw_CallFunc = fn(
 ) -> i32;
 
 /// GrateEntryTable is to map entry dispatcher function per grateid.
-// const MAX_GRATEID: usize = 1024;
-// const GRATE_ENTRY_POINT: &str = "pass_fptr_to_wt";
+const MAX_GRATEID: usize = 1024;
 
-// trait InstanceWrapper: Send + Sync {
-//     fn instantiate(&self) -> i32;
-// }
+/// Required to use none
+// let f: Option<Box<dyn FnMut(
+//     u64, u64, u64, u64, u64,
+//     u64, u64, u64, u64, u64,
+//     u64, u64, u64, u64
+// ) -> i32>> = None;
 
-// impl<T: Clone + Send + 'static> InstanceWrapper for Arc<InstancePre<T>> {
-//     fn call(&self, args: [u64; 14]) -> i32 {
+static mut GLOBAL_GRATE: Option<Vec<Option<Box<dyn FnMut(
+    u64, u64, u64, u64, u64,
+    u64, u64, u64, u64, u64,
+    u64, u64, u64, u64
+) -> i32>>>> = None;
 
-//         // todo: put these into a closure and store the closure in vec..?
-//         let mut store = Store::new(&self.module().engine(), ());
-//         let instance = self.instantiate(&mut store).unwrap();
-        
-//         let grate_entry_point = instance
-//             .get_typed_func::<(u64, u64, u64, u64, u64, u64, u64, u64, u64, u64, u64, u64, u64, u64), i32>(&mut store, GRATE_ENTRY_POINT)
-//             .unwrap();
+fn init_global_grate() {
+    unsafe {
+        if GLOBAL_GRATE.is_none() {
+            GLOBAL_GRATE = Some(Vec::new()); 
+        }
 
-//         grate_entry_point.call(&mut store, (args[0], args[1], args[2], args[3], args[4], args[5], args[6],
-//             args[7], args[8], args[9], args[10], args[11], args[12], args[13]))
-//     }
-// }
+        for _ in 0..5 {
+            let f: Option<Box<dyn FnMut(
+                u64, u64, u64, u64, u64,
+                u64, u64, u64, u64, u64,
+                u64, u64, u64, u64
+            ) -> i32>> = None;
+            
+            if let Some(ref mut vec) = GLOBAL_GRATE {
+                vec.push(f);
+            }
+        }
+    }
+}
 
-// static GLOBAL_GRATE: Mutex<Option<Grate>> = Mutex::new(None);
 
-// fn call_grate_func(
-//     grateid: u64,
-//     call_index: u64, 
-//     self_cageid: u64, 
-//     arg1: u64, arg1_cageid: u64,
-//     arg2: u64, arg2_cageid: u64,
-//     arg3: u64, arg3_cageid: u64,
-//     arg4: u64, arg4_cageid: u64,
-//     arg5: u64, arg5_cageid: u64,
-//     arg6: u64, arg6_cageid: u64,
-// ) -> Option<i32> {
-//     let mut lock = GLOBAL_GRATE.lock().unwrap();
-//     lock.as_mut().map(|grate| {
-//         grate.call([
-//             call_index, 
-//             self_cageid, 
-//             arg1, arg1_cageid,
-//             arg2, arg2_cageid,
-//             arg3, arg3_cageid,
-//             arg4, arg4_cageid,
-//             arg5, arg5_cageid,
-//             arg6, arg6_cageid,
-//         ])
-//     })
-// }
+fn call_grate_func(
+    grateid: u64,
+    call_index: u64, 
+    self_cageid: u64, 
+    arg1: u64, arg1_cageid: u64,
+    arg2: u64, arg2_cageid: u64,
+    arg3: u64, arg3_cageid: u64,
+    arg4: u64, arg4_cageid: u64,
+    arg5: u64, arg5_cageid: u64,
+    arg6: u64, arg6_cageid: u64,
+) -> Option<i32> {
+    unsafe {
+        if let Some(ref mut vec) = GLOBAL_GRATE {
+            if (grateid as usize) < vec.len() {
+                if let Some(ref mut func) = vec[grateid as usize] {
+                    return Some(func(
+                        call_index, self_cageid,
+                        arg1, arg1_cageid,
+                        arg2, arg2_cageid,
+                        arg3, arg3_cageid,
+                        arg4, arg4_cageid,
+                        arg5, arg5_cageid,
+                        arg6, arg6_cageid
+                    ));
+                } else {
+                    println!("Function at index {} is None", grateid);
+                    return None;
+                }
+            } else {
+                println!("Index {} out of bounds", grateid);
+                return None;
+            }
+        } else {
+            println!("GLOBAL_GRATE is not initialized");
+            return None;
+        }
+    }
+}
 
 // Keys are the grate, the value is a HashMap with a key of the callnum
 // and the values are a (target_call_index, grate) tuple for the actual handlers...
@@ -323,60 +363,55 @@ pub fn make_syscall(
         return threei_const::ELINDESRCH as i32;
     }
 
+    // TODO:
+    // if there's a better to handle
+    // now if only one syscall in cage has been registered, then every call of that cage will check (extra overhead)
     if check_handler_exist(self_cageid) {
-        match get_handler(self_cageid, syscall_num) {
-            Some((call_index, grateid)) => {
-                // TODO:
-                // 1. search by grateid for InstancePre
-                // 2. Restruct call_index to arg list
-                // 3. Call InstancePre
-
-                // Theoretically, the complexity is O(1), shouldn't effect performance a lot
-                // match call_grate_func(
-                //     grateid,
-                //     call_index, 
-                //     self_cageid, 
-                //     arg1, arg1_cageid,
-                //     arg2, arg2_cageid,
-                //     arg3, arg3_cageid,
-                //     arg4, arg4_cageid,
-                //     arg5, arg5_cageid,
-                //     arg6, arg6_cageid,
-                // ) {
-                //     Some(ret) => {
-                //         return ret;
-                //     }
-                //     None => { panic!("[3i|make_syscall] grate call not found! grateid: {}", grateid); }
-                // }
-                panic!(" ");
+        if let Some((call_index, grateid)) = get_handler(self_cageid, syscall_num) {
+            // Theoretically, the complexity is O(1), shouldn't affect performance a lot
+            if let Some(ret) = call_grate_func(
+                grateid,
+                call_index, 
+                self_cageid, 
+                arg1, arg1_cageid,
+                arg2, arg2_cageid,
+                arg3, arg3_cageid,
+                arg4, arg4_cageid,
+                arg5, arg5_cageid,
+                arg6, arg6_cageid,
+            ) {
+                return ret;
+            } else {
+                // syscall has been registered to register_handler but grate's entry function
+                // doesn't provide
+                panic!("[3i|make_syscall] grate call not found! grateid: {}", grateid);
             }
-            None => { panic!("Shouldn't execute"); }
         }
         
+    } 
+
+    // Regular case (call from cage/grate to rawposix)
+    if let Some(&(_, syscall_func)) = SYSCALL_TABLE.iter().find(|&&(num, _)| num == syscall_num) {
+        let ret = syscall_func(
+            target_cageid,
+            arg1,
+            arg1_cageid,
+            arg2,
+            arg2_cageid,
+            arg3,
+            arg3_cageid,
+            arg4,
+            arg4_cageid,
+            arg5,
+            arg5_cageid,
+            arg6,
+            arg6_cageid,
+        );
+        eprintln!("[3i|make_syscall] regular syscallnum: {}, ret: {}, self_cageid: {}, target_cageid: {}", syscall_num, ret, self_cageid, target_cageid);
+        return ret;
     } else {
-        // Regular case (call from cage/grate to rawposix)
-        if let Some(&(_, syscall_func)) = SYSCALL_TABLE.iter().find(|&&(num, _)| num == syscall_num) {
-            let ret = syscall_func(
-                target_cageid,
-                arg1,
-                arg1_cageid,
-                arg2,
-                arg2_cageid,
-                arg3,
-                arg3_cageid,
-                arg4,
-                arg4_cageid,
-                arg5,
-                arg5_cageid,
-                arg6,
-                arg6_cageid,
-            );
-            eprintln!("[3i|make_syscall] regular syscallnum: {}, ret: {}, self_cageid: {}, target_cageid: {}", syscall_num, ret, self_cageid, target_cageid);
-            return ret;
-        } else {
-            eprintln!("[3i|make_syscall] Syscall number {} not found!", syscall_num);
-            return threei_const::ELINDAPIABORTED as i32;
-        }
+        eprintln!("[3i|make_syscall] Syscall number {} not found!", syscall_num);
+        return threei_const::ELINDAPIABORTED as i32;
     }
     
 }
