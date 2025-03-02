@@ -6,6 +6,8 @@ use once_cell::sync::Lazy;
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 use parking_lot::RwLock;
+use std::cell::RefCell;
+use std::rc::Rc;
 
 /// ------------------------------------------------------------
 /// `call_back` function is the dispatcher function for grate, so it's per grate bias (each grate will have same callback function, and 
@@ -14,25 +16,13 @@ use parking_lot::RwLock;
 /// In this function, threei will add the mapping (grateid -> entry dispatcher function) in the 
 /// ## Arguments:
 /// - callback: <index, grateid, arg, argid ,...>
-pub fn threei_test_func<'a>(grateid: u64, mut callback: Box<dyn FnMut(
-        u64, u64, u64, u64, u64,
-        u64, u64, u64, u64, u64,
-        u64, u64, u64, u64
-) -> i32 + 'static>) {
-    let mut guard = GrateEntryTable.write();
-
-    let index = grateid as usize;
-    // Check if desired position is empty
-    match guard[index] {
-        Some(_) => {
-            // Each grate should have only 1 entry function
-            panic!("[3i|threei_test_func] Grateid {} in GrateEntryTable is already occupied!", index);
-        },
-        None => {
-            guard[index] = Some(call_func);
-        }
-    }
-
+pub fn threei_test_func(grateid: u64, mut callback: Box<dyn FnMut(
+    u64, u64, u64, u64, u64,
+    u64, u64, u64, u64, u64,
+    u64, u64, u64, u64
+) -> i32 + 'static>) -> i32 {
+    callback(1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1);
+    println!("[3i|threei_test_func] Execute 'pass_fptr_to_wt'");
     0
 }
 /// ------------------------------------------------------------
@@ -50,17 +40,18 @@ const exit_syscallnum: u64 = 30; // Develop purpose only
 /// 2. callnum is mapped to addr (callnum=addr) -- achieve per cage filter
 ///
 /// 
+/// ** Attempt1: Send+Sync + mutex
 /// Use Send to send it to another thread.
 /// Use Sync to share between threads (T is Sync if and only if &T is Send).
+/// NOT WORK! because wasmtime has entries doesnt support send+sync (*const u8 usage)
+/// 
+/// ** Attempt2: rc<refcell<>> 
+/// NOT WORK! lifetime 
+/// 
+/// ** Attempt3: store directly as Vec
+/// NOT WORK! required to be static. all lifetime in vec needs to be same 
+/// 
 /// TODO: do we need lock here...? we should allow multiple access to same logic at same time??
-pub type CallFunc = Box<dyn FnMut(
-    u64, // Call index
-    u64, // self cage id
-    u64, // arg1
-    u64, // arg1 cageid
-    u64, u64, u64, u64, u64, u64, u64, u64, u64, u64
-) -> i32 + 'static>;
-
 pub type Raw_CallFunc = fn(
     target_cageid: u64,
     arg1: u64,
@@ -78,21 +69,56 @@ pub type Raw_CallFunc = fn(
 ) -> i32;
 
 /// GrateEntryTable is to map entry dispatcher function per grateid.
-const MAX_GRATEID: usize = 1024;
-pub static GrateEntryTable: Lazy<RwLock<Vec<Option<CallFunc>>>> = Lazy::new(|| {
-    let mut vec = Vec::with_capacity(MAX_GRATEID);
-    vec.resize_with(MAX_GRATEID, || None);
-    RwLock::new(vec)
-});
+// const MAX_GRATEID: usize = 1024;
+// const GRATE_ENTRY_POINT: &str = "pass_fptr_to_wt";
 
-fn get_grate_entry(grateid: u64) -> Option<CallFunc> {
-    let table = GrateEntryTable.read();
-    if (grateid as usize) < MAX_GRATEID {
-        table[grateid as usize].clone() 
-    } else {
-        None
-    }
-}
+// trait InstanceWrapper: Send + Sync {
+//     fn instantiate(&self) -> i32;
+// }
+
+// impl<T: Clone + Send + 'static> InstanceWrapper for Arc<InstancePre<T>> {
+//     fn call(&self, args: [u64; 14]) -> i32 {
+
+//         // todo: put these into a closure and store the closure in vec..?
+//         let mut store = Store::new(&self.module().engine(), ());
+//         let instance = self.instantiate(&mut store).unwrap();
+        
+//         let grate_entry_point = instance
+//             .get_typed_func::<(u64, u64, u64, u64, u64, u64, u64, u64, u64, u64, u64, u64, u64, u64), i32>(&mut store, GRATE_ENTRY_POINT)
+//             .unwrap();
+
+//         grate_entry_point.call(&mut store, (args[0], args[1], args[2], args[3], args[4], args[5], args[6],
+//             args[7], args[8], args[9], args[10], args[11], args[12], args[13]))
+//     }
+// }
+
+// static GLOBAL_GRATE: Mutex<Option<Grate>> = Mutex::new(None);
+
+// fn call_grate_func(
+//     grateid: u64,
+//     call_index: u64, 
+//     self_cageid: u64, 
+//     arg1: u64, arg1_cageid: u64,
+//     arg2: u64, arg2_cageid: u64,
+//     arg3: u64, arg3_cageid: u64,
+//     arg4: u64, arg4_cageid: u64,
+//     arg5: u64, arg5_cageid: u64,
+//     arg6: u64, arg6_cageid: u64,
+// ) -> Option<i32> {
+//     let mut lock = GLOBAL_GRATE.lock().unwrap();
+//     lock.as_mut().map(|grate| {
+//         grate.call([
+//             call_index, 
+//             self_cageid, 
+//             arg1, arg1_cageid,
+//             arg2, arg2_cageid,
+//             arg3, arg3_cageid,
+//             arg4, arg4_cageid,
+//             arg5, arg5_cageid,
+//             arg6, arg6_cageid,
+//         ])
+//     })
+// }
 
 // Keys are the grate, the value is a HashMap with a key of the callnum
 // and the values are a (target_call_index, grate) tuple for the actual handlers...
@@ -110,6 +136,7 @@ fn check_handler_exist(cageid: u64) -> bool {
     handler_table.contains_key(&cageid)
 }
 
+/// Return value: <call_index_inside_grate, grateid>
 fn get_handler(self_cageid: u64, syscall_num: u64) -> Option<(u64, u64)> {
     let handler_table = HANDLERTABLE.lock().unwrap();
     
@@ -299,38 +326,31 @@ pub fn make_syscall(
     if check_handler_exist(self_cageid) {
         match get_handler(self_cageid, syscall_num) {
             Some((call_index, grateid)) => {
+                // TODO:
+                // 1. search by grateid for InstancePre
+                // 2. Restruct call_index to arg list
+                // 3. Call InstancePre
+
                 // Theoretically, the complexity is O(1), shouldn't effect performance a lot
-                match get_grate_entry(grateid) {
-                    Some(grate_entry) => {
-                        // We need to attach original cageid to different args 
-                        let mut entry_func = grate_entry.lock().unwrap();
-                        let grate_ret = entry_func(
-                            call_index, // index
-                            target_cageid, // grateid
-                            arg1,
-                            self_cageid, // source cageid of the args (where the args come from)
-                            arg2,
-                            self_cageid,
-                            arg3,
-                            self_cageid,
-                            arg4,
-                            self_cageid,
-                            arg5,
-                            self_cageid,
-                            arg6,
-                            self_cageid,
-                        );
-                        eprintln!("[3i|make_syscall] grate call_index: {}, ret: {}, self_cageid: {}, target_cageid: {}", call_index, grate_ret, self_cageid, target_cageid);
-                        return grate_ret;
-                    }
-                    None => {
-                        panic!("[3i|make_syscall] grate has been registered in handler_table but entry function not provided!");
-                    }
-                }
+                // match call_grate_func(
+                //     grateid,
+                //     call_index, 
+                //     self_cageid, 
+                //     arg1, arg1_cageid,
+                //     arg2, arg2_cageid,
+                //     arg3, arg3_cageid,
+                //     arg4, arg4_cageid,
+                //     arg5, arg5_cageid,
+                //     arg6, arg6_cageid,
+                // ) {
+                //     Some(ret) => {
+                //         return ret;
+                //     }
+                //     None => { panic!("[3i|make_syscall] grate call not found! grateid: {}", grateid); }
+                // }
+                panic!(" ");
             }
-            None => {
-                panic!("Shouldn't execute");
-            }
+            None => { panic!("Shouldn't execute"); }
         }
         
     } else {

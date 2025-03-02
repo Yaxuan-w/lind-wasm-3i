@@ -1,7 +1,7 @@
 #![allow(dead_code)]
 
 use anyhow::{anyhow, Result};
-use threei::threei::make_syscall;
+use threei::threei::{make_syscall, threei_test_func};
 use wasmtime_lind_utils::lind_syscall_numbers::{EXIT_SYSCALL, FORK_SYSCALL, EXEC_SYSCALL};
 use wasmtime_lind_utils::{parse_env_var, LindCageManager};
 
@@ -263,6 +263,11 @@ impl<T: Clone + Send + 'static + std::marker::Sync, U: Clone + Send + 'static + 
 
         // retrieve the child host
         let mut child_host = (self.fork_host)(caller.data());
+
+        // -------------- AW -------------- 
+        let grate_host = child_host.clone();
+        // -------------- AW -------------- ^
+
         // get next cage id
         let child_cageid = self.next_cage_id();
         if let None = child_cageid {
@@ -318,7 +323,11 @@ impl<T: Clone + Send + 'static + std::marker::Sync, U: Clone + Send + 'static + 
 
                 // create a new memory area for child
                 child_ctx.fork_memory(&store_inner, parent_addr_len);
-                let instance_pre = Arc::new(child_ctx.linker.instantiate_pre(&child_ctx.module).unwrap());
+                // -------------- AW --------------
+                let mid_instance_pre = child_ctx.linker.instantiate_pre(&child_ctx.module).unwrap();
+                let instance_pre_grate = mid_instance_pre.clone(); 
+                // -------------- AW -------------- ^
+                let instance_pre = Arc::new(mid_instance_pre);
 
                 let lind_manager = child_ctx.lind_manager.clone();
                 let mut store = Store::new_with_inner(&engine, child_host, store_inner);
@@ -327,6 +336,38 @@ impl<T: Clone + Send + 'static + std::marker::Sync, U: Clone + Send + 'static + 
                 if is_parent_thread {
                     store.set_is_thread(true);
                 }
+
+                // -------------- AW --------------
+                // All cageid or grateid will be passed to 3i, and 3i will distinguish which is grate by register_handler table
+                // Clone the InstancePre type and then add lock
+                // let res = threei_test_func(current_pid, instance_pre);
+                let res = threei_test_func(child_cageid, Box::new(move |index: u64, cageid: u64, arg1: u64, arg1cageid: u64, arg2: u64, arg2cageid: u64, arg3: u64, arg3cageid: u64, arg4: u64, arg4cageid: u64, arg5: u64, arg5cageid: u64, arg6: u64, arg6cageid: u64| -> i32 {
+                    let mut gstore = Store::new(&instance_pre_grate.module().engine(), grate_host.clone());
+                    let instance = instance_pre_grate.instantiate(&mut gstore).unwrap();
+                    println!("[wasmtime|instance] Find function 'pass_fptr_to_wt'");
+                    let grate_entry_point = match instance
+                        .get_typed_func::<(u64, u64, u64, u64, u64, u64, u64, u64, u64, u64, u64, u64, u64, u64), i32>(&mut gstore, "pass_fptr_to_wt") {
+                            Ok(typed_func) => typed_func,
+                            Err(e) => {
+                                eprintln!("[wasmtime|instance] Failed to find function 'pass_fptr_to_wt': {:?}", e);
+                                return -1; 
+                            }
+                        };
+
+                    let result = match grate_entry_point.call(&mut gstore, (index, cageid, arg1, arg1cageid, arg2, arg2cageid, arg3, arg3cageid, arg4, arg4cageid, arg5, arg5cageid, arg6, arg6cageid)) {
+                            Ok(value) => value,
+                            Err(e) => {
+                                eprintln!("Error calling pass_fptr_to_wt: {:?}", e);
+                                return -1; 
+                            }
+                        };
+                    result
+                }));
+                if res < 0 {
+                    panic!("[wasmtime|instance] error on passing instance_pre to 3i");
+                }
+                // -------------- AW -------------- ^
+                
 
                 // instantiate the module
                 let instance = instance_pre.instantiate_with_lind(&mut store,
