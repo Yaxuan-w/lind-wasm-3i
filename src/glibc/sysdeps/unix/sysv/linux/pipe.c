@@ -15,7 +15,6 @@
    You should have received a copy of the GNU Lesser General Public
    License along with the GNU C Library.  If not, see
    <https://www.gnu.org/licenses/>.  */
-
 #include <unistd.h>
 #include <sysdep.h>
 #include <syscall-template.h>
@@ -31,3 +30,4 @@ __pipe (int __pipedes[2])
 }
 libc_hidden_def (__pipe)
 weak_alias (__pipe, pipe)
+~                                   
