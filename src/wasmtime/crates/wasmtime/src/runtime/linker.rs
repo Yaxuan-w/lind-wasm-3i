@@ -1133,9 +1133,12 @@ impl<T> Linker<T> {
         mut store: impl AsContextMut<Data = T>,
         module: &Module,
         instantiate_type: InstantiateType,
-    ) -> Result<Instance> {
-        self._instantiate_pre(module, Some(store.as_context_mut().0))?
-            .instantiate_with_lind(store, instantiate_type)
+    ) -> Result<(InstancePre<T>, Instance)> {
+        let instance_pre = self._instantiate_pre(module, Some(store.as_context_mut().0))?;
+
+        let instance = instance_pre.instantiate_with_lind(store, instantiate_type)?;
+    
+        Ok((instance_pre, instance))
     }
 
     /// Attempts to instantiate the `module` provided. This is the same as

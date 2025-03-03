@@ -233,15 +233,11 @@ pub fn waitpid_syscall(
         return syscall_error(Errno::EFAULT, "waitpid", "Invalid Arguments");
     }
 
-    println!("[rawposix|waitpid] cp-1--- cageid: {:?}, cageid_arg: {:?}, status: {:?}, options: {:?}", cageid, cageid_arg, status as *mut i32, options);
-
     // get the cage instance 
     let cage = get_cage(cageid).unwrap();
 
     let mut zombies = cage.zombies.write();
     let child_num = cage.child_num.load(Relaxed);
-
-    println!("[rawposix|waitpid] cp-2");
 
     // if there is no pending zombies to wait, and there is no active child, return ECHILD
     if zombies.len() == 0 && child_num == 0 {

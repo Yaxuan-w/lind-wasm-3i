@@ -6,7 +6,7 @@
 )]
 
 use crate::common::{Profile, RunCommon, RunTarget};
-
+use threei::threei::threei_test_func;
 use anyhow::{anyhow, bail, Context as _, Error, Result};
 use clap::Parser;
 use sysdefs::constants::fs_const::{MAP_ANONYMOUS, MAP_FIXED, MAP_PRIVATE, PAGESHIFT, PROT_READ, PROT_WRITE};
@@ -558,10 +558,48 @@ impl RunCommand {
         let result = match linker {
             CliLinker::Core(linker) => {
                 let module = module.unwrap_core();
-                let instance = linker.instantiate_with_lind(&mut *store, &module, InstantiateType::InstantiateFirst(pid)).context(format!(
+                // let instance = linker.instantiate_with_lind(&mut *store, &module, InstantiateType::InstantiateFirst(pid)).context(format!(
+                //     "failed to instantiate {:?}",
+                //     self.module_and_args[0]
+                // ))?;
+                // -------------- AW --------------
+                let (instance_pre, instance) = linker.instantiate_with_lind(&mut *store, &module, InstantiateType::InstantiateFirst(pid)).context(format!(
                     "failed to instantiate {:?}",
                     self.module_and_args[0]
                 ))?;
+                println!("[wasmtime|run] load_main_module");
+                let instance_pre = instance_pre.clone(); 
+                let current_pid = pid;
+                // store.data() will return &T, which is a borrowed value, but we will need to have ownership of this..
+                // and T doesn't implement Clone method... we need to manually to do that
+                // todo: create a new instance to store the data 
+                let grate_store = store.data().clone();
+                let res = threei_test_func(current_pid, Box::new(move |index: u64, cageid: u64, arg1: u64, arg1cageid: u64, arg2: u64, arg2cageid: u64, arg3: u64, arg3cageid: u64, arg4: u64, arg4cageid: u64, arg5: u64, arg5cageid: u64, arg6: u64, arg6cageid: u64| -> i32 {
+                    let mut gstore = Store::new(instance_pre.module().engine(), grate_store.clone());
+                    let instance = instance_pre.instantiate(&mut gstore).unwrap();
+                    
+                    let grate_entry_point = match instance
+                        .get_typed_func::<(u64, u64, u64, u64, u64, u64, u64, u64, u64, u64, u64, u64, u64, u64), i32>(&mut gstore, "pass_fptr_to_wt") {
+                            Ok(typed_func) => typed_func,
+                            Err(e) => {
+                                eprintln!("[wasmtime|run] Failed to find function 'pass_fptr_to_wt': {:?}", e);
+                                return -1; 
+                            }
+                        };
+
+                    let result = match grate_entry_point.call(&mut gstore, (index, cageid, arg1, arg1cageid, arg2, arg2cageid, arg3, arg3cageid, arg4, arg4cageid, arg5, arg5cageid, arg6, arg6cageid)) {
+                            Ok(value) => value,
+                            Err(e) => {
+                                eprintln!("Error calling pass_fptr_to_wt: {:?}", e);
+                                return -1; 
+                            }
+                        };
+                    result
+                }));
+                if res < 0 {
+                    panic!("[wasmtime|instance] error on passing instance_pre to 3i");
+                }
+                // -------------- AW --------------
 
                 // If `_initialize` is present, meaning a reactor, then invoke
                 // the function.

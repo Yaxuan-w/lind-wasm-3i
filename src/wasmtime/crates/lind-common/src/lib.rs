@@ -1,7 +1,7 @@
 #![allow(dead_code)]
 
 use anyhow::Result;
-use threei::threei::make_syscall;
+use threei::threei::{make_syscall, register_handler};
 use wasmtime_lind_multi_process::{get_memory_base, LindHost, clone_constants::CloneArgStruct};
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
@@ -38,8 +38,21 @@ impl LindCommonCtx {
     // entry point for lind_syscall in glibc, dispatching syscalls to rawposix or wasmtime
     pub fn lind_syscall<T: LindHost<T, U> + Clone + Send + 'static + std::marker::Sync, U: Clone + Send + 'static + std::marker::Sync>
                         (&self, call_number: u32, call_name: u64, caller: &mut Caller<'_, T>, arg1: u64, arg2: u64, arg3: u64, arg4: u64, arg5: u64, arg6: u64) -> i32 {
+        // println!("[wasmtime|common] callnum: {:?}, call_name:{:?}", call_number, call_name.to_string());
         let start_address = get_memory_base(&caller);
         match call_number as i32 {
+            // register_handler
+            400 => {
+                register_handler(
+                    0,
+                    arg1,
+                    arg2,
+                    0,
+                    arg3,
+                    arg4,
+                    0, 0, 0, 0, 0, 0, 0, 0,
+                )
+            }
             // clone syscall
             171 => {
                 let clone_args = unsafe { &mut *((arg1 + start_address) as *mut CloneArgStruct) };
