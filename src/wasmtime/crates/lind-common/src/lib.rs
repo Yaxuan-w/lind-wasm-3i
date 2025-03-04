@@ -178,5 +178,15 @@ pub fn add_to_linker<T: LindHost<T, U> + Clone + Send + 'static + std::marker::S
         },
     )?;
 
+    linker.func_wrap(
+        "debug",
+        "debug",
+        move |mut caller: Caller<'_, T>, val: i32| -> i32 {
+            println!("debug: {}", val);
+
+            val
+        },
+    )?;
+
     Ok(())
 }

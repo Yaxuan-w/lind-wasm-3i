@@ -1134,12 +1134,21 @@ impl<T> Linker<T> {
         module: &Module,
         instantiate_type: InstantiateType,
     ) -> Result<(InstancePre<T>, Instance)> {
-        let instance_pre = self._instantiate_pre(module, Some(store.as_context_mut().0))?;
+        let instance_pre = self._instantiate_pre(&module.clone(), Some(store.as_context_mut().0))?;
 
         let instance = instance_pre.instantiate_with_lind(store, instantiate_type)?;
     
         Ok((instance_pre, instance))
     }
+    // pub fn instantiate_with_lind(
+    //     &self,
+    //     mut store: impl AsContextMut<Data = T>,
+    //     module: &Module,
+    //     instantiate_type: InstantiateType,
+    // ) -> Result<Instance> {
+    //     self._instantiate_pre(module, Some(store.as_context_mut().0))?
+    //         .instantiate_with_lind(store, instantiate_type)
+    // }
 
     /// Attempts to instantiate the `module` provided. This is the same as
     /// [`Linker::instantiate`], except for async `Store`s.

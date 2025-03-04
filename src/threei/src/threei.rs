@@ -5,10 +5,6 @@ use dashmap::DashSet;
 use once_cell::sync::Lazy;
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
-use parking_lot::RwLock;
-use std::cell::RefCell;
-use std::rc::Rc;
-use std::iter;
 
 /// ------------------------------------------------------------
 /// `call_back` function is the dispatcher function for grate, so it's per grate bias (each grate will have same callback function, and 
@@ -17,6 +13,9 @@ use std::iter;
 /// In this function, threei will add the mapping (grateid -> entry dispatcher function) in the 
 /// ## Arguments:
 /// - callback: <index, grateid, arg, argid ,...>
+/// 
+/// todo: currently all cage/grate will store a closure in global_grate table, we distinguish whether a cage is cage or grate
+/// by using register_handler table
 pub fn threei_test_func(grateid: u64, mut callback: Box<dyn FnMut(
     u64, u64, u64, u64, u64,
     u64, u64, u64, u64, u64,
@@ -87,18 +86,11 @@ pub type Raw_CallFunc = fn(
 /// GrateEntryTable is to map entry dispatcher function per grateid.
 const MAX_GRATEID: usize = 1024;
 
-/// Required to use none
-// let f: Option<Box<dyn FnMut(
-//     u64, u64, u64, u64, u64,
-//     u64, u64, u64, u64, u64,
-//     u64, u64, u64, u64
-// ) -> i32>> = None;
-
 static mut GLOBAL_GRATE: Option<Vec<Option<Box<dyn FnMut(
     u64, u64, u64, u64, u64,
     u64, u64, u64, u64, u64,
     u64, u64, u64, u64
-) -> i32>>>> = None;
+) -> i32 >>>> = None;
 
 fn init_global_grate() {
     unsafe {
@@ -106,7 +98,8 @@ fn init_global_grate() {
             GLOBAL_GRATE = Some(Vec::new()); 
         }
 
-        for _ in 0..5 {
+        // todo: now only initialize 10 entries for usage
+        for _ in 0..10 {
             let f: Option<Box<dyn FnMut(
                 u64, u64, u64, u64, u64,
                 u64, u64, u64, u64, u64,
@@ -120,6 +113,32 @@ fn init_global_grate() {
     }
 }
 
+/// Set the corresponding index to None to indicate removal
+fn rm_from_global_grate(grateid: u64) {
+    unsafe {
+        if let Some(ref mut global_grate) = GLOBAL_GRATE {
+            if grateid < global_grate.len() as u64 {
+                global_grate[grateid as usize] = None;
+            }
+        }
+    }
+}
+
+// fn check_is_grate(id: u64) -> bool {
+//     unsafe {
+//         if let Some(ref global_grate) = GLOBAL_GRATE {
+//             if grateid < global_grate.len() as u64 {
+//                 // grateid is the index of GLOBAL_GRATE. If the id is a grate
+//                 // then the related 
+//                 return global_grate[grateid as usize].is_some();
+//             }
+//         }
+//         // Return false is either GLOBAL_GRATE is uninitialized or grateid exceed 
+//         // range
+//         false
+//     }
+// }
+
 fn call_grate_func(
     grateid: u64,
     call_index: u64, 
@@ -131,6 +150,7 @@ fn call_grate_func(
     arg5: u64, arg5_cageid: u64,
     arg6: u64, arg6_cageid: u64,
 ) -> Option<i32> {
+    println!("[3i|call_grate_func] grateid (aka index): {}", grateid);
     unsafe {
         if let Some(ref mut vec) = GLOBAL_GRATE {
             if (grateid as usize) < vec.len() {
@@ -142,7 +162,7 @@ fn call_grate_func(
                         arg3, arg3_cageid,
                         arg4, arg4_cageid,
                         arg5, arg5_cageid,
-                        arg6, arg6_cageid
+                        arg6, arg6_cageid,
                     ));
                 } else {
                     println!("Function at index {} is None", grateid);
@@ -170,7 +190,7 @@ lazy_static::lazy_static! {
 }
 
 /// Use functions to improve lock usage
-fn check_handler_exist(cageid: u64) -> bool {
+fn check_cage_handler_exist(cageid: u64) -> bool {
     let handler_table = HANDLERTABLE.lock().unwrap();
     handler_table.contains_key(&cageid)
 }
@@ -184,6 +204,16 @@ fn get_handler(self_cageid: u64, syscall_num: u64) -> Option<(u64, u64)> {
         .and_then(|sub_table| sub_table.get(&syscall_num)) // Get the second HashMap<u64, u64>
         .and_then(|map| map.iter().next()) // Extract the first (key, value) pair
         .map(|(&call_index, &grateid)| (call_index, grateid)) // Convert to (u64, u64)
+}
+
+/// Remove all entries point to grate
+fn rm_grate_from_handler(grateid: u64) {
+    let mut table = HANDLERTABLE.lock().unwrap();
+    for (_, callmap) in table.iter_mut() {
+        for (_, target_map) in callmap.iter_mut() {
+            target_map.retain(|_, &mut dest_grateid| dest_grateid != grateid);
+        }
+    }
 }
 
 
@@ -365,8 +395,10 @@ pub fn make_syscall(
     // TODO:
     // if there's a better to handle
     // now if only one syscall in cage has been registered, then every call of that cage will check (extra overhead)
-    if check_handler_exist(self_cageid) {
+    if check_cage_handler_exist(self_cageid) {
         if let Some((call_index, grateid)) = get_handler(self_cageid, syscall_num) {
+            // <targetcage, targetcallnum, handlefunc_index_in_this_grate, this_grate_id>
+            println!("[3i|make_syscall] grate call -- selfcageid: {}, syscallnum: {}, callindex: {}, grateid: {}", self_cageid, syscall_num, call_index, grateid);
             // Theoretically, the complexity is O(1), shouldn't affect performance a lot
             if let Some(ret) = call_grate_func(
                 grateid,
@@ -388,6 +420,19 @@ pub fn make_syscall(
         }
         
     } 
+
+    // TODO: need to move to harsh_cage_exit...??
+    // Cleanup two global tables for exit syscall
+    if syscall_num == exit_syscallnum {
+        println!("[3i|exit] exit cageid: {:?}", self_cageid);
+        // todo: potential refinement here
+        // since `rm_grate_from_handler` searches all entries and remove desired entries..
+        // to make things work as fast as possible, I use brute force here to perform cleanup
+        rm_grate_from_handler(self_cageid);
+        // currently all cages/grates will store closures in global_grate table, so we need to 
+        // cleanup whatever its actually a cage/grate
+        rm_from_global_grate(self_cageid);
+    }
 
     // Regular case (call from cage/grate to rawposix)
     if let Some(&(_, syscall_func)) = SYSCALL_TABLE.iter().find(|&&(num, _)| num == syscall_num) {

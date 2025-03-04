@@ -5,12 +5,13 @@
     allow(irrefutable_let_patterns, unreachable_patterns)
 )]
 
+use std::sync::Barrier;
+
 use crate::common::{Profile, RunCommon, RunTarget};
-use threei::threei::threei_test_func;
 use anyhow::{anyhow, bail, Context as _, Error, Result};
 use clap::Parser;
 use sysdefs::constants::fs_const::{MAP_ANONYMOUS, MAP_FIXED, MAP_PRIVATE, PAGESHIFT, PROT_READ, PROT_WRITE};
-use threei::threei::make_syscall;
+use threei::threei::{make_syscall, threei_test_func};
 use rawposix::{lindrustinit, lindrustfinalize};
 use wasmtime_lind_multi_process::{LindCtx, LindHost};
 use wasmtime_lind_common::LindCommonCtx;
@@ -558,48 +559,18 @@ impl RunCommand {
         let result = match linker {
             CliLinker::Core(linker) => {
                 let module = module.unwrap_core();
+                // -------------- AW --------------
                 // let instance = linker.instantiate_with_lind(&mut *store, &module, InstantiateType::InstantiateFirst(pid)).context(format!(
                 //     "failed to instantiate {:?}",
                 //     self.module_and_args[0]
                 // ))?;
-                // -------------- AW --------------
+                // todo: 1. get info from 3i. 2. execute on wasmtime
                 let (instance_pre, instance) = linker.instantiate_with_lind(&mut *store, &module, InstantiateType::InstantiateFirst(pid)).context(format!(
                     "failed to instantiate {:?}",
                     self.module_and_args[0]
                 ))?;
-                println!("[wasmtime|run] load_main_module");
-                let instance_pre = instance_pre.clone(); 
-                let current_pid = pid;
-                // store.data() will return &T, which is a borrowed value, but we will need to have ownership of this..
-                // and T doesn't implement Clone method... we need to manually to do that
-                // todo: create a new instance to store the data 
-                let grate_store = store.data().clone();
-                let res = threei_test_func(current_pid, Box::new(move |index: u64, cageid: u64, arg1: u64, arg1cageid: u64, arg2: u64, arg2cageid: u64, arg3: u64, arg3cageid: u64, arg4: u64, arg4cageid: u64, arg5: u64, arg5cageid: u64, arg6: u64, arg6cageid: u64| -> i32 {
-                    let mut gstore = Store::new(instance_pre.module().engine(), grate_store.clone());
-                    let instance = instance_pre.instantiate(&mut gstore).unwrap();
-                    
-                    let grate_entry_point = match instance
-                        .get_typed_func::<(u64, u64, u64, u64, u64, u64, u64, u64, u64, u64, u64, u64, u64, u64), i32>(&mut gstore, "pass_fptr_to_wt") {
-                            Ok(typed_func) => typed_func,
-                            Err(e) => {
-                                eprintln!("[wasmtime|run] Failed to find function 'pass_fptr_to_wt': {:?}", e);
-                                return -1; 
-                            }
-                        };
-
-                    let result = match grate_entry_point.call(&mut gstore, (index, cageid, arg1, arg1cageid, arg2, arg2cageid, arg3, arg3cageid, arg4, arg4cageid, arg5, arg5cageid, arg6, arg6cageid)) {
-                            Ok(value) => value,
-                            Err(e) => {
-                                eprintln!("Error calling pass_fptr_to_wt: {:?}", e);
-                                return -1; 
-                            }
-                        };
-                    result
-                }));
-                if res < 0 {
-                    panic!("[wasmtime|instance] error on passing instance_pre to 3i");
-                }
-                // -------------- AW --------------
+                
+                println!("[wasmtime|run] instantiate cp-1");
 
                 // If `_initialize` is present, meaning a reactor, then invoke
                 // the function.
@@ -621,15 +592,68 @@ impl RunCommand {
                         .or_else(|| instance.get_func(&mut *store, "_start"))
                 };
 
+                println!("[wasmtime|run] instantiate cp-2");
+
                 let stack_low = instance.get_stack_low(store.as_context_mut()).unwrap();
                 let stack_pointer = instance.get_stack_pointer(store.as_context_mut()).unwrap();
                 store.as_context_mut().set_stack_base(stack_pointer as u64);
                 store.as_context_mut().set_stack_top(stack_low as u64);
 
-                match func {
+                // -------------- AW --------------
+                // todo: 1. get info from 3i. 2. execute on wasmtime
+                println!("[wasmtime|run] load_main_module");
+                let instance_pre = instance_pre.clone(); 
+                let current_pid = pid;
+                // store.data() will return &T, which is a borrowed value, but we will need to have ownership of this..
+                // and T doesn't implement Clone method... we need to manually to do that
+                // todo: create a new instance to store the data 
+                let grate_store = store.data().clone();
+                let res = threei_test_func(current_pid, Box::new(move |index: u64, cageid: u64, arg1: u64, arg1cageid: u64, arg2: u64, arg2cageid: u64, arg3: u64, arg3cageid: u64, arg4: u64, arg4cageid: u64, arg5: u64, arg5cageid: u64, arg6: u64, arg6cageid: u64| -> i32 {
+                    // let grate_store = Host::default();
+                    println!("[wasmtime|run] inside closure: pid {}", pid);
+                    let mut gstore = Store::new(instance_pre.module().engine(), grate_store.clone());
+                    let instance = instance_pre.instantiate_with_lind(&mut gstore, InstantiateType::InstantiateFirst(pid)).unwrap();
+                    println!("[wasmtime|run] executing 'pass_fptr_to_wt'");
+                    // if let Some(table) =  {
+                    //     println!("Table size: {:?}", table.size(&gstore));
+                    // }   
+                    let table = instance.get_export(&mut gstore, "__indirect_function_table").and_then(|e| e.into_table()).unwrap();                 
+                    if let Some(grate_entry_func) = instance.get_func(&mut gstore, "pass_fptr_to_wt") {
+                        println!("[wasmtime|run] get 'pass_fptr_to_wt'");
+                        let grate_entry_point = match grate_entry_func.typed::<(u64, u64, u64, u64, u64, u64, u64, u64, u64, u64, u64, u64, u64, u64), i32>(&mut gstore) {
+                            Ok(typed_func) => typed_func,
+                            Err(e) => {
+                                eprintln!("[wasmtime|run] Failed to find function 'pass_fptr_to_wt': {:?}", e);
+                                return -1; 
+                            }
+                        };
+                        let result = match grate_entry_point.call(&mut gstore, (index, cageid, arg1, arg1cageid, arg2, arg2cageid, arg3, arg3cageid, arg4, arg4cageid, arg5, arg5cageid, arg6, arg6cageid)) {
+                            Ok(value) => value,
+                            Err(e) => {
+                                eprintln!("Error calling pass_fptr_to_wt: {:?}", e);
+                                return -1; 
+                            }
+                        };
+                        println!("[wasmtime|run] result of 'pass_fptr_to_wt': {}", result);
+                        result
+                    } else {
+                        panic!("[wasmtime|run] not found!");
+                    }
+                    
+                }));
+                if res < 0 {
+                    panic!("[wasmtime|instance] error on passing instance_pre to 3i");
+                }
+                // -------------- AW --------------
+                
+                let return_val = match func {
                     Some(func) => self.invoke_func(store, func),
                     None => Ok(vec![]),
-                }
+                };
+
+                println!("[wasmtime|run] instantiate cp-3");
+
+                return_val
             }
             #[cfg(feature = "component-model")]
             CliLinker::Component(linker) => {

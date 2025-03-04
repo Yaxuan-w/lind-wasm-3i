@@ -9,22 +9,22 @@
 *   Because in wasmtime, it will continue to execute until the main function ends after finding the entry point of main function. 
 *   Due to the limitation of lifetime on `Store` in rust language features, it is very cumbersome to insert an interrupt mechanism 
 *   during execution (I haven't found a way so far), so I put the syscall interception mechanism before wasmtime executes the main 
-*   function. But this will cause a problem: Every time we call the intercepted function (`getuid` in this case) through 3i, the 
+*   function. But this will cause a problem: Every time we call the intercepted function (`geteuid` in this case) through 3i, the 
 *   context info (stored in `Store` in wasmtime) accessed by 3i is before main runs, which makes it impossible to set the uid 
-*   constant in grate and then get it through 3i by using the method of `./grateuid 10 cageuid`. (Because the main function has 
+*   constant in grate and then get it through 3i by using the method of `./grateeuid 10 cageeuid`. (Because the main function has 
 *   not started to execute when 3i accesses it, the constant accessed is set after compilation, while setting it through command 
 *   line requires executing main function and then modifying context info). So I let the user modify this constant through the 
-*   clang compilation flag `-DUID_GRATE_VAL=$val`
+*   clang compilation flag `-DEUID_GRATE_VAL=$val`
 */
-#ifndef UID_GRATE_VAL
-#define UID_GRATE_VAL 10
+#ifndef EUID_GRATE_VAL
+#define EUID_GRATE_VAL 10
 #endif
 
 // Function ptr and signatures of this grate
 typedef int (*func_ptr_t)(uint64_t, uint64_t, uint64_t, uint64_t, uint64_t, uint64_t, uint64_t, uint64_t, uint64_t, uint64_t, uint64_t, uint64_t, uint64_t);
-int getuid_grate(uint64_t, uint64_t, uint64_t, uint64_t, uint64_t, uint64_t, uint64_t, uint64_t, uint64_t, uint64_t, uint64_t, uint64_t, uint64_t);
+int geteuid_grate(uint64_t, uint64_t, uint64_t, uint64_t, uint64_t, uint64_t, uint64_t, uint64_t, uint64_t, uint64_t, uint64_t, uint64_t, uint64_t);
 
-func_ptr_t func_array[1] = {getuid_grate};
+func_ptr_t func_array[1] = {geteuid_grate};
 
 // Dispatcher function
 int pass_fptr_to_wt(uint64_t index, uint64_t cageid, uint64_t arg1, uint64_t arg1cage, uint64_t arg2, uint64_t arg2cage, uint64_t arg3, uint64_t arg3cage, uint64_t arg4, uint64_t arg4cage, uint64_t arg5, uint64_t arg5cage, uint64_t arg6, uint64_t arg6cage) {
@@ -38,8 +38,9 @@ int pass_fptr_to_wt(uint64_t index, uint64_t cageid, uint64_t arg1, uint64_t arg
 }
 
 // Grate function implementation
-int getuid_grate(uint64_t cageid, uint64_t arg1, uint64_t arg1cage, uint64_t arg2, uint64_t arg2cage, uint64_t arg3, uint64_t arg3cage, uint64_t arg4, uint64_t arg4cage, uint64_t arg5, uint64_t arg5cage, uint64_t arg6, uint64_t arg6cage) {
-    return UID_GRATE_VAL;
+int geteuid_grate(uint64_t cageid, uint64_t arg1, uint64_t arg1cage, uint64_t arg2, uint64_t arg2cage, uint64_t arg3, uint64_t arg3cage, uint64_t arg4, uint64_t arg4cage, uint64_t arg5, uint64_t arg5cage, uint64_t arg6, uint64_t arg6cage) {
+    printf("[Grate | geteuid] current grateid: %d, geteuid: %d", getpid(), EUID_GRATE_VAL);
+    return EUID_GRATE_VAL;
 }
 
 int main(int argc, char *argv[]) {
@@ -68,9 +69,9 @@ int main(int argc, char *argv[]) {
             if (i % 2 != 0) {
                 // Next one is cage, only cage set the register_handler
                 int cageid = getpid();
-                // Set the getuid (syscallnum=50) of this cage to call this grate function getuid_grate (func index=0)
+                // Set the geteuid (syscallnum=51) of this cage to call this grate function geteuid_grate (func index=0)
                 // Syntax of register_handler: <targetcage, targetcallnum, handlefunc_index_in_this_grate, this_grate_id>
-                int ret = register_handler(cageid, 50, 0, grateid);
+                int ret = register_handler(cageid, 51, 0, grateid);
             }
 
             if ( execv(argv[i], &argv[i]) == -1) {
@@ -82,7 +83,7 @@ int main(int argc, char *argv[]) {
 
     int status;
     while (wait(&status) > 0) {
-        printf("[Grate | getuid] terminated, status: %d\n", status);
+        printf("[Grate | geteuid] terminated, status: %d\n", status);
     }
     
     return 0;
