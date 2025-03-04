@@ -1,5 +1,5 @@
-/* Get file status.  Linux version.
-   Copyright (C) 2020-2024 Free Software Foundation, Inc.
+/* Linux read syscall implementation.
+   Copyright (C) 2017-2024 Free Software Foundation, Inc.
    This file is part of the GNU C Library.
 
    The GNU C Library is free software; you can redistribute it and/or
@@ -16,16 +16,23 @@
    License along with the GNU C Library; if not, see
    <https://www.gnu.org/licenses/>.  */
 
-#include <sys/stat.h>
-#include <fcntl.h>
-#include <kernel_stat.h>
+#include <unistd.h>
+#include <sysdep-cancel.h>
 #include <syscall-template.h>
-#include <lind_syscall_num.h>
-#if !XSTAT_IS_XSTAT64
-int
-__stat (const char *fd, struct stat *buf)
+
+/* Read NBYTES into BUF from FD.  Return the number read or -1.  */
+
+// Edit: Dennis
+ssize_t
+__libc_read (int fd, void *buf, size_t nbytes)
 {
- return MAKE_SYSCALL(XSTAT_SYSCALL, "syscall|xstat", (uint64_t) fd, (uint64_t) buf, NOTUSED, NOTUSED, NOTUSED, NOTUSED);
+  return MAKE_SYSCALL(12, "syscall|read", (uint64_t) fd, (uint64_t)(uintptr_t) buf, (uint64_t) nbytes, NOTUSED, NOTUSED, NOTUSED);
+
+  //return SYSCALL_CANCEL (read, fd, buf, nbytes);
 }
-weak_alias (__stat, stat)
-#endif
+libc_hidden_def (__libc_read)
+
+libc_hidden_def (__read)
+weak_alias (__libc_read, __read)
+libc_hidden_def (read)
+weak_alias (__libc_read, read)

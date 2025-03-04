@@ -1,5 +1,4 @@
-/* Get file status.  Linux version.
-   Copyright (C) 2020-2024 Free Software Foundation, Inc.
+/* Copyright (C) 2015-2024 Free Software Foundation, Inc.
    This file is part of the GNU C Library.
 
    The GNU C Library is free software; you can redistribute it and/or
@@ -16,16 +15,22 @@
    License along with the GNU C Library; if not, see
    <https://www.gnu.org/licenses/>.  */
 
-#include <sys/stat.h>
-#include <fcntl.h>
-#include <kernel_stat.h>
+#include <sys/socket.h>
+#include <socketcall.h>
 #include <syscall-template.h>
-#include <lind_syscall_num.h>
-#if !XSTAT_IS_XSTAT64
+
 int
-__stat (const char *fd, struct stat *buf)
+__socket (int fd, int type, int domain)
 {
- return MAKE_SYSCALL(XSTAT_SYSCALL, "syscall|xstat", (uint64_t) fd, (uint64_t) buf, NOTUSED, NOTUSED, NOTUSED, NOTUSED);
+
+// #ifdef __ASSUME_SOCKET_SYSCALL
+//   return INLINE_SYSCALL_CALL (socket, fd, type, domain);
+// #else
+//   return SOCKETCALL (socket, fd, type, domain);
+// #endif
+
+  // Dennis Edit
+  return MAKE_SYSCALL(136, "syscall|socket", (uint64_t) fd, (uint64_t) type, (uint64_t) domain, NOTUSED, NOTUSED, NOTUSED);
 }
-weak_alias (__stat, stat)
-#endif
+libc_hidden_def (__socket)
+weak_alias (__socket, socket)

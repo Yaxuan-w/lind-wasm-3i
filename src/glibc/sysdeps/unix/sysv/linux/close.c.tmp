@@ -1,5 +1,5 @@
-/* Get file status.  Linux version.
-   Copyright (C) 2020-2024 Free Software Foundation, Inc.
+/* Linux close syscall implementation.
+   Copyright (C) 2017-2024 Free Software Foundation, Inc.
    This file is part of the GNU C Library.
 
    The GNU C Library is free software; you can redistribute it and/or
@@ -16,16 +16,20 @@
    License along with the GNU C Library; if not, see
    <https://www.gnu.org/licenses/>.  */
 
-#include <sys/stat.h>
-#include <fcntl.h>
-#include <kernel_stat.h>
+#include <unistd.h>
+#include <sysdep-cancel.h>
+#include <not-cancel.h>
 #include <syscall-template.h>
-#include <lind_syscall_num.h>
-#if !XSTAT_IS_XSTAT64
+
+/* Close the file descriptor FD.  */
+
+// Edit: Dennis
 int
-__stat (const char *fd, struct stat *buf)
+__close (int fd)
 {
- return MAKE_SYSCALL(XSTAT_SYSCALL, "syscall|xstat", (uint64_t) fd, (uint64_t) buf, NOTUSED, NOTUSED, NOTUSED, NOTUSED);
+  return MAKE_SYSCALL(11, "syscall|close", (uint64_t) fd, NOTUSED, NOTUSED, NOTUSED, NOTUSED, NOTUSED);
+  // return SYSCALL_CANCEL (close, fd);
 }
-weak_alias (__stat, stat)
-#endif
+libc_hidden_def (__close)
+strong_alias (__close, __libc_close)
+weak_alias (__close, close)
