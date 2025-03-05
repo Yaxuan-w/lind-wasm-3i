@@ -5,8 +5,6 @@
     allow(irrefutable_let_patterns, unreachable_patterns)
 )]
 
-use std::sync::Barrier;
-
 use crate::common::{Profile, RunCommon, RunTarget};
 use anyhow::{anyhow, bail, Context as _, Error, Result};
 use clap::Parser;
@@ -16,7 +14,7 @@ use rawposix::{lindrustinit, lindrustfinalize};
 use wasmtime_lind_multi_process::{LindCtx, LindHost};
 use wasmtime_lind_common::LindCommonCtx;
 use wasmtime_lind_utils::lind_syscall_numbers::EXIT_SYSCALL;
-use std::ffi::OsString;
+use std::ffi::{OsString, CStr};
 use std::path::{Path, PathBuf};
 use std::sync::atomic::AtomicU64;
 use std::sync::{Arc, Mutex};
@@ -217,6 +215,7 @@ impl RunCommand {
                 make_syscall(
                     1,
                     EXIT_SYSCALL,
+                    0, // syscall name will be ignored 
                     1,
                     code as u64, // Exit type
                     1,
@@ -569,7 +568,7 @@ impl RunCommand {
                     "failed to instantiate {:?}",
                     self.module_and_args[0]
                 ))?;
-                
+                // -------------- AW --------------
                 println!("[wasmtime|run] instantiate cp-1");
 
                 // If `_initialize` is present, meaning a reactor, then invoke
@@ -608,33 +607,37 @@ impl RunCommand {
                 // and T doesn't implement Clone method... we need to manually to do that
                 // todo: create a new instance to store the data 
                 let grate_store = store.data().clone();
-                let res = threei_test_func(current_pid, Box::new(move |index: u64, cageid: u64, arg1: u64, arg1cageid: u64, arg2: u64, arg2cageid: u64, arg3: u64, arg3cageid: u64, arg4: u64, arg4cageid: u64, arg5: u64, arg5cageid: u64, arg6: u64, arg6cageid: u64| -> i32 {
-                    // let grate_store = Host::default();
+                let res = threei_test_func(current_pid, Box::new(move |call_ptr: u64, cageid: u64, arg1: u64, arg1cageid: u64, arg2: u64, arg2cageid: u64, arg3: u64, arg3cageid: u64, arg4: u64, arg4cageid: u64, arg5: u64, arg5cageid: u64, arg6: u64, arg6cageid: u64| -> i32 {
+                    let syscall_name = unsafe {
+                        let c_str = CStr::from_ptr(call_ptr as *const i8); 
+                        let rust_str = c_str.to_str().expect("[wasmtime|run] Invalid UTF-8 in call name field"); 
+                        println!("[wasmtime|run] syscallname before modification: {}; ptr: {}", rust_str, call_ptr);
+                        let trimmed = rust_str.strip_prefix("syscall|").unwrap_or(rust_str);
+                        let modified_str = format!("{}_grate", trimmed);
+                        println!("[wasmtime|run] syscallname: {}", modified_str);
+                        modified_str
+                    };
                     println!("[wasmtime|run] inside closure: pid {}", pid);
                     let mut gstore = Store::new(instance_pre.module().engine(), grate_store.clone());
                     let instance = instance_pre.instantiate_with_lind(&mut gstore, InstantiateType::InstantiateFirst(pid)).unwrap();
-                    println!("[wasmtime|run] executing 'pass_fptr_to_wt'");
-                    // if let Some(table) =  {
-                    //     println!("Table size: {:?}", table.size(&gstore));
-                    // }   
-                    let table = instance.get_export(&mut gstore, "__indirect_function_table").and_then(|e| e.into_table()).unwrap();                 
-                    if let Some(grate_entry_func) = instance.get_func(&mut gstore, "pass_fptr_to_wt") {
-                        println!("[wasmtime|run] get 'pass_fptr_to_wt'");
-                        let grate_entry_point = match grate_entry_func.typed::<(u64, u64, u64, u64, u64, u64, u64, u64, u64, u64, u64, u64, u64, u64), i32>(&mut gstore) {
+                    println!("[wasmtime|run] executing '{}'", syscall_name);                
+                    if let Some(grate_entry_func) = instance.get_func(&mut gstore, &syscall_name) {
+                        println!("[wasmtime|run] get '{}'", syscall_name);
+                        let grate_entry_point = match grate_entry_func.typed::<(u64, u64, u64, u64, u64, u64, u64, u64, u64, u64, u64, u64, u64), i32>(&mut gstore) {
                             Ok(typed_func) => typed_func,
                             Err(e) => {
-                                eprintln!("[wasmtime|run] Failed to find function 'pass_fptr_to_wt': {:?}", e);
+                                eprintln!("[wasmtime|run] Failed to find function '{}': {:?}", syscall_name, e);
                                 return -1; 
                             }
                         };
-                        let result = match grate_entry_point.call(&mut gstore, (index, cageid, arg1, arg1cageid, arg2, arg2cageid, arg3, arg3cageid, arg4, arg4cageid, arg5, arg5cageid, arg6, arg6cageid)) {
+                        let result = match grate_entry_point.call(&mut gstore, (cageid, arg1, arg1cageid, arg2, arg2cageid, arg3, arg3cageid, arg4, arg4cageid, arg5, arg5cageid, arg6, arg6cageid)) {
                             Ok(value) => value,
                             Err(e) => {
-                                eprintln!("Error calling pass_fptr_to_wt: {:?}", e);
+                                eprintln!("Error calling {}: {:?}", syscall_name, e);
                                 return -1; 
                             }
                         };
-                        println!("[wasmtime|run] result of 'pass_fptr_to_wt': {}", result);
+                        println!("[wasmtime|run] result of '{}': {}", syscall_name, result);
                         result
                     } else {
                         panic!("[wasmtime|run] not found!");

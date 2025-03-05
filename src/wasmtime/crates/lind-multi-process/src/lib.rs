@@ -275,6 +275,7 @@ impl<T: Clone + Send + 'static + std::marker::Sync, U: Clone + Send + 'static + 
         make_syscall(
             self.pid as u64, 
             FORK_SYSCALL, // syscall num for fork 
+            0, // syscall name will be ignored 
             self.pid as u64, 
             child_cageid, 
             self.pid as u64,
@@ -393,6 +394,7 @@ impl<T: Clone + Send + 'static + std::marker::Sync, U: Clone + Send + 'static + 
                             make_syscall(
                                 child_cageid, // self cage
                                 EXIT_SYSCALL, // syscall num
+                                0, // syscall name will be ignored
                                 child_cageid, // target cage
                                 *val as u64, // 1st arg: status
                                 child_cageid,
@@ -799,6 +801,7 @@ impl<T: Clone + Send + 'static + std::marker::Sync, U: Clone + Send + 'static + 
             make_syscall(
                 cloned_pid as u64, 
                 EXEC_SYSCALL, // syscall num for exec 
+                0, // syscall name will be ignored 
                 cloned_pid as u64, 
                 0,
                 0,

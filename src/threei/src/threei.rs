@@ -44,6 +44,7 @@ pub fn threei_test_func(grateid: u64, mut callback: Box<dyn FnMut(
 
 // use cage::cage::get_cage;
 // use cage::memory::mem_helper::*;
+use typemap::syscall_conv::*;
 use sysdefs::constants::threei_const;
 // use sysdefs::constants::{PROT_READ, PROT_WRITE}; // might be used on memcp, so keep them for now
 
@@ -141,7 +142,7 @@ fn rm_from_global_grate(grateid: u64) {
 
 fn call_grate_func(
     grateid: u64,
-    call_index: u64, 
+    call_name: u64,
     self_cageid: u64, 
     arg1: u64, arg1_cageid: u64,
     arg2: u64, arg2_cageid: u64,
@@ -151,12 +152,16 @@ fn call_grate_func(
     arg6: u64, arg6_cageid: u64,
 ) -> Option<i32> {
     println!("[3i|call_grate_func] grateid (aka index): {}", grateid);
+    // syscall_name from glibc is an address ptr inside wasm linear memory, so we need to manually extract the string content 
+    // from the address 
+    let call_ptr = sc_convert_buf(call_name, self_cageid, self_cageid);
+
     unsafe {
         if let Some(ref mut vec) = GLOBAL_GRATE {
             if (grateid as usize) < vec.len() {
                 if let Some(ref mut func) = vec[grateid as usize] {
                     return Some(func(
-                        call_index, self_cageid,
+                        call_ptr as u64, self_cageid,
                         arg1, arg1_cageid,
                         arg2, arg2_cageid,
                         arg3, arg3_cageid,
@@ -165,15 +170,15 @@ fn call_grate_func(
                         arg6, arg6_cageid,
                     ));
                 } else {
-                    println!("Function at index {} is None", grateid);
+                    println!("[3i|call_grate_func] Function at index {} is None", grateid);
                     return None;
                 }
             } else {
-                println!("Index {} out of bounds", grateid);
+                println!("[3i|call_grate_func] Index {} out of bounds", grateid);
                 return None;
             }
         } else {
-            println!("GLOBAL_GRATE is not initialized");
+            println!("[3i|call_grate_func] GLOBAL_GRATE is not initialized");
             return None;
         }
     }
@@ -371,6 +376,7 @@ pub fn register_handler(
 pub fn make_syscall(
     self_cageid: u64, // is required to get the cage instance 
     syscall_num: u64,
+    syscall_name: u64,
     target_cageid: u64,
     arg1: u64,
     arg1_cageid: u64,
@@ -402,7 +408,7 @@ pub fn make_syscall(
             // Theoretically, the complexity is O(1), shouldn't affect performance a lot
             if let Some(ret) = call_grate_func(
                 grateid,
-                call_index, 
+                syscall_name,
                 self_cageid, 
                 arg1, arg1_cageid,
                 arg2, arg2_cageid,

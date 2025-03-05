@@ -55,60 +55,62 @@ Cageid: 2
 [sbrk_syscall]
 [mmap_inner] cageid: 2, vfd: -1
 [3i|make_syscall] regular syscallnum: 176, ret: 331776, self_cageid: 2, target_cageid: 2
+[3i|make_syscall] syscallnum: 50, self_cageid: 2, target_cageid: 2
+[3i|make_syscall] grate call -- selfcageid: 2, syscallnum: 50, callindex: 0, grateid: 1
+[3i|call_grate_func] grateid (aka index): 1
+[wasmtime|run] syscallname before modification: syscall|getuid; ptr: 123983089378264
+[wasmtime|run] syscallname: getuid_grate
+[wasmtime|run] inside closure: pid 1
 Cageid: 3
 [3i|make_syscall] syscallnum: 21, self_cageid: 3, target_cageid: 3
 [mmap_syscall] selfcageid: 3, FD Cageid: 3
 [mmap_inner] cageid: 3, vfd: -1
 [3i|make_syscall] regular syscallnum: 21, ret: 0, self_cageid: 3, target_cageid: 3
-[3i|make_syscall] syscallnum: 50, self_cageid: 2, target_cageid: 2
-[3i|make_syscall] grate call -- selfcageid: 2, syscallnum: 50, callindex: 0, grateid: 1
-[3i|call_grate_func] grateid (aka index): 1
-[wasmtime|run] inside closure: pid 1
-[wasmtime|run] instantiate cp-1
-[wasmtime|run] instantiate cp-2
-[wasmtime|run] load_main_module
-[3i|threei_test_func] Callback replaced with grateid 3
-[3i|threei_test_func] Added grate entry func to global table
 Cageid: 1
 [3i|make_syscall] syscallnum: 21, self_cageid: 1, target_cageid: 1
 [mmap_syscall] selfcageid: 1, FD Cageid: 1
 [mmap_inner] cageid: 1, vfd: -1
-[3i|make_syscall] regular syscallnum: 21, ret: [3i|make_syscall] syscallnum: 191, self_cageid: 3, target_cageid: 3
-0, self_cageid: 1, target_cageid: 1
+[wasmtime|run] instantiate cp-1
+[wasmtime|run] instantiate cp-2
+[3i|make_syscall] regular syscallnum: [wasmtime|run] load_main_module
+21, ret: 0, self_cageid: 1, target_cageid: 1
+[3i|threei_test_func] Callback replaced with grateid 3
+[3i|threei_test_func] Added grate entry func to global table
+[wasmtime|run] executing 'getuid_grate'
+[wasmtime|run] get 'getuid_grate'
+[wasmtime|run] result of 'getuid_grate': 20
+[3i|make_syscall] syscallnum: 191, self_cageid: 3, target_cageid: 3
 [3i|make_syscall] regular syscallnum: 191, ret: -14, self_cageid: 3, target_cageid: 3
-[wasmtime|run] executing 'pass_fptr_to_wt'
 [3i|make_syscall] syscallnum: 176, self_cageid: 3, target_cageid: 3
 [sbrk_syscall]
-[wasmtime|run] get 'pass_fptr_to_wt'
 [mmap_inner] cageid: 3, vfd: -1
 [3i|make_syscall] regular syscallnum: 176, ret: 196608, self_cageid: 3, target_cageid: 3
-[wasmtime|run] result of 'pass_fptr_to_wt': 20
-[3i|make_syscall] syscallnum: 176, self_cageid: 3, target_cageid: 3
-[sbrk_syscall]
-[mmap_inner] cageid: 3, vfd: -1
-[3i|make_syscall] regular syscallnum: 176, ret: 331776, self_cageid: 3, target_cageid: 3
 [3i|make_syscall] syscallnum: 13, self_cageid: 2, target_cageid: 2
 [Cage | getuid] getuid ret = 20
 [3i|make_syscall] regular syscallnum: 13, ret: 32, self_cageid: 2, target_cageid: 2
+[3i|make_syscall] syscallnum: 176, self_cageid: 3, target_cageid: 3
+[sbrk_syscall]
+[mmap_inner] cageid: 3, vfd: -1
 [wasmtime|run] instantiate cp-3
+[3i|make_syscall] regular syscallnum: 176, ret: 331776, self_cageid: 3, target_cageid: 3
 [3i|make_syscall] syscallnum: 30, self_cageid: 2, target_cageid: 2
 [3i|exit] exit cageid: 2
 [3i|make_syscall] syscallnum: 31, self_cageid: 3, target_cageid: 3
 [3i|make_syscall] regular syscallnum: 31, ret: 3, self_cageid: 3, target_cageid: 3
 [3i|make_syscall] syscallnum: 68, self_cageid: 3, target_cageid: 3
-[rawposix|waitpid] cp-3
-[3i|make_syscall] regular syscallnum: 30, ret: 0, self_cageid: 2, target_cageid: 2
+[3i|make_syscall] regular syscallnum: [rawposix|waitpid] cp-3
+30, ret: 0, self_cageid: 2, target_cageid: 2
 [3i|make_syscall] regular syscallnum: 172, ret: 2, self_cageid: 1, target_cageid: 1
+[3i|make_syscall] regular syscallnum: 68, ret: 0, self_cageid: 3, target_cageid: 3
 [3i|make_syscall] syscallnum: 13, self_cageid: 1, target_cageid: 1
 [Grate | getuid] terminated, status: 0
 [3i|make_syscall] regular syscallnum: 13, ret: 39, self_cageid: 1, target_cageid: 1
 [3i|make_syscall] syscallnum: 172, self_cageid: 1, target_cageid: 1
-[3i|make_syscall] regular syscallnum: 68, ret: 0, self_cageid: 3, target_cageid: 3
 Cageid: 4
 [3i|make_syscall] syscallnum: 172, self_cageid: 3, target_cageid: 3
 [3i|make_syscall] syscallnum: 31, self_cageid: 4, target_cageid: 4
 [3i|make_syscall] regular syscallnum: 31, ret: 4, self_cageid: 4, target_cageid: 4
-[3i|register_handler] handler_table: {4: {51: {0: 3}}, 2: {50: {0: 1}}}
+[3i|register_handler] handler_table: {2: {50: {0: 1}}, 4: {51: {0: 3}}}
 [3i|make_syscall] syscallnum: 69, self_cageid: 4, target_cageid: 4
 [3i|make_syscall] regular syscallnum: 69, ret: 0, self_cageid: 4, target_cageid: 4
 Cageid: 4
@@ -134,19 +136,21 @@ Cageid: 4
 [3i|make_syscall] syscallnum: 51, self_cageid: 4, target_cageid: 4
 [3i|make_syscall] grate call -- selfcageid: 4, syscallnum: 51, callindex: 0, grateid: 3
 [3i|call_grate_func] grateid (aka index): 3
+[wasmtime|run] syscallname before modification: syscall|geteuid; ptr: 123957319574488
+[wasmtime|run] syscallname: geteuid_grate
 [wasmtime|run] inside closure: pid 3
 Cageid: 3
 [3i|make_syscall] syscallnum: 21, self_cageid: 3, target_cageid: 3
 [mmap_syscall] selfcageid: 3, FD Cageid: 3
 [mmap_inner] cageid: 3, vfd: -1
 [3i|make_syscall] regular syscallnum: 21, ret: 0, self_cageid: 3, target_cageid: 3
-[wasmtime|run] executing 'pass_fptr_to_wt'
-[wasmtime|run] get 'pass_fptr_to_wt'
+[wasmtime|run] executing 'geteuid_grate'
+[wasmtime|run] get 'geteuid_grate'
 [3i|make_syscall] syscallnum: 31, self_cageid: 3, target_cageid: 3
 [3i|make_syscall] regular syscallnum: 31, ret: 3, self_cageid: 3, target_cageid: 3
 [3i|make_syscall] syscallnum: 13, self_cageid: 3, target_cageid: 3
 [Grate | geteuid] current grateid: 3, geteuid: 30[3i|make_syscall] regular syscallnum: 13, ret: 49, self_cageid: 3, target_cageid: 3
-[wasmtime|run] result of 'pass_fptr_to_wt': 30
+[wasmtime|run] result of 'geteuid_grate': 30
 [3i|make_syscall] syscallnum: 13, self_cageid: 4, target_cageid: 4
 [Cage | geteuid] geteuid ret = 30
 [3i|make_syscall] regular syscallnum: 13, ret: 34, self_cageid: 4, target_cageid: 4

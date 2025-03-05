@@ -256,6 +256,7 @@ impl Instance {
                 make_syscall(
                     pid, // self cageid
                     MMAP_SYSCALL, // syscall num
+                    0, // syscall name will be ignored 
                     pid, // target cageid (should be same)
                     0, // the first memory region starts from 0
                     pid,
