@@ -1,3 +1,16 @@
+/*
+ * Lind syscall number definitions
+ *
+ * This file contains syscall number constants used by Lind WASM to map
+ * between glibc function calls and the corresponding system calls.
+ * These numbers match the syscall table in the Lind WASM dispatcher.rs file
+ * and are used to replace hardcoded syscall numbers with symbolic constants
+ * for better maintainability.
+ *
+ * Source: These constants are derived from the dispatcher.rs file in the
+ * Lind-WASM codebase (src/threei/src/syscall_table.rs).
+ */
+
 #ifndef _LIND_SYSCALL_NUM_H
 #define _LIND_SYSCALL_NUM_H
 
