@@ -328,7 +328,7 @@ pub fn waitpid_syscall(
     let zombie = zombie_opt.unwrap();
     // update the status
     *status = zombie.exit_code;
-    println!("[rawposix|waitpid] cp-3");
+    // println!("[rawposix|waitpid] cp-3");
     // return child's cageid
     zombie.cageid as i32
 }

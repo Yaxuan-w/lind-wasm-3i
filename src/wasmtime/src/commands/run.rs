@@ -570,7 +570,7 @@ impl RunCommand {
                     self.module_and_args[0]
                 ))?;
                 
-                println!("[wasmtime|run] instantiate cp-1");
+                // println!("[wasmtime|run] instantiate cp-1");
 
                 // If `_initialize` is present, meaning a reactor, then invoke
                 // the function.
@@ -592,7 +592,7 @@ impl RunCommand {
                         .or_else(|| instance.get_func(&mut *store, "_start"))
                 };
 
-                println!("[wasmtime|run] instantiate cp-2");
+                // println!("[wasmtime|run] instantiate cp-2");
 
                 let stack_low = instance.get_stack_low(store.as_context_mut()).unwrap();
                 let stack_pointer = instance.get_stack_pointer(store.as_context_mut()).unwrap();
@@ -601,7 +601,7 @@ impl RunCommand {
 
                 // -------------- AW --------------
                 // todo: 1. get info from 3i. 2. execute on wasmtime
-                println!("[wasmtime|run] load_main_module");
+                // println!("[wasmtime|run] load_main_module");
                 let instance_pre = instance_pre.clone(); 
                 let current_pid = pid;
                 // store.data() will return &T, which is a borrowed value, but we will need to have ownership of this..
@@ -610,20 +610,20 @@ impl RunCommand {
                 let grate_store = store.data().clone();
                 let res = threei_test_func(current_pid, Box::new(move |index: u64, cageid: u64, arg1: u64, arg1cageid: u64, arg2: u64, arg2cageid: u64, arg3: u64, arg3cageid: u64, arg4: u64, arg4cageid: u64, arg5: u64, arg5cageid: u64, arg6: u64, arg6cageid: u64| -> i32 {
                     // let grate_store = Host::default();
-                    println!("[wasmtime|run] inside closure: pid {}", pid);
+                    // println!("[wasmtime|run] inside closure: pid {}", pid);
                     let mut gstore = Store::new(instance_pre.module().engine(), grate_store.clone());
                     let instance = instance_pre.instantiate_with_lind(&mut gstore, InstantiateType::InstantiateFirst(pid)).unwrap();
-                    println!("[wasmtime|run] executing 'pass_fptr_to_wt'");
+                    // println!("[wasmtime|run] executing 'pass_fptr_to_wt'");
                     // if let Some(table) =  {
                     //     println!("Table size: {:?}", table.size(&gstore));
                     // }   
                     let table = instance.get_export(&mut gstore, "__indirect_function_table").and_then(|e| e.into_table()).unwrap();                 
                     if let Some(grate_entry_func) = instance.get_func(&mut gstore, "pass_fptr_to_wt") {
-                        println!("[wasmtime|run] get 'pass_fptr_to_wt'");
+                        // println!("[wasmtime|run] get 'pass_fptr_to_wt'");
                         let grate_entry_point = match grate_entry_func.typed::<(u64, u64, u64, u64, u64, u64, u64, u64, u64, u64, u64, u64, u64, u64), i32>(&mut gstore) {
                             Ok(typed_func) => typed_func,
                             Err(e) => {
-                                eprintln!("[wasmtime|run] Failed to find function 'pass_fptr_to_wt': {:?}", e);
+                                // println!("[wasmtime|run] Failed to find function 'pass_fptr_to_wt': {:?}", e);
                                 return -1; 
                             }
                         };
@@ -634,7 +634,7 @@ impl RunCommand {
                                 return -1; 
                             }
                         };
-                        println!("[wasmtime|run] result of 'pass_fptr_to_wt': {}", result);
+                        // println!("[wasmtime|run] result of 'pass_fptr_to_wt': {}", result);
                         result
                     } else {
                         panic!("[wasmtime|run] not found!");
@@ -651,7 +651,7 @@ impl RunCommand {
                     None => Ok(vec![]),
                 };
 
-                println!("[wasmtime|run] instantiate cp-3");
+                // println!("[wasmtime|run] instantiate cp-3");
 
                 return_val
             }
