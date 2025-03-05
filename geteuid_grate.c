@@ -39,10 +39,10 @@ int pass_fptr_to_wt(uint64_t index, uint64_t cageid, uint64_t arg1, uint64_t arg
 
 // Grate function implementation
 int geteuid_grate(uint64_t cageid, uint64_t arg1, uint64_t arg1cage, uint64_t arg2, uint64_t arg2cage, uint64_t arg3, uint64_t arg3cage, uint64_t arg4, uint64_t arg4cage, uint64_t arg5, uint64_t arg5cage, uint64_t arg6, uint64_t arg6cage) {
-    printf("[Grate | geteuid] current grateid: %d, geteuid: %d", getpid(), EUID_GRATE_VAL);
     return EUID_GRATE_VAL;
 }
 
+// Main function will always be same in all grates
 int main(int argc, char *argv[]) {
     // Should be at least two inputs (at least one grate file and one cage file)
     if (argc < 2) {
@@ -56,7 +56,7 @@ int main(int argc, char *argv[]) {
     // grate, so we need to handle these two situations separately in grate. 
     // grate needs to fork in two situations: 
     // - the first is to fork and use its own cage; 
-    // - the second is when there is still grate in the subsequent command line input. 
+    // - the second is when there is still at least one grate in the subsequent command line input. 
     // In the second case, we fork & exec the new grate and let the new grate handle the subsequent process.
     for (int i = 1; i < (argc < 3 ? argc : 3); i++) {
         pid_t pid = fork();
@@ -67,7 +67,7 @@ int main(int argc, char *argv[]) {
             // According to input format, the odd-numbered positions will always be grate, and even-numbered positions 
             // will always be cage.
             if (i % 2 != 0) {
-                // Next one is cage, only cage set the register_handler
+                // Next one is cage, only set the register_handler when next one is cage 
                 int cageid = getpid();
                 // Set the geteuid (syscallnum=51) of this cage to call this grate function geteuid_grate (func index=0)
                 // Syntax of register_handler: <targetcage, targetcallnum, handlefunc_index_in_this_grate, this_grate_id>
