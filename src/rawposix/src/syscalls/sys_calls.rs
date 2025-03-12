@@ -50,10 +50,10 @@ pub fn fork_syscall(
     }
 
     // Modify the fdtable manually
-    fdtables::copy_fdtable_for_cage(child_arg_cageid, child_arg).unwrap();
+    fdtables::copy_fdtable_for_cage(cageid, child_arg).unwrap();
 
     // Get the self cage
-    let selfcage = get_cage(child_arg_cageid).unwrap();
+    let selfcage = get_cage(cageid).unwrap();
 
     let parent_vmmap = selfcage.vmmap.read();
     let new_vmmap = parent_vmmap.clone();
@@ -358,13 +358,14 @@ pub fn wait_syscall(
         && sc_unusedarg(arg5, arg5_cageid)
         && sc_unusedarg(arg6, arg6_cageid))
     {
-        return syscall_error(Errno::EFAULT, "waitpid", "Invalid Arguments");
+        return syscall_error(Errno::EFAULT, "wait", "Invalid Arguments");
     }
     // left type conversion done inside waitpid_syscall
     waitpid_syscall(cageid, 0, 0, status_arg, status_cageid, 0, 0, 0, 0, 0, 0, 0, 0)
 }
 
-pub fn getpid_syscall(cageid: u64,
+pub fn getpid_syscall(
+    cageid: u64,
     arg1: u64,
     arg1_cageid: u64,
     arg2: u64,
@@ -386,7 +387,7 @@ pub fn getpid_syscall(cageid: u64,
         && sc_unusedarg(arg5, arg5_cageid)
         && sc_unusedarg(arg6, arg6_cageid))
     {
-        return syscall_error(Errno::EFAULT, "exec", "Invalide Cage ID");
+        return syscall_error(Errno::EFAULT, "getpid", "Invalide Cage ID");
     }
 
     let cage = get_cage(cageid).unwrap();
@@ -394,7 +395,8 @@ pub fn getpid_syscall(cageid: u64,
     return cage.cageid as i32;
 }
 
-pub fn getppid_syscall(cageid: u64,
+pub fn getppid_syscall(
+    cageid: u64,
     arg1: u64,
     arg1_cageid: u64,
     arg2: u64,
@@ -416,7 +418,7 @@ pub fn getppid_syscall(cageid: u64,
         && sc_unusedarg(arg5, arg5_cageid)
         && sc_unusedarg(arg6, arg6_cageid))
     {
-        return syscall_error(Errno::EFAULT, "exec", "Invalide Cage ID");
+        return syscall_error(Errno::EFAULT, "getppid", "Invalide Cage ID");
     }
 
     let cage = get_cage(cageid).unwrap();
@@ -424,6 +426,155 @@ pub fn getppid_syscall(cageid: u64,
     return cage.parent as i32;
 }
 
+pub fn getuid_syscall(
+    cageid: u64,
+    arg1: u64,
+    arg1_cageid: u64,
+    arg2: u64,
+    arg2_cageid: u64,
+    arg3: u64,
+    arg3_cageid: u64,
+    arg4: u64,
+    arg4_cageid: u64,
+    arg5: u64,
+    arg5_cageid: u64,
+    arg6: u64,
+    arg6_cageid: u64,
+) -> i32 {
+    // would sometimes check, sometimes be a no-op depending on the compiler settings
+    if !(sc_unusedarg(arg1, arg1_cageid)
+        && sc_unusedarg(arg2, arg2_cageid)
+        && sc_unusedarg(arg3, arg3_cageid)
+        && sc_unusedarg(arg4, arg4_cageid)
+        && sc_unusedarg(arg5, arg5_cageid)
+        && sc_unusedarg(arg6, arg6_cageid))
+    {
+        return syscall_error(Errno::EFAULT, "getuid", "Invalide Cage ID");
+    }
+
+    return 1000;
+}
+
+pub fn geteuid_syscall(
+    cageid: u64,
+    arg1: u64,
+    arg1_cageid: u64,
+    arg2: u64,
+    arg2_cageid: u64,
+    arg3: u64,
+    arg3_cageid: u64,
+    arg4: u64,
+    arg4_cageid: u64,
+    arg5: u64,
+    arg5_cageid: u64,
+    arg6: u64,
+    arg6_cageid: u64,
+) -> i32 {
+    // would sometimes check, sometimes be a no-op depending on the compiler settings
+    if !(sc_unusedarg(arg1, arg1_cageid)
+        && sc_unusedarg(arg2, arg2_cageid)
+        && sc_unusedarg(arg3, arg3_cageid)
+        && sc_unusedarg(arg4, arg4_cageid)
+        && sc_unusedarg(arg5, arg5_cageid)
+        && sc_unusedarg(arg6, arg6_cageid))
+    {
+        return syscall_error(Errno::EFAULT, "geteuid", "Invalide Cage ID");
+    }
+
+    return 1000;
+}
+
+pub fn getgid_syscall(
+    cageid: u64,
+    arg1: u64,
+    arg1_cageid: u64,
+    arg2: u64,
+    arg2_cageid: u64,
+    arg3: u64,
+    arg3_cageid: u64,
+    arg4: u64,
+    arg4_cageid: u64,
+    arg5: u64,
+    arg5_cageid: u64,
+    arg6: u64,
+    arg6_cageid: u64,
+) -> i32 {
+    // would sometimes check, sometimes be a no-op depending on the compiler settings
+    if !(sc_unusedarg(arg1, arg1_cageid)
+        && sc_unusedarg(arg2, arg2_cageid)
+        && sc_unusedarg(arg3, arg3_cageid)
+        && sc_unusedarg(arg4, arg4_cageid)
+        && sc_unusedarg(arg5, arg5_cageid)
+        && sc_unusedarg(arg6, arg6_cageid))
+    {
+        return syscall_error(Errno::EFAULT, "getgid", "Invalide Cage ID");
+    }
+
+    return 1000;
+}
+
+pub fn getegid_syscall(
+    cageid: u64,
+    arg1: u64,
+    arg1_cageid: u64,
+    arg2: u64,
+    arg2_cageid: u64,
+    arg3: u64,
+    arg3_cageid: u64,
+    arg4: u64,
+    arg4_cageid: u64,
+    arg5: u64,
+    arg5_cageid: u64,
+    arg6: u64,
+    arg6_cageid: u64,
+) -> i32 {
+    // would sometimes check, sometimes be a no-op depending on the compiler settings
+    if !(sc_unusedarg(arg1, arg1_cageid)
+        && sc_unusedarg(arg2, arg2_cageid)
+        && sc_unusedarg(arg3, arg3_cageid)
+        && sc_unusedarg(arg4, arg4_cageid)
+        && sc_unusedarg(arg5, arg5_cageid)
+        && sc_unusedarg(arg6, arg6_cageid))
+    {
+        return syscall_error(Errno::EFAULT, "getegid", "Invalide Cage ID");
+    }
+
+    return 1000;
+}
+
+pub fn gethostname_syscall(
+    cageid: u64,
+    name_arg: u64,
+    name_cageid: u64,
+    len_arg: u64,
+    len_cageid: u64,
+    arg3: u64,
+    arg3_cageid: u64,
+    arg4: u64,
+    arg4_cageid: u64,
+    arg5: u64,
+    arg5_cageid: u64,
+    arg6: u64,
+    arg6_cageid: u64,
+) -> i32 {
+    let name = sc_convert_mut_buf(name_arg, name_cageid, cageid);
+    let len = sc_convert_sysarg_to_usize(len_arg, len_cageid, cageid);
+    // would sometimes check, sometimes be a no-op depending on the compiler settings
+    if !(sc_unusedarg(arg3, arg3_cageid)
+        && sc_unusedarg(arg4, arg4_cageid)
+        && sc_unusedarg(arg5, arg5_cageid)
+        && sc_unusedarg(arg6, arg6_cageid))
+    {
+        return syscall_error(Errno::EFAULT, "gethostname", "Invalide Cage ID");
+    }
+    // todo: perform translate to i8 other place 
+    let ret = unsafe { libc::gethostname(name as *mut i8, len) };
+    if ret < 0 {
+        let errno = get_errno();
+        return handle_errno(errno, "gethostname");
+    }
+    ret
+}
 /// Those functions are required by wasmtime to create the first cage. `verbosity` indicates whether
 /// detailed error messages will be printed if set
 pub fn lindrustinit(verbosity: isize) {

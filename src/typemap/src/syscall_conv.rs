@@ -266,3 +266,12 @@ pub fn sc_convert_buf(buf_arg: u64, arg_cageid: u64, cageid: u64) -> *const u8 {
     let buf = translate_vmmap_addr(&cage, buf_arg).unwrap() as *const u8;
     buf
 }
+
+pub fn sc_convert_mut_buf(buf_arg: u64, arg_cageid: u64, cageid: u64) -> *mut u8 {
+    // Get cage reference to translate address
+    let cage = get_cage(arg_cageid).unwrap();
+    // Convert user buffer address to system address. We don't need to check permission here.
+    // Permission check has been handled in 3i
+    let buf = translate_vmmap_addr(&cage, buf_arg).unwrap() as *mut u8;
+    buf
+}

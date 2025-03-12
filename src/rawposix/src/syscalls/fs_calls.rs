@@ -181,6 +181,13 @@ pub fn write_syscall(
         return syscall_error(Errno::EBADF, "write", "Bad File Descriptor");
     }
 
+    if !(sc_unusedarg(arg4, arg4_cageid)
+        && sc_unusedarg(arg5, arg5_cageid)
+        && sc_unusedarg(arg6, arg6_cageid))
+    {
+        return syscall_error(Errno::EFAULT, "write", "Invalide Cage ID");
+    }
+
     let buf = sc_convert_buf(buf_arg, buf_cageid, cageid);
     let count = sc_convert_sysarg_to_usize(count_arg, count_cageid, cageid);
     // would sometimes check, sometimes be a no-op depending on the compiler settings
@@ -201,6 +208,139 @@ pub fn write_syscall(
     if ret < 0 {
         let errno = get_errno();
         return handle_errno(errno, "write");
+    }
+    return ret;
+}
+
+pub fn read_syscall(
+    cageid: u64,
+    virtual_fd: u64,
+    vfd_cageid: u64,
+    buf_arg: u64,
+    buf_cageid: u64,
+    count_arg: u64,
+    count_cageid: u64,
+    arg4: u64,
+    arg4_cageid: u64,
+    arg5: u64,
+    arg5_cageid: u64,
+    arg6: u64,
+    arg6_cageid: u64,
+) -> i32 {
+    let kernel_fd = convert_fd_to_host(virtual_fd, vfd_cageid, cageid);
+    if !(sc_unusedarg(arg4, arg4_cageid)
+        && sc_unusedarg(arg5, arg5_cageid)
+        && sc_unusedarg(arg6, arg6_cageid))
+    {
+        return syscall_error(Errno::EFAULT, "read", "Invalide Cage ID");
+    }
+    if kernel_fd == -1 {
+        return syscall_error(Errno::EFAULT, "read", "Invalid Cage ID");
+    } else if kernel_fd == -9 {
+        return syscall_error(Errno::EBADF, "read", "Bad File Descriptor");
+    }
+
+    let buf = sc_convert_mut_buf(buf_arg, buf_cageid, cageid);
+    let count = sc_convert_sysarg_to_usize(count_arg, count_cageid, cageid);
+
+    // would sometimes check, sometimes be a no-op depending on the compiler settings
+    if !(sc_unusedarg(arg4, arg4_cageid)
+        && sc_unusedarg(arg5, arg5_cageid)
+        && sc_unusedarg(arg6, arg6_cageid))
+    {
+        return syscall_error(Errno::EFAULT, "read", "Invalide Cage ID");
+    }
+
+    // Early return
+    if count == 0 {
+        return 0;
+    }
+
+    //kernel fd
+    let ret = unsafe {
+        libc::read(kernel_fd as i32, buf as *mut c_void, count) as i32
+    };
+    if ret < 0 {
+        let errno = get_errno();
+        return handle_errno(errno, "read");
+    }
+    return ret;
+}
+
+pub fn close_syscall(
+    cageid: u64,
+    virtual_fd: u64,
+    vfd_cageid: u64,
+    arg2: u64,
+    arg2_cageid: u64,
+    arg3: u64,
+    arg3_cageid: u64,
+    arg4: u64,
+    arg4_cageid: u64,
+    arg5: u64,
+    arg5_cageid: u64,
+    arg6: u64,
+    arg6_cageid: u64,
+) -> i32 {
+    if !(sc_unusedarg(arg2, arg2_cageid)
+        && sc_unusedarg(arg3, arg3_cageid)
+        && sc_unusedarg(arg4, arg4_cageid)
+        && sc_unusedarg(arg5, arg5_cageid)
+        && sc_unusedarg(arg6, arg6_cageid))
+    {
+        return syscall_error(Errno::EFAULT, "close", "Invalide Cage ID");
+    }
+    match fdtables::close_virtualfd(cageid, virtual_fd ) {
+        Ok(()) => {
+            return 0;
+        }
+        Err(e) => {
+            if e == Errno::EBADFD as u64 {
+                return syscall_error(Errno::EBADF, "close", "bad file descriptor");
+            } 
+            return -1;
+        }
+    }
+}
+
+pub fn lseek_syscall(
+    cageid: u64,
+    virtual_fd: u64,
+    vfd_cageid: u64,
+    offset_arg: u64,
+    offset_cageid: u64,
+    whence_arg: u64,
+    whence_cageid: u64,
+    arg4: u64,
+    arg4_cageid: u64,
+    arg5: u64,
+    arg5_cageid: u64,
+    arg6: u64,
+    arg6_cageid: u64,
+) -> i32 {
+    if !(sc_unusedarg(arg4, arg4_cageid)
+        && sc_unusedarg(arg5, arg5_cageid)
+        && sc_unusedarg(arg6, arg6_cageid))
+    {
+        return syscall_error(Errno::EFAULT, "lseek", "Invalide Cage ID");
+    }
+
+    let kernel_fd = convert_fd_to_host(virtual_fd, vfd_cageid, cageid);
+    
+    if kernel_fd == -1 {
+        return syscall_error(Errno::EFAULT, "lseek", "Invalid Cage ID");
+    } else if kernel_fd == -9 {
+        return syscall_error(Errno::EBADF, "lseek", "Bad File Descriptor");
+    }
+    let offset = sc_convert_sysarg_to_i64(offset_arg, offset_cageid, cageid);
+    let whence = sc_convert_sysarg_to_i32(whence_arg, whence_cageid, cageid);
+
+    let ret = unsafe {
+        libc::lseek(kernel_fd, offset, whence) as i32
+    };
+    if ret < 0 {
+        let errno = get_errno();
+        return handle_errno(errno, "lseek");
     }
     return ret;
 }
@@ -288,6 +428,133 @@ pub fn dup2_syscall(
     
 }
 
+pub fn stat_syscall(
+    cageid: u64,
+    path_arg: u64,
+    path_arg_cageid: u64,
+    statbuf_arg: u64,
+    statbuf_arg_cageid: u64,
+    arg3: u64,
+    arg3_cageid: u64,
+    arg4: u64,
+    arg4_cageid: u64,
+    arg5: u64,
+    arg5_cageid: u64,
+    arg6: u64,
+    arg6_cageid: u64,
+) -> i32 {
+    let path = sc_convert_path_to_host(path_arg, path_arg_cageid, cageid);
+    let statbuf = sc_convert_mut_buf(statbuf_arg, statbuf_arg_cageid, cageid);
+    // would sometimes check, sometimes be a no-op depending on the compiler settings
+    if !(sc_unusedarg(arg3, arg3_cageid)
+        && sc_unusedarg(arg4, arg4_cageid)
+        && sc_unusedarg(arg5, arg5_cageid)
+        && sc_unusedarg(arg6, arg6_cageid))
+    {
+        return syscall_error(Errno::EFAULT, "stat", "Invalide Cage ID");
+    }
+
+    // BUG!!!!
+    // todo: need to fix!!!! manually copy-out
+    // Declare statbuf by ourselves 
+    let mut libc_statbuf: stat = unsafe { std::mem::zeroed() };
+    let libcret = unsafe {
+        libc::stat(path.as_ptr(), &mut libc_statbuf)
+    };
+    
+    if libcret < 0 {
+        let errno = get_errno();
+        return handle_errno(errno, "stat");
+    }
+
+    libcret
+}
+
+pub fn fstat_syscall(
+    cageid: u64,
+    virtual_fd: u64,
+    vfd_cageid: u64,
+    statbuf_arg: u64,
+    statbuf_arg_cageid: u64,
+    arg3: u64,
+    arg3_cageid: u64,
+    arg4: u64,
+    arg4_cageid: u64,
+    arg5: u64,
+    arg5_cageid: u64,
+    arg6: u64,
+    arg6_cageid: u64,
+) -> i32 {
+    let kernel_fd = convert_fd_to_host(virtual_fd, vfd_cageid, cageid);
+    if kernel_fd == -1 {
+        return syscall_error(Errno::EFAULT, "fstat", "Invalid Cage ID");
+    } else if kernel_fd == -9 {
+        return syscall_error(Errno::EBADF, "fstat", "Bad File Descriptor");
+    }
+
+    // would sometimes check, sometimes be a no-op depending on the compiler settings
+    if !(sc_unusedarg(arg3, arg3_cageid)
+        && sc_unusedarg(arg4, arg4_cageid)
+        && sc_unusedarg(arg5, arg5_cageid)
+        && sc_unusedarg(arg6, arg6_cageid))
+    {
+        return syscall_error(Errno::EFAULT, "fstat", "Invalide Cage ID");
+    }
+
+    // BUG!!!!
+    // todo: need to fix!!!! manually copy-out
+    // Declare statbuf by ourselves 
+    let mut libc_statbuf: stat = unsafe { std::mem::zeroed() };
+
+    let libcret = unsafe {
+        libc::fstat(kernel_fd, &mut libc_statbuf)
+    };
+
+    if libcret < 0 {
+        let errno = get_errno();
+        return handle_errno(errno, "fstat");
+    }
+
+    libcret
+}
+
+pub fn ioctl_syscall(
+    cageid: u64,
+    virtual_fd: u64,
+    vfd_cageid: u64,
+    request_arg: u64,
+    request_cageid: u64,
+    ptrunion_arg: u64,
+    ptrunion_cageid: u64,
+    arg4: u64,
+    arg4_cageid: u64,
+    arg5: u64,
+    arg5_cageid: u64,
+    arg6: u64,
+    arg6_cageid: u64,
+) -> i32 {
+    let kernel_fd = convert_fd_to_host(virtual_fd, vfd_cageid, cageid);
+    if kernel_fd == -1 {
+        return syscall_error(Errno::EFAULT, "ioctl", "Invalid Cage ID");
+    } else if kernel_fd == -9 {
+        return syscall_error(Errno::EBADF, "ioctl", "Bad File Descriptor");
+    }
+    let ptrunion = sc_convert_mut_buf(ptrunion_arg, ptrunion_cageid, cageid);
+    // would sometimes check, sometimes be a no-op depending on the compiler settings
+    if !(sc_unusedarg(arg4, arg4_cageid)
+        && sc_unusedarg(arg5, arg5_cageid)
+        && sc_unusedarg(arg6, arg6_cageid))
+    {
+        return syscall_error(Errno::EFAULT, "ioctl", "Invalide Cage ID");
+    }
+    let ret = unsafe { libc::ioctl(kernel_fd, request_arg, ptrunion as *mut c_void) };
+    if ret < 0 {
+        let errno = get_errno();
+        return handle_errno(errno, "ioctl");
+    }
+    return ret;
+}
+
 /// Handles the `mmap_syscall`, interacting with the `vmmap` structure.
 ///
 /// This function processes the `mmap_syscall` by updating the `vmmap` entries and performing
@@ -326,7 +593,7 @@ pub fn mmap_syscall(
     off_cageid: u64,
 ) -> i32 {
     // TODO: Check will perform in the below logic??
-    // println!("[mmap_syscall] selfcageid: {:?}, FD Cageid: {:?}", cageid, vfd_cageid);
+    println!("[mmap_syscall] selfcageid: {:?}, FD Cageid: {:?}", cageid, vfd_cageid);
     let mut addr = addr_arg as *mut u8;
     let mut len = sc_convert_sysarg_to_usize(len_arg, len_cageid, cageid);
     let mut prot = sc_convert_sysarg_to_i32(prot_arg, prot_cageid, cageid);
@@ -477,7 +744,7 @@ pub fn mmap_inner(
     virtual_fd: i32,
     off: i64,
 ) -> usize {
-    // println!("[mmap_inner] cageid: {:?}, vfd: {:?}", cageid, virtual_fd);
+    println!("[mmap_inner] cageid: {:?}, vfd: {:?}", cageid, virtual_fd);
     if virtual_fd != -1 {
         match fdtables::translate_virtual_fd(cageid, virtual_fd as u64) {
             Ok(kernel_fd) => {
@@ -744,8 +1011,9 @@ pub fn sbrk_syscall(
     arg6: u64,
     arg6_cageid: u64,
 ) -> i32 {
-    // println!("[sbrk_syscall]");
+    println!("[sbrk_syscall] cageid: {}", cageid);
     let brk = sc_convert_sysarg_to_i32(sbrk_arg, sbrk_cageid, cageid);
+    println!("[sbrk_syscall] cp 1");
     // would sometimes check, sometimes be a no-op depending on the compiler settings
     if !(sc_unusedarg(arg2, arg2_cageid)
         && sc_unusedarg(arg3, arg3_cageid)
@@ -756,19 +1024,26 @@ pub fn sbrk_syscall(
         return syscall_error(Errno::EFAULT, "sbrk_syscall", "Invalide Cage ID");
     }
 
+    println!("[sbrk_syscall] cp 2");
+
     let cage = get_cage(sbrk_cageid).unwrap();
+
+    println!("[sbrk_syscall] cp 3");
 
     // get the heap entry
     let mut vmmap = cage.vmmap.read();
     let heap = vmmap.find_page(HEAP_ENTRY_INDEX).unwrap().clone();
 
+    println!("[sbrk_syscall] cp 4");
     // program break should always be the same as the heap entry end
     assert!(heap.npages == vmmap.program_break);
-
+    println!("[sbrk_syscall] cp 4.5");
     // pass 0 to sbrk will just return the current brk
     if brk == 0 {
         return (PAGESIZE * heap.npages) as i32;
     }
+
+    println!("[sbrk_syscall] cp 5");
 
     // round up the break to multiple of pages
     // brk increment could possibly be negative

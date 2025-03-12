@@ -1,0 +1,9 @@
+Available commands:
+1. export
+2. compile_test (cptest)
+3. run
+4. compile_wasmtime (cpwasm)
+5. compile_rustposix (cpposix)
+6. compile_src (cpsrc)
+7. make_all
+8. make

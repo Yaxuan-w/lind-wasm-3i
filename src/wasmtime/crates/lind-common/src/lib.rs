@@ -38,9 +38,9 @@ impl LindCommonCtx {
     // entry point for lind_syscall in glibc, dispatching syscalls to rawposix or wasmtime
     pub fn lind_syscall<T: LindHost<T, U> + Clone + Send + 'static + std::marker::Sync, U: Clone + Send + 'static + std::marker::Sync>
                         (&self, call_number: u32, call_name: u64, caller: &mut Caller<'_, T>, arg1: u64, arg2: u64, arg3: u64, arg4: u64, arg5: u64, arg6: u64) -> i32 {
-        // println!("[wasmtime|common] callnum: {:?}, call_name:{:?}", call_number, call_name.to_string());
+        println!("[wasmtime|common] callnum: {:?}, call_name:{:?}", call_number, call_name);
         let start_address = get_memory_base(&caller);
-        match call_number as i32 {
+        let ret = match call_number as i32 {
             // register_handler
             400 => {
                 register_handler(
@@ -87,7 +87,9 @@ impl LindCommonCtx {
                     self.pid as u64,
                 )
             }
-        }
+        };
+        println!("[wasmtime|common] callnum: {:?}, ret:{:?}", call_number, ret);
+        ret
     }
 
     // setjmp call. This function needs to be handled within wasmtime, but it is not an actual syscall so we use a different routine from lind_syscall

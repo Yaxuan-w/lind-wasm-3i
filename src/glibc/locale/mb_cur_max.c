@@ -27,5 +27,6 @@ size_t
 weak_function
 __ctype_get_mb_cur_max (void)
 {
-  return _NL_CURRENT_WORD (LC_CTYPE, _NL_CTYPE_MB_CUR_MAX);
+  // return _NL_CURRENT_WORD (LC_CTYPE, _NL_CTYPE_MB_CUR_MAX);
+  return 1;
 }

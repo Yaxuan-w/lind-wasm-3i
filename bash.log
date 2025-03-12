@@ -1,0 +1,338 @@
+[32m/home/lind/lind-wasm/src/wasmtime/target/debug/wasmtime run --allow-precompiled --wasi threads=y --wasi preview2=n bash-5.2/bash.cwasm -c echo hello[0m
+Cageid: 1
+[3i|make_syscall] syscallnum: 21, self_cageid: 1, target_cageid: 1
+[mmap_syscall] selfcageid: 1, FD Cageid: 1
+[mmap_inner] cageid: 1, vfd: -1
+[3i|threei_test_func] Callback replaced with grateid 1
+[3i|threei_test_func] Added grate entry func to global table
+[wasmtime|common] callnum: 176, call_name:16990
+[3i|make_syscall] syscallnum: 176, self_cageid: 1, target_cageid: 1
+[sbrk_syscall] cageid: 1
+[sbrk_syscall] cp 1
+[sbrk_syscall] cp 2
+[sbrk_syscall] cp 3
+[sbrk_syscall] cp 4
+[sbrk_syscall] cp 4.5
+[wasmtime|common] callnum: 176, ret:393216
+[wasmtime|common] callnum: 176, call_name:16990
+[3i|make_syscall] syscallnum: 176, self_cageid: 1, target_cageid: 1
+[sbrk_syscall] cageid: 1
+[sbrk_syscall] cp 1
+[sbrk_syscall] cp 2
+[sbrk_syscall] cp 3
+[sbrk_syscall] cp 4
+[sbrk_syscall] cp 4.5
+[sbrk_syscall] cp 5
+[mmap_inner] cageid: 1, vfd: -1
+[wasmtime|common] callnum: 176, ret:393216
+[wasmtime|common] callnum: 10, call_name:15886
+[3i|make_syscall] syscallnum: 10, self_cageid: 1, target_cageid: 1
+[open_syscall] path: "/home/lind/lind-wasm/src/RawPOSIX/tmp/dev/tty"
+[wasmtime|common] callnum: 10, ret:-2
+[wasmtime|common] callnum: 50, call_name:26712
+[3i|make_syscall] syscallnum: 50, self_cageid: 1, target_cageid: 1
+[wasmtime|common] callnum: 50, ret:1000
+[wasmtime|common] callnum: 51, call_name:26727
+[3i|make_syscall] syscallnum: 51, self_cageid: 1, target_cageid: 1
+[wasmtime|common] callnum: 51, ret:1000
+[wasmtime|common] callnum: 53, call_name:26944
+[3i|make_syscall] syscallnum: 53, self_cageid: 1, target_cageid: 1
+[wasmtime|common] callnum: 53, ret:1000
+[wasmtime|common] callnum: 176, call_name:16990
+[3i|make_syscall] syscallnum: 176, self_cageid: 1, target_cageid: 1
+[sbrk_syscall] cageid: 1
+[sbrk_syscall] cp 1
+[sbrk_syscall] cp 2
+[sbrk_syscall] cp 3
+[sbrk_syscall] cp 4
+[sbrk_syscall] cp 4.5
+[wasmtime|common] callnum: 176, ret:397312
+[wasmtime|common] callnum: 176, call_name:16990
+[3i|make_syscall] syscallnum: 176, self_cageid: 1, target_cageid: 1
+[sbrk_syscall] cageid: 1
+[sbrk_syscall] cp 1
+[sbrk_syscall] cp 2
+[sbrk_syscall] cp 3
+[sbrk_syscall] cp 4
+[sbrk_syscall] cp 4.5
+[sbrk_syscall] cp 5
+[mmap_inner] cageid: 1, vfd: -1
+[wasmtime|common] callnum: 176, ret:397312
+[wasmtime|common] callnum: 191, call_name:21422
+[3i|make_syscall] syscallnum: 191, self_cageid: 1, target_cageid: 1
+[wasmtime|common] callnum: 191, ret:-14
+[wasmtime|common] callnum: 13, call_name:19735
+[3i|make_syscall] syscallnum: 13, self_cageid: 1, target_cageid: 1
+[wasmtime|common] callnum: 13, ret:12
+[wasmtime|common] callnum: 13, call_name:19735
+[3i|make_syscall] syscallnum: 13, self_cageid: 1, target_cageid: 1
+[wasmtime|common] callnum: 13, ret:42
+[wasmtime|common] callnum: 13, call_name:19735
+[3i|make_syscall] syscallnum: 13, self_cageid: 1, target_cageid: 1
+[wasmtime|common] callnum: 13, ret:14
+[wasmtime|common] callnum: 13, call_name:19735
+[3i|make_syscall] syscallnum: 13, self_cageid: 1, target_cageid: 1
+[wasmtime|common] callnum: 13, ret:12
+[wasmtime|common] callnum: 13, call_name:19735
+[3i|make_syscall] syscallnum: 13, self_cageid: 1, target_cageid: 1
+[wasmtime|common] callnum: 13, ret:40
+[wasmtime|common] callnum: 13, call_name:19735
+[3i|make_syscall] syscallnum: 13, self_cageid: 1, target_cageid: 1
+[wasmtime|common] callnum: 13, ret:10
+[wasmtime|common] callnum: 176, call_name:16990
+[3i|make_syscall] syscallnum: 176, self_cageid: 1, target_cageid: 1
+[sbrk_syscall] cageid: 1
+[sbrk_syscall] cp 1
+[sbrk_syscall] cp 2
+[sbrk_syscall] cp 3
+[sbrk_syscall] cp 4
+[sbrk_syscall] cp 4.5
+[sbrk_syscall] cp 5
+[mmap_inner] cageid: 1, vfd: -1
+[wasmtime|common] callnum: 176, ret:401408
+[wasmtime|common] callnum: 176, call_name:16990
+[3i|make_syscall] syscallnum: 176, self_cageid: 1, target_cageid: 1
+[sbrk_syscall] cageid: 1
+[sbrk_syscall] cp 1
+[sbrk_syscall] cp 2
+[sbrk_syscall] cp 3
+[sbrk_syscall] cp 4
+[sbrk_syscall] cp 4.5
+[sbrk_syscall] cp 5
+[mmap_inner] cageid: 1, vfd: -1
+[wasmtime|common] callnum: 176, ret:405504
+[wasmtime|common] callnum: 149, call_name:16908
+[3i|make_syscall] syscallnum: 149, self_cageid: 1, target_cageid: 1
+[3i|make_syscall] Syscall number 149 not found!
+[wasmtime|common] callnum: 149, ret:-1
+[wasmtime|common] callnum: 125, call_name:21539
+[3i|make_syscall] syscallnum: 125, self_cageid: 1, target_cageid: 1
+[wasmtime|common] callnum: 125, ret:0
+[wasmtime|common] callnum: 176, call_name:16990
+[3i|make_syscall] syscallnum: 176, self_cageid: 1, target_cageid: 1
+[sbrk_syscall] cageid: 1
+[sbrk_syscall] cp 1
+[sbrk_syscall] cp 2
+[sbrk_syscall] cp 3
+[sbrk_syscall] cp 4
+[sbrk_syscall] cp 4.5
+[sbrk_syscall] cp 5
+[mmap_inner] cageid: 1, vfd: -1
+[wasmtime|common] callnum: 176, ret:409600
+[wasmtime|common] callnum: 176, call_name:16990
+[3i|make_syscall] syscallnum: 176, self_cageid: 1, target_cageid: 1
+[sbrk_syscall] cageid: 1
+[sbrk_syscall] cp 1
+[sbrk_syscall] cp 2
+[sbrk_syscall] cp 3
+[sbrk_syscall] cp 4
+[sbrk_syscall] cp 4.5
+[sbrk_syscall] cp 5
+[mmap_inner] cageid: 1, vfd: -1
+[wasmtime|common] callnum: 176, ret:417792
+[wasmtime|common] callnum: 176, call_name:16990
+[3i|make_syscall] syscallnum: 176, self_cageid: 1, target_cageid: 1
+[sbrk_syscall] cageid: 1
+[sbrk_syscall] cp 1
+[sbrk_syscall] cp 2
+[sbrk_syscall] cp 3
+[sbrk_syscall] cp 4
+[sbrk_syscall] cp 4.5
+[sbrk_syscall] cp 5
+[mmap_inner] cageid: 1, vfd: -1
+[wasmtime|common] callnum: 176, ret:421888
+[wasmtime|common] callnum: 9, call_name:6964
+[3i|make_syscall] syscallnum: 9, self_cageid: 1, target_cageid: 1
+[wasmtime|common] callnum: 9, ret:0
+[wasmtime|common] callnum: 9, call_name:6964
+[3i|make_syscall] syscallnum: 9, self_cageid: 1, target_cageid: 1
+[wasmtime|common] callnum: 9, ret:0
+[wasmtime|common] callnum: 176, call_name:16990
+[3i|make_syscall] syscallnum: 176, self_cageid: 1, target_cageid: 1
+[sbrk_syscall] cageid: 1
+[sbrk_syscall] cp 1
+[sbrk_syscall] cp 2
+[sbrk_syscall] cp 3
+[sbrk_syscall] cp 4
+[sbrk_syscall] cp 4.5
+[sbrk_syscall] cp 5
+[mmap_inner] cageid: 1, vfd: -1
+[wasmtime|common] callnum: 176, ret:425984
+[wasmtime|common] callnum: 31, call_name:26797
+[3i|make_syscall] syscallnum: 31, self_cageid: 1, target_cageid: 1
+[wasmtime|common] callnum: 31, ret:1
+[wasmtime|common] callnum: 29, call_name:26812
+[3i|make_syscall] syscallnum: 29, self_cageid: 1, target_cageid: 1
+[wasmtime|common] callnum: 29, ret:1
+[wasmtime|common] callnum: 9, call_name:6964
+[3i|make_syscall] syscallnum: 9, self_cageid: 1, target_cageid: 1
+[wasmtime|common] callnum: 9, ret:0
+[wasmtime|common] callnum: 9, call_name:6964
+[3i|make_syscall] syscallnum: 9, self_cageid: 1, target_cageid: 1
+[wasmtime|common] callnum: 9, ret:-2
+[wasmtime|common] callnum: 9, call_name:6964
+[3i|make_syscall] syscallnum: 9, self_cageid: 1, target_cageid: 1
+[wasmtime|common] callnum: 9, ret:-2
+[wasmtime|common] callnum: 9, call_name:6964
+[3i|make_syscall] syscallnum: 9, self_cageid: 1, target_cageid: 1
+[wasmtime|common] callnum: 9, ret:-2
+[wasmtime|common] callnum: 9, call_name:6964
+[3i|make_syscall] syscallnum: 9, self_cageid: 1, target_cageid: 1
+[wasmtime|common] callnum: 9, ret:-2
+[wasmtime|common] callnum: 9, call_name:6964
+[3i|make_syscall] syscallnum: 9, self_cageid: 1, target_cageid: 1
+[wasmtime|common] callnum: 9, ret:-2
+[wasmtime|common] callnum: 9, call_name:6964
+[3i|make_syscall] syscallnum: 9, self_cageid: 1, target_cageid: 1
+[wasmtime|common] callnum: 9, ret:-2
+[wasmtime|common] callnum: 9, call_name:6964
+[3i|make_syscall] syscallnum: 9, self_cageid: 1, target_cageid: 1
+[wasmtime|common] callnum: 9, ret:0
+[wasmtime|common] callnum: 9, call_name:6964
+[3i|make_syscall] syscallnum: 9, self_cageid: 1, target_cageid: 1
+[wasmtime|common] callnum: 9, ret:-2
+[wasmtime|common] callnum: 9, call_name:6964
+[3i|make_syscall] syscallnum: 9, self_cageid: 1, target_cageid: 1
+[wasmtime|common] callnum: 9, ret:-2
+[wasmtime|common] callnum: 9, call_name:6964
+[3i|make_syscall] syscallnum: 9, self_cageid: 1, target_cageid: 1
+[wasmtime|common] callnum: 9, ret:-2
+[wasmtime|common] callnum: 9, call_name:6964
+[3i|make_syscall] syscallnum: 9, self_cageid: 1, target_cageid: 1
+[wasmtime|common] callnum: 9, ret:0
+[wasmtime|common] callnum: 176, call_name:16990
+[3i|make_syscall] syscallnum: 176, self_cageid: 1, target_cageid: 1
+[sbrk_syscall] cageid: 1
+[sbrk_syscall] cp 1
+[sbrk_syscall] cp 2
+[sbrk_syscall] cp 3
+[sbrk_syscall] cp 4
+[sbrk_syscall] cp 4.5
+[sbrk_syscall] cp 5
+[mmap_inner] cageid: 1, vfd: -1
+[wasmtime|common] callnum: 176, ret:434176
+[wasmtime|common] callnum: 10, call_name:15886
+[3i|make_syscall] syscallnum: 10, self_cageid: 1, target_cageid: 1
+[open_syscall] path: "/home/lind/lind-wasm/src/RawPOSIX/tmp/etc/nsswitch.conf"
+[wasmtime|common] callnum: 10, ret:-2
+[wasmtime|common] callnum: 10, call_name:15886
+[3i|make_syscall] syscallnum: 10, self_cageid: 1, target_cageid: 1
+[open_syscall] path: "/home/lind/lind-wasm/src/RawPOSIX/tmp/etc/passwd"
+[wasmtime|common] callnum: 10, ret:-2
+[wasmtime|common] callnum: 191, call_name:21422
+[3i|make_syscall] syscallnum: 191, self_cageid: 1, target_cageid: 1
+[wasmtime|common] callnum: 191, ret:-14
+[wasmtime|common] callnum: 31, call_name:26797
+[3i|make_syscall] syscallnum: 31, self_cageid: 1, target_cageid: 1
+[wasmtime|common] callnum: 31, ret:1
+[wasmtime|common] callnum: 29, call_name:26812
+[3i|make_syscall] syscallnum: 29, self_cageid: 1, target_cageid: 1
+[wasmtime|common] callnum: 29, ret:1
+[wasmtime|common] callnum: 191, call_name:21422
+[3i|make_syscall] syscallnum: 191, self_cageid: 1, target_cageid: 1
+[wasmtime|common] callnum: 191, ret:-14
+[wasmtime|common] callnum: 31, call_name:26797
+[3i|make_syscall] syscallnum: 31, self_cageid: 1, target_cageid: 1
+[wasmtime|common] callnum: 31, ret:1
+[wasmtime|common] callnum: 29, call_name:26812
+[3i|make_syscall] syscallnum: 29, self_cageid: 1, target_cageid: 1
+[wasmtime|common] callnum: 29, ret:1
+[wasmtime|common] callnum: 176, call_name:16990
+[3i|make_syscall] syscallnum: 176, self_cageid: 1, target_cageid: 1
+[sbrk_syscall] cageid: 1
+[sbrk_syscall] cp 1
+[sbrk_syscall] cp 2
+[sbrk_syscall] cp 3
+[sbrk_syscall] cp 4
+[sbrk_syscall] cp 4.5
+[sbrk_syscall] cp 5
+[mmap_inner] cageid: 1, vfd: -1
+[wasmtime|common] callnum: 176, ret:438272
+[wasmtime|common] callnum: 176, call_name:16990
+[3i|make_syscall] syscallnum: 176, self_cageid: 1, target_cageid: 1
+[sbrk_syscall] cageid: 1
+[sbrk_syscall] cp 1
+[sbrk_syscall] cp 2
+[sbrk_syscall] cp 3
+[sbrk_syscall] cp 4
+[sbrk_syscall] cp 4.5
+[sbrk_syscall] cp 5
+[mmap_inner] cageid: 1, vfd: -1
+[wasmtime|common] callnum: 176, ret:442368
+[wasmtime|common] callnum: 176, call_name:16990
+[3i|make_syscall] syscallnum: 176, self_cageid: 1, target_cageid: 1
+[sbrk_syscall] cageid: 1
+[sbrk_syscall] cp 1
+[sbrk_syscall] cp 2
+[sbrk_syscall] cp 3
+[sbrk_syscall] cp 4
+[sbrk_syscall] cp 4.5
+[sbrk_syscall] cp 5
+[mmap_inner] cageid: 1, vfd: -1
+[wasmtime|common] callnum: 176, ret:446464
+[wasmtime|common] callnum: 176, call_name:16990
+[3i|make_syscall] syscallnum: 176, self_cageid: 1, target_cageid: 1
+[sbrk_syscall] cageid: 1
+[sbrk_syscall] cp 1
+[sbrk_syscall] cp 2
+[sbrk_syscall] cp 3
+[sbrk_syscall] cp 4
+[sbrk_syscall] cp 4.5
+[sbrk_syscall] cp 5
+[mmap_inner] cageid: 1, vfd: -1
+[wasmtime|common] callnum: 176, ret:454656
+[wasmtime|common] callnum: 15, call_name:16294
+[3i|make_syscall] syscallnum: 15, self_cageid: 1, target_cageid: 1
+[wasmtime|common] callnum: 15, ret:0
+[wasmtime|common] callnum: 176, call_name:16990
+[3i|make_syscall] syscallnum: 176, self_cageid: 1, target_cageid: 1
+[sbrk_syscall] cageid: 1
+[sbrk_syscall] cp 1
+[sbrk_syscall] cp 2
+[sbrk_syscall] cp 3
+[sbrk_syscall] cp 4
+[sbrk_syscall] cp 4.5
+[sbrk_syscall] cp 5
+[mmap_inner] cageid: 1, vfd: -1
+[wasmtime|common] callnum: 176, ret:462848
+[wasmtime|common] callnum: 176, call_name:16990
+[3i|make_syscall] syscallnum: 176, self_cageid: 1, target_cageid: 1
+[sbrk_syscall] cageid: 1
+[sbrk_syscall] cp 1
+[sbrk_syscall] cp 2
+[sbrk_syscall] cp 3
+[sbrk_syscall] cp 4
+[sbrk_syscall] cp 4.5
+[sbrk_syscall] cp 5
+[mmap_inner] cageid: 1, vfd: -1
+[wasmtime|common] callnum: 176, ret:466944
+[wasmtime|common] callnum: 149, call_name:16908
+[3i|make_syscall] syscallnum: 149, self_cageid: 1, target_cageid: 1
+[3i|make_syscall] Syscall number 149 not found!
+[wasmtime|common] callnum: 149, ret:-1
+[wasmtime|common] callnum: 176, call_name:16990
+[3i|make_syscall] syscallnum: 176, self_cageid: 1, target_cageid: 1
+[sbrk_syscall] cageid: 1
+[sbrk_syscall] cp 1
+[sbrk_syscall] cp 2
+[sbrk_syscall] cp 3
+[sbrk_syscall] cp 4
+[sbrk_syscall] cp 4.5
+[sbrk_syscall] cp 5
+[mmap_inner] cageid: 1, vfd: -1
+[wasmtime|common] callnum: 176, ret:471040
+[wasmtime|common] callnum: 13, call_name:19735
+[3i|make_syscall] syscallnum: 13, self_cageid: 1, target_cageid: 1
+
+[wasmtime|common] callnum: 13, ret:1
+[wasmtime|common] callnum: 149, call_name:16908
+[3i|make_syscall] syscallnum: 149, self_cageid: 1, target_cageid: 1
+[3i|make_syscall] Syscall number 149 not found!
+[wasmtime|common] callnum: 149, ret:-1
+[wasmtime|common] callnum: 149, call_name:16908
+[3i|make_syscall] syscallnum: 149, self_cageid: 1, target_cageid: 1
+[3i|make_syscall] Syscall number 149 not found!
+[wasmtime|common] callnum: 149, ret:-1
+[wasmtime|common] callnum: 30, call_name:6183
+[wasmtime|common] callnum: 30, ret:0
+[3i|make_syscall] syscallnum: 30, self_cageid: 1, target_cageid: 1

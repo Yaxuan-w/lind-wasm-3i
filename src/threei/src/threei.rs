@@ -30,14 +30,14 @@ pub fn threei_test_func(grateid: u64, mut callback: Box<dyn FnMut(
         if let Some(ref mut vec) = GLOBAL_GRATE {
             if index < vec.len() {
                 vec[index] = Some(callback);
-                // println!("[3i|threei_test_func] Callback replaced with grateid {}", index);
+                println!("[3i|threei_test_func] Callback replaced with grateid {}", index);
             } else {
                 println!("[3i|threei_test_func] Index out of bounds: {}", index);
             }
         }
     }
 
-    // println!("[3i|threei_test_func] Added grate entry func to global table");
+    println!("[3i|threei_test_func] Added grate entry func to global table");
     0
 }
 /// ------------------------------------------------------------
@@ -150,7 +150,7 @@ fn call_grate_func(
     arg5: u64, arg5_cageid: u64,
     arg6: u64, arg6_cageid: u64,
 ) -> Option<i32> {
-    // println!("[3i|call_grate_func] grateid (aka index): {}", grateid);
+    println!("[3i|call_grate_func] grateid (aka index): {}", grateid);
     unsafe {
         if let Some(ref mut vec) = GLOBAL_GRATE {
             if (grateid as usize) < vec.len() {
@@ -165,7 +165,7 @@ fn call_grate_func(
                         arg6, arg6_cageid,
                     ));
                 } else {
-                    // println!("Function at index {} is None", grateid);
+                    println!("Function at index {} is None", grateid);
                     return None;
                 }
             } else {
@@ -385,7 +385,7 @@ pub fn make_syscall(
     arg6: u64,
     arg6_cageid: u64,
 ) -> i32 {
-    // println!("[3i|make_syscall] syscallnum: {}, self_cageid: {}, target_cageid: {}", syscall_num, self_cageid, target_cageid);
+    println!("[3i|make_syscall] syscallnum: {}, self_cageid: {}, target_cageid: {}", syscall_num, self_cageid, target_cageid);
     // Return error if the target cage/grate is exiting. We need to add this check beforehead, because make_syscall will also
     // contain cases that can directly redirect a syscall when self_cageid == target_id, which will bypass the handlertable check
     if EXITING_TABLE.contains(&target_cageid) && syscall_num != exit_syscallnum {
@@ -398,7 +398,7 @@ pub fn make_syscall(
     if check_cage_handler_exist(self_cageid) {
         if let Some((call_index, grateid)) = get_handler(self_cageid, syscall_num) {
             // <targetcage, targetcallnum, handlefunc_index_in_this_grate, this_grate_id>
-            // println!("[3i|make_syscall] grate call -- selfcageid: {}, syscallnum: {}, callindex: {}, grateid: {}", self_cageid, syscall_num, call_index, grateid);
+            println!("[3i|make_syscall] grate call -- selfcageid: {}, syscallnum: {}, callindex: {}, grateid: {}", self_cageid, syscall_num, call_index, grateid);
             // Theoretically, the complexity is O(1), shouldn't affect performance a lot
             if let Some(ret) = call_grate_func(
                 grateid,
@@ -454,7 +454,7 @@ pub fn make_syscall(
         // println!("[3i|make_syscall] regular syscallnum: {}, ret: {}, self_cageid: {}, target_cageid: {}", syscall_num, ret, self_cageid, target_cageid);
         return ret;
     } else {
-        // println!("[3i|make_syscall] Syscall number {} not found!", syscall_num);
+        println!("[3i|make_syscall] Syscall number {} not found!", syscall_num);
         return threei_const::ELINDAPIABORTED as i32;
     }
     
