@@ -247,3 +247,131 @@ fn test_exit() {
         *handler_table
     );
 }
+
+/// Test basic pipe creation and operations
+#[test]
+fn test_pipe() {
+    let cageid = 50;
+    simple_init_cage(cageid);
+
+    let mut pipe_fds = [-1; 2];
+    let pipe_result = pipe(cageid, pipe_fds.as_mut_ptr());
+    assert_eq!(pipe_result, 0, "pipe creation failed");
+    assert!(pipe_fds[0] >= 0, "read end of pipe is invalid");
+    assert!(pipe_fds[1] >= 0, "write end of pipe is invalid");
+
+    // Test basic read/write through pipe
+    let test_data = b"Hello, pipe!";
+    let write_result = write(
+        cageid,
+        pipe_fds[1],
+        test_data.as_ptr() as *const c_void,
+        test_data.len(),
+    );
+    assert_eq!(
+        write_result as usize,
+        test_data.len(),
+        "write to pipe failed"
+    );
+
+    let mut read_buffer = vec![0u8; test_data.len()];
+    let read_result = read(
+        cageid,
+        pipe_fds[0],
+        read_buffer.as_mut_ptr() as *mut c_void,
+        read_buffer.len(),
+    );
+    assert_eq!(
+        read_result as usize,
+        test_data.len(),
+        "read from pipe failed"
+    );
+    assert_eq!(&read_buffer, test_data, "read data doesn't match written data");
+
+    testing_remove_all();
+}
+
+/// Test pipe2 with various flags
+#[test]
+fn test_pipe2() {
+    let cageid = 51;
+    simple_init_cage(cageid);
+
+    let mut pipe2_fds = [-1; 2];
+    let pipe2_result = pipe2(cageid, pipe2_fds.as_mut_ptr(), O_NONBLOCK);
+    assert_eq!(pipe2_result, 0, "pipe2 creation failed");
+    assert!(pipe2_fds[0] >= 0, "read end of pipe2 is invalid");
+    assert!(pipe2_fds[1] >= 0, "write end of pipe2 is invalid");
+
+    // Test non-blocking behavior
+    let large_buffer = vec![0u8; 65536]; // Size larger than pipe buffer
+    let write_result = write(
+        cageid,
+        pipe2_fds[1],
+        large_buffer.as_ptr() as *const c_void,
+        large_buffer.len(),
+    );
+    assert!(write_result < large_buffer.len() as isize, "Non-blocking write should not block");
+
+    testing_remove_all();
+}
+
+/// Test read syscall behavior
+#[test]
+fn test_read() {
+    let cageid = 52;
+    simple_init_cage(cageid);
+
+    let mut pipe_fds = [-1; 2];
+    pipe(cageid, pipe_fds.as_mut_ptr());
+
+    // Test reading with different buffer sizes
+    let test_data = b"Testing read syscall";
+    write(
+        cageid,
+        pipe_fds[1],
+        test_data.as_ptr() as *const c_void,
+        test_data.len(),
+    );
+
+    // Test partial read
+    let mut small_buffer = vec![0u8; 5];
+    let read_result = read(
+        cageid,
+        pipe_fds[0],
+        small_buffer.as_mut_ptr() as *mut c_void,
+        small_buffer.len(),
+    );
+    assert_eq!(read_result as usize, 5, "partial read failed");
+    assert_eq!(&small_buffer, &test_data[..5], "partial read data mismatch");
+
+    testing_remove_all();
+}
+
+/// Test close syscall behavior
+#[test]
+fn test_close() {
+    let cageid = 53;
+    simple_init_cage(cageid);
+
+    let mut pipe_fds = [-1; 2];
+    pipe(cageid, pipe_fds.as_mut_ptr());
+
+    // Test closing read end
+    let close_read_result = close(cageid, pipe_fds[0]);
+    assert_eq!(close_read_result, 0, "closing read end failed");
+
+    // Test closing write end
+    let close_write_result = close(cageid, pipe_fds[1]);
+    assert_eq!(close_write_result, 0, "closing write end failed");
+
+    // Test double close (should fail)
+    let double_close_result = close(cageid, pipe_fds[0]);
+    assert!(double_close_result < 0, "double close should fail");
+
+    // Test closing invalid fd
+    let invalid_fd_result = close(cageid, 99999);
+    assert!(invalid_fd_result < 0, "closing invalid fd should fail");
+
+    testing_remove_all();
+}

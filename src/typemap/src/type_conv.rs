@@ -182,17 +182,23 @@
 //     unsafe { Ok(&mut *((generic_argument) as *mut i32)) }
 // }
 
-// pub fn get_pipearray<'a>(generic_argument: u64) -> Result<&'a mut PipeArray, i32> {
-//     let pointer = generic_argument as *mut PipeArray;
-//     if !pointer.is_null() {
-//         return Ok(unsafe { &mut *pointer });
-//     }
-//     return Err(syscall_error(
-//         Errno::EFAULT,
-//         "dispatcher",
-//         "input data not valid",
-//     ));
-// }
+#[repr(C)]
+pub struct PipeArray {
+    pub readfd: i32,
+    pub writefd: i32,
+}
+
+pub fn get_pipearray<'a>(generic_argument: u64) -> Result<&'a mut PipeArray, i32> {
+    let pointer = generic_argument as *mut PipeArray;
+    if !pointer.is_null() {
+        return Ok(unsafe { &mut *pointer });
+    }
+    return Err(syscall_error(
+        Errno::EFAULT,
+        "dispatcher",
+        "input data not valid",
+    ));
+}
 
 // pub fn get_sockpair<'a>(generic_argument: u64) -> Result<&'a mut SockPair, i32> {
 //     let pointer = generic_argument as *mut SockPair;
