@@ -9,6 +9,9 @@
  *
  * Source: These constants are derived from the dispatcher.rs file in the
  * Lind-WASM codebase (src/threei/src/syscall_table.rs).
+ *
+ * These syscall numbers also align with the Linux syscall table.
+ * Reference: https://github.com/torvalds/linux/blob/master/arch/x86/entry/syscalls/syscall_64.tbl
  */
 
 #ifndef _LIND_SYSCALL_NUM_H
