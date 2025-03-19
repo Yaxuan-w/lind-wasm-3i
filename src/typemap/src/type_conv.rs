@@ -7,6 +7,8 @@
 // //! promotes secure, reliable access to memory and resources in a low-level systems environment.
 // use sysdefs::data::fs_struct;
 // use sysdefs::data::net_struct;
+use sysdefs::data::fs_struct::PipeArray;
+
 
 // pub unsafe fn charstar_to_ruststr<'a>(cstr: *const i8) -> Result<&'a str, Utf8Error> {
 //     std::ffi::CStr::from_ptr(cstr as *const _).to_str() //returns a result to be unwrapped later
@@ -181,12 +183,6 @@
 // pub fn get_i32_ref<'a>(generic_argument: u64) -> Result<&'a mut i32, i32> {
 //     unsafe { Ok(&mut *((generic_argument) as *mut i32)) }
 // }
-
-#[repr(C)]
-pub struct PipeArray {
-    pub readfd: i32,
-    pub writefd: i32,
-}
 
 pub fn get_pipearray<'a>(generic_argument: u64) -> Result<&'a mut PipeArray, i32> {
     let pointer = generic_argument as *mut PipeArray;

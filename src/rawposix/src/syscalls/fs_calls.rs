@@ -133,10 +133,6 @@ pub fn read_syscall(
     }
 
     let count = sc_convert_sysarg_to_usize(count_arg, count_cageid, cageid);
-    // Check for negative count (converted to very large usize)
-    if count > isize::MAX as usize {
-        return syscall_error(Errno::EINVAL, "read", "Invalid count value");
-    }
 
     if !(sc_unusedarg(arg4, arg4_cageid)
          && sc_unusedarg(arg5, arg5_cageid)
@@ -187,11 +183,6 @@ pub fn close_syscall(
          && sc_unusedarg(arg5, arg5_cageid)
          && sc_unusedarg(arg6, arg6_cageid)) {
         return syscall_error(Errno::EFAULT, "close", "Invalid Cage ID");
-    }
-
-    // Check for negative file descriptor
-    if virtual_fd > i32::MAX as u64 {
-        return syscall_error(Errno::EBADF, "close", "Invalid file descriptor");
     }
 
     match fdtables::close_virtualfd(cageid, virtual_fd) {
@@ -334,7 +325,6 @@ pub fn pipe2_syscall(
         Ok(fd) => fd as i32,
         Err(_) => {
             unsafe { libc::close(kernel_fds[0]); libc::close(kernel_fds[1]); }
-            fdtables::close_virtualfd(cageid, read_vfd as u64).unwrap();
             return syscall_error(Errno::EMFILE, "pipe2_syscall", "Too many files opened");
         }
     };
