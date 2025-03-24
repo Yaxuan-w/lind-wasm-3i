@@ -7,6 +7,8 @@
 // //! promotes secure, reliable access to memory and resources in a low-level systems environment.
 // use sysdefs::data::fs_struct;
 // use sysdefs::data::net_struct;
+use sysdefs::data::fs_struct::PipeArray;
+
 
 // pub unsafe fn charstar_to_ruststr<'a>(cstr: *const i8) -> Result<&'a str, Utf8Error> {
 //     std::ffi::CStr::from_ptr(cstr as *const _).to_str() //returns a result to be unwrapped later
@@ -182,17 +184,17 @@
 //     unsafe { Ok(&mut *((generic_argument) as *mut i32)) }
 // }
 
-// pub fn get_pipearray<'a>(generic_argument: u64) -> Result<&'a mut PipeArray, i32> {
-//     let pointer = generic_argument as *mut PipeArray;
-//     if !pointer.is_null() {
-//         return Ok(unsafe { &mut *pointer });
-//     }
-//     return Err(syscall_error(
-//         Errno::EFAULT,
-//         "dispatcher",
-//         "input data not valid",
-//     ));
-// }
+pub fn get_pipearray<'a>(generic_argument: u64) -> Result<&'a mut PipeArray, i32> {
+    let pointer = generic_argument as *mut PipeArray;
+    if !pointer.is_null() {
+        return Ok(unsafe { &mut *pointer });
+    }
+    return Err(syscall_error(
+        Errno::EFAULT,
+        "dispatcher",
+        "input data not valid",
+    ));
+}
 
 // pub fn get_sockpair<'a>(generic_argument: u64) -> Result<&'a mut SockPair, i32> {
 //     let pointer = generic_argument as *mut SockPair;
