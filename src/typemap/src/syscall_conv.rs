@@ -7,17 +7,21 @@ use crate::type_conv::*;
 use cage::get_cage;
 use cage::memory::mem_helper::*;
 use fdtables;
+use sysdefs::constants::err_const::{syscall_error, Errno};
+use sysdefs::constants::fs_const::{PATH_MAX, MAX_CAGEID};
 use std::error::Error;
 use std::str::Utf8Error;
-use sysdefs::constants::err_const::{syscall_error, Errno};
-use sysdefs::constants::fs_const::{MAX_CAGEID, PATH_MAX};
 
 /// Translate a received virtual file descriptor (`virtual_fd`) to real kernel file descriptor.
 /// This function is not for security purpose. Always using arg_cageid to translate.
 ///     - If arg_cageid != cageid: this call is sent by grate. We need to translate according to cage
 ///     - If arg_cageid == cageid: this call is sent by cage, we can use either one
 /// Return: underlying kernel file descriptor
-pub fn convert_fd_to_host(virtual_fd: u64, arg_cageid: u64, cageid: u64) -> i32 {
+pub fn convert_fd_to_host(
+    virtual_fd: u64,
+    arg_cageid: u64,
+    cageid: u64,
+) -> i32 {
     #[cfg(feature = "secure")]
     {
         if !validate_cageid(path_arg_cageid, cageid) {
@@ -50,7 +54,11 @@ pub fn convert_fd_to_host(virtual_fd: u64, arg_cageid: u64, cageid: u64) -> i32 
 ///     - c_path: a `CString` variable stores the path from host's perspective
 ///     - will return error if total length exceed the MAX_PATH (which is 4096). We use `Box<dyn Error>` here to
 ///      let upper functions do error handling. (ie: we want to )
-pub fn sc_convert_path_to_host(path_arg: u64, path_arg_cageid: u64, cageid: u64) -> CString {
+pub fn sc_convert_path_to_host(
+    path_arg: u64,
+    path_arg_cageid: u64,
+    cageid: u64,
+) -> CString {
     #[cfg(feature = "secure")]
     {
         if !validate_cageid(path_arg_cageid, cageid) {
@@ -102,6 +110,7 @@ pub fn get_cstr<'a>(arg: u64) -> Result<&'a str, i32> {
     return Err(-1);
 }
 
+/// This function will be called only in secure mode 
 pub fn validate_cageid(cageid_1: u64, cageid_2: u64) -> bool {
     if cageid_1 > MAX_CAGEID as u64 || cageid_2 > MAX_CAGEID as u64 {
         return false;
@@ -109,11 +118,12 @@ pub fn validate_cageid(cageid_1: u64, cageid_2: u64) -> bool {
     true
 }
 
+/// This function will be called only in secure mode 
 pub fn get_i32(arg: u64, arg_cageid: u64, cageid: u64) -> i32 {
     if !validate_cageid(arg_cageid, cageid) {
         panic!("Invalide Cage ID");
     }
-
+    
     if (arg & 0xFFFFFFFF_00000000) != 1 {
         return (arg & 0xFFFFFFFF) as i32;
     }
@@ -121,6 +131,16 @@ pub fn get_i32(arg: u64, arg_cageid: u64, cageid: u64) -> i32 {
     panic!("Invalide argument");
 }
 
+/// This function will be called only in secure mode TODO: delete
+// pub fn get_i32_ref<'a>(arg: u64, arg_cageid: u64, cageid: u64) -> &'a mut i32 {
+//     if !validate_cageid(arg_cageid, cageid) {
+//         panic!("Invalide Cage ID");
+//     }
+
+//     unsafe { &mut *((arg) as *mut i32)}
+// }
+
+/// This function will be called only in secure mode 
 pub fn get_u32(arg: u64, arg_cageid: u64, cageid: u64) -> u32 {
     if !validate_cageid(arg_cageid, cageid) {
         panic!("Invalide Cage ID");
@@ -133,7 +153,11 @@ pub fn get_u32(arg: u64, arg_cageid: u64, cageid: u64) -> u32 {
     panic!("Invalide argument");
 }
 
-pub fn sc_convert_sysarg_to_i32(arg: u64, arg_cageid: u64, cageid: u64) -> i32 {
+pub fn sc_convert_sysarg_to_i32(
+    arg: u64,
+    arg_cageid: u64,
+    cageid: u64,
+) -> i32 {
     #[cfg(feature = "fast")]
     return arg as i32;
 
@@ -141,42 +165,80 @@ pub fn sc_convert_sysarg_to_i32(arg: u64, arg_cageid: u64, cageid: u64) -> i32 {
     return get_i32(arg, arg_cageid, cageid);
 }
 
-pub fn sc_convert_sysarg_to_u32(arg: u64, arg_cageid: u64, cageid: u64) -> u32 {
+pub fn sc_convert_sysarg_to_i32_ref<'a>(
+    arg: u64,
+    arg_cageid: u64,
+    cageid: u64,
+) -> &'a mut i32 {
+    #[cfg(feature = "secure")]
+    {
+        if !validate_cageid(arg_cageid, cageid) {
+            panic!("Invalide Cage ID");
+        }
+    }
+    
+    let cage = get_cage(arg_cageid).unwrap();
+    let addr = translate_vmmap_addr(&cage, arg).unwrap();
+    return unsafe { &mut *((addr) as *mut i32)};
+}
+
+pub fn sc_convert_sysarg_to_u32(
+    arg: u64,
+    arg_cageid: u64,
+    cageid: u64,
+) -> u32 {
     #[cfg(feature = "fast")]
     return arg as u32;
 
     #[cfg(feature = "secure")]
-    return get_u32(arg);
+    return get_u32(arg, arg_cageid, cageid);
 }
 
-pub fn sc_convert_sysarg_to_isize(arg: u64, arg_cageid: u64, cageid: u64) -> isize {
-    #[cfg(feature = "fast")]
+/// If the compilation flag has been set to `secure`, then extra check
+/// will be performed 
+pub fn sc_convert_sysarg_to_isize(
+    arg: u64,
+    arg_cageid: u64,
+    cageid: u64,
+) -> isize {
+    #[cfg(feature = "secure")]
+    {
+        if !validate_cageid(arg_cageid, cageid) {
+            panic!("Invalide Cage ID");
+        }
+    }
+
     return arg as isize;
-
-    #[cfg(feature = "secure")]
-    if !validate_cageid(arg_cageid, cageid) {
-        panic!("Invalide Cage ID");
-    }
 }
 
-pub fn sc_convert_sysarg_to_usize(arg: u64, arg_cageid: u64, cageid: u64) -> usize {
-    #[cfg(feature = "fast")]
+pub fn sc_convert_sysarg_to_usize(
+    arg: u64,
+    arg_cageid: u64,
+    cageid: u64,
+) -> usize {
+    #[cfg(feature = "secure")]
+    {
+        if !validate_cageid(arg_cageid, cageid) {
+            panic!("Invalide Cage ID");
+        }
+    }
+    
     return arg as usize;
-
-    #[cfg(feature = "secure")]
-    if !validate_cageid(arg_cageid, cageid) {
-        panic!("Invalide Cage ID");
-    }
 }
 
-pub fn sc_convert_sysarg_to_i64(arg: u64, arg_cageid: u64, cageid: u64) -> i64 {
-    #[cfg(feature = "fast")]
-    return arg as i64;
-
+pub fn sc_convert_sysarg_to_i64(
+    arg: u64,
+    arg_cageid: u64,
+    cageid: u64,
+) -> i64 {
     #[cfg(feature = "secure")]
-    if !validate_cageid(arg_cageid, cageid) {
-        panic!("Invalide Cage ID");
+    {
+        if !validate_cageid(arg_cageid, cageid) {
+            panic!("Invalide Cage ID");
+        }
     }
+
+    return arg as i64;
 }
 
 pub fn sc_unusedarg(arg: u64, arg_cageid: u64) -> bool {
