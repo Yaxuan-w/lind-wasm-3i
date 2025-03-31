@@ -9,6 +9,13 @@ use libc::*;
 use parking_lot::RwLock;
 use std::sync::atomic::{AtomicI32, AtomicU64};
 use std::sync::Arc;
+use sysdefs::constants::err_const::{get_errno, handle_errno, syscall_error, Errno};
+use sysdefs::constants::fs_const;
+use sysdefs::constants::fs_const::{
+    F_GETFL, F_GETOWN, F_SETOWN, MAP_ANONYMOUS, MAP_FAILED, MAP_FIXED, MAP_PRIVATE, MAP_SHARED,
+    PAGESHIFT, PAGESIZE, PROT_EXEC, PROT_NONE, PROT_READ, PROT_WRITE,
+};
+use typemap::syscall_conv::*;
 use typemap::type_conv::get_pipearray;
 
 /// Helper function for close_syscall
@@ -130,8 +137,9 @@ pub fn read_syscall(
     let count = sc_convert_sysarg_to_usize(count_arg, count_cageid, cageid);
 
     if !(sc_unusedarg(arg4, arg4_cageid)
-         && sc_unusedarg(arg5, arg5_cageid)
-         && sc_unusedarg(arg6, arg6_cageid)) {
+        && sc_unusedarg(arg5, arg5_cageid)
+        && sc_unusedarg(arg6, arg6_cageid))
+    {
         return syscall_error(Errno::EFAULT, "read", "Invalid Cage ID");
     }
 
@@ -163,7 +171,7 @@ pub fn read_syscall(
 pub fn close_syscall(
     cageid: u64,
     virtual_fd: u64,
-    vfd_cageid: u64, 
+    vfd_cageid: u64,
     arg3: u64,
     arg3_cageid: u64,
     arg4: u64,
@@ -174,9 +182,10 @@ pub fn close_syscall(
     arg6_cageid: u64,
 ) -> i32 {
     if !(sc_unusedarg(arg3, arg3_cageid)
-         && sc_unusedarg(arg4, arg4_cageid)
-         && sc_unusedarg(arg5, arg5_cageid)
-         && sc_unusedarg(arg6, arg6_cageid)) {
+        && sc_unusedarg(arg4, arg4_cageid)
+        && sc_unusedarg(arg5, arg5_cageid)
+        && sc_unusedarg(arg6, arg6_cageid))
+    {
         return syscall_error(Errno::EFAULT, "close", "Invalid Cage ID");
     }
 
@@ -265,7 +274,7 @@ pub fn pipe2_syscall(
 ) -> i32 {
     // Convert the flags argument.
     let flags = sc_convert_sysarg_to_i32(flags_arg, flags_cageid, cageid);
-    
+
     // Validate flags - only O_NONBLOCK and O_CLOEXEC are allowed
     let allowed_flags = fs_const::O_NONBLOCK | fs_const::O_CLOEXEC;
     if flags & !allowed_flags != 0 {
@@ -274,9 +283,10 @@ pub fn pipe2_syscall(
 
     // Ensure unused arguments are truly unused.
     if !(sc_unusedarg(arg3, arg3_cageid)
-         && sc_unusedarg(arg4, arg4_cageid)
-         && sc_unusedarg(arg5, arg5_cageid)
-         && sc_unusedarg(arg6, arg6_cageid)) {
+        && sc_unusedarg(arg4, arg4_cageid)
+        && sc_unusedarg(arg5, arg5_cageid)
+        && sc_unusedarg(arg6, arg6_cageid))
+    {
         return syscall_error(Errno::EFAULT, "pipe2_syscall", "Invalid Cage ID");
     }
     // Convert the u64 pointer into a mutable reference to PipeArray.
@@ -296,30 +306,36 @@ pub fn pipe2_syscall(
 
     // Get virtual fd for read end
     let read_vfd = match fdtables::get_unused_virtual_fd(
-        cageid, 
-        fs_const::FDKIND_KERNEL, 
-        kernel_fds[0] as u64, 
-        should_cloexec, 
-        0
+        cageid,
+        fs_const::FDKIND_KERNEL,
+        kernel_fds[0] as u64,
+        should_cloexec,
+        0,
     ) {
         Ok(fd) => fd as i32,
         Err(_) => {
-            unsafe { libc::close(kernel_fds[0]); libc::close(kernel_fds[1]); }
+            unsafe {
+                libc::close(kernel_fds[0]);
+                libc::close(kernel_fds[1]);
+            }
             return syscall_error(Errno::EMFILE, "pipe2_syscall", "Too many files opened");
         }
     };
 
     // Get virtual fd for write end
     let write_vfd = match fdtables::get_unused_virtual_fd(
-        cageid, 
-        fs_const::FDKIND_KERNEL, 
-        kernel_fds[1] as u64, 
-        should_cloexec, 
-        0
+        cageid,
+        fs_const::FDKIND_KERNEL,
+        kernel_fds[1] as u64,
+        should_cloexec,
+        0,
     ) {
         Ok(fd) => fd as i32,
         Err(_) => {
-            unsafe { libc::close(kernel_fds[0]); libc::close(kernel_fds[1]); }
+            unsafe {
+                libc::close(kernel_fds[0]);
+                libc::close(kernel_fds[1]);
+            }
             return syscall_error(Errno::EMFILE, "pipe2_syscall", "Too many files opened");
         }
     };
@@ -1152,5 +1168,37 @@ pub fn clock_gettime_syscall(
         return handle_errno(errno, "clock_gettime");
     }
 
+    ret
+}
+
+pub fn nanosleep_time64_syscall(
+    cageid: u64,
+    clockid_arg: u64,
+    clockid_cageid: u64,
+    flags_arg: u64,
+    flags_cageid: u64,
+    req_arg: u64,
+    req_cageid: u64,
+    rem_arg: u64,
+    rem_cageid: u64,
+    arg5: u64,
+    arg5_cageid: u64,
+    arg6: u64,
+    arg6_cageid: u64,
+) -> i32 {
+    // Type conversion
+    let clockid = sc_convert_sysarg_to_u32(clockid_arg, clockid_cageid, cageid);
+    let flags = sc_convert_sysarg_to_i32(flags_arg, flags_cageid, cageid);
+    let req = sc_convert_buf(req_arg, req_cageid, cageid);
+    let rem = sc_convert_buf(rem_arg, rem_cageid, cageid);
+    // would sometimes check, sometimes be a no-op depending on the compiler settings
+    if !(sc_unusedarg(arg5, arg5_cageid) && sc_unusedarg(arg6, arg6_cageid)) {
+        return syscall_error(Errno::EFAULT, "nanosleep", "Invalide Cage ID");
+    }
+    let ret = unsafe { syscall(SYS_clock_nanosleep, clockid, flags, req, rem) as i32 };
+    if ret < 0 {
+        let errno = get_errno();
+        return handle_errno(errno, "nanosleep");
+    }
     ret
 }

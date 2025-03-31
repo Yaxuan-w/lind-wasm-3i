@@ -7,6 +7,8 @@ edition = "2021"
 libc = "0.2"
 sysdefs = { path = "../sysdefs" }
 rawposix = { path = "../rawposix" }
+typemap = { path = "../typemap" }
 dashmap = "5.0"      
 once_cell = "1.18" 
 lazy_static = "1.4"
+parking_lot = "0.12"

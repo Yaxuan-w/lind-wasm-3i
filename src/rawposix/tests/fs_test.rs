@@ -286,7 +286,10 @@ fn test_pipe() {
         test_data.len(),
         "read from pipe failed"
     );
-    assert_eq!(&read_buffer, test_data, "read data doesn't match written data");
+    assert_eq!(
+        &read_buffer, test_data,
+        "read data doesn't match written data"
+    );
 
     testing_remove_all();
 }
@@ -311,7 +314,10 @@ fn test_pipe2() {
         large_buffer.as_ptr() as *const c_void,
         large_buffer.len(),
     );
-    assert!(write_result < large_buffer.len() as isize, "Non-blocking write should not block");
+    assert!(
+        write_result < large_buffer.len() as isize,
+        "Non-blocking write should not block"
+    );
 
     testing_remove_all();
 }
