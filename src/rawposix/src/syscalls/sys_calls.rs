@@ -1,22 +1,23 @@
 //! System syscalls implementation
 //!
 //! This module contains all system calls that are being emulated/faked in Lind.
-use std::sync::atomic::Ordering::*;
-use typemap::syscall_conv::*;
-use std::path::PathBuf;
-use std::ffi::CString;
-use std::sync::atomic::{AtomicI32, AtomicU64};
-use parking_lot::RwLock;
-use std::sync::Arc;
 use crate::syscalls::fs_calls::kernel_close;
 use cage::memory::mem_helper::*;
 use cage::memory::vmmap::{VmmapOps, *};
-use cage::{Cage, get_cage, add_cage, cagetable_clear, Zombie, remove_cage};
+use cage::{add_cage, cagetable_clear, get_cage, remove_cage, Cage, Zombie};
 use fdtables;
+use libc::sched_yield;
+use parking_lot::RwLock;
+use std::ffi::CString;
+use std::path::PathBuf;
+use std::sync::atomic::Ordering::*;
+use std::sync::atomic::{AtomicI32, AtomicU64};
+use std::sync::Arc;
 use sysdefs::constants::err_const::{get_errno, handle_errno, syscall_error, Errno};
 use sysdefs::constants::fs_const::*;
 use sysdefs::constants::{EXIT_SUCCESS, VERBOSE};
-use libc::sched_yield;
+use typemap::syscall_conv::*;
+use typemap::syscall_conv::*;
 
 /// Reference to Linux: https://man7.org/linux/man-pages/man2/fork.2.html
 ///
@@ -26,8 +27,8 @@ use libc::sched_yield;
 /// with this cloned tables.
 pub fn fork_syscall(
     cageid: u64,
-    child_arg: u64, // Child's cage id
-    child_arg_cageid: u64, // Child's cage id arguments cageid 
+    child_arg: u64,        // Child's cage id
+    child_arg_cageid: u64, // Child's cage id arguments cageid
     arg2: u64,
     arg2_cageid: u64,
     arg3: u64,
@@ -169,10 +170,10 @@ pub fn exec_syscall(
         return syscall_error(Errno::EFAULT, "exec", "Invalide Cage ID");
     }
 
-    // Empty fd with flag should_cloexec 
+    // Empty fd with flag should_cloexec
     fdtables::empty_fds_for_exec(cageid);
 
-    // Copy necessary data from current cage 
+    // Copy necessary data from current cage
     let selfcage = get_cage(cageid).unwrap();
 
     let zombies = selfcage.zombies.read();
@@ -189,7 +190,7 @@ pub fn exec_syscall(
         egid: AtomicI32::new(-1),
         euid: AtomicI32::new(-1),
         main_threadid: AtomicU64::new(0),
-        zombies: RwLock::new(cloned_zombies),   // When a process exec-ed, its child relationship should be perserved 
+        zombies: RwLock::new(cloned_zombies), // When a process exec-ed, its child relationship should be perserved
         child_num: AtomicU64::new(child_num),
         vmmap: RwLock::new(Vmmap::new()), // Memory is cleared after exec
     };
@@ -201,12 +202,11 @@ pub fn exec_syscall(
     0
 }
 
-
 /// Reference to Linux: https://man7.org/linux/man-pages/man3/waitpid.3p.html
 ///
 /// waitpid() will return the cageid of waited cage, or 0 when WNOHANG is set and there is no cage already exited
 /// waitpid_syscall utilizes the zombie list stored in cage struct. When a cage exited, a zombie entry will be inserted
-/// into the end of its parent's zombie list. Then when parent wants to wait for any of child, it could just check its 
+/// into the end of its parent's zombie list. Then when parent wants to wait for any of child, it could just check its
 /// zombie list and retrieve the first entry from it (first in, first out).
 pub fn waitpid_syscall(
     cageid: u64,
@@ -233,7 +233,7 @@ pub fn waitpid_syscall(
         return syscall_error(Errno::EFAULT, "waitpid", "Invalid Arguments");
     }
 
-    // get the cage instance 
+    // get the cage instance
     let cage = get_cage(cageid).unwrap();
 
     let mut zombies = cage.zombies.write();
@@ -241,7 +241,11 @@ pub fn waitpid_syscall(
 
     // if there is no pending zombies to wait, and there is no active child, return ECHILD
     if zombies.len() == 0 && child_num == 0 {
-        return syscall_error(Errno::ECHILD, "waitpid", "no existing unwaited-for child processes");
+        return syscall_error(
+            Errno::ECHILD,
+            "waitpid",
+            "no existing unwaited-for child processes",
+        );
     }
 
     let mut zombie_opt: Option<Zombie> = None;
@@ -278,7 +282,10 @@ pub fn waitpid_syscall(
     // if cageid is specified, then we need to look up the zombie list for the id
     else {
         // first let's check if the cageid is in the zombie list
-        if let Some(index) = zombies.iter().position(|zombie| zombie.cageid == cageid_arg as u64) {
+        if let Some(index) = zombies
+            .iter()
+            .position(|zombie| zombie.cageid == cageid_arg as u64)
+        {
             // find the cage in zombie list, remove it from the list and break
             zombie_opt = Some(zombies.remove(index));
         } else {
@@ -291,7 +298,11 @@ pub fn waitpid_syscall(
             if let Some(child_cage) = child {
                 // make sure the child's parent is correct
                 if child_cage.parent != cage.cageid {
-                    return syscall_error(Errno::ECHILD, "waitpid", "waited cage is not the child of the cage");
+                    return syscall_error(
+                        Errno::ECHILD,
+                        "waitpid",
+                        "waited cage is not the child of the cage",
+                    );
                 }
             } else {
                 // cage does not exist
@@ -313,7 +324,10 @@ pub fn waitpid_syscall(
                 zombies = cage.zombies.write();
 
                 // let's check if the zombie list contains the cage
-                if let Some(index) = zombies.iter().position(|zombie| zombie.cageid == cageid_arg as u64) {
+                if let Some(index) = zombies
+                    .iter()
+                    .position(|zombie| zombie.cageid == cageid_arg as u64)
+                {
                     // find the cage in zombie list, remove it from the list and break
                     zombie_opt = Some(zombies.remove(index));
                     break;
@@ -334,7 +348,7 @@ pub fn waitpid_syscall(
 }
 
 /// Reference to Linux: https://man7.org/linux/man-pages/man2/wait.2.html
-/// 
+///
 /// See comments of waitpid_syscall
 pub fn wait_syscall(
     cageid: u64,
@@ -349,7 +363,7 @@ pub fn wait_syscall(
     arg5: u64,
     arg5_cageid: u64,
     arg6: u64,
-    arg6_cageid: u64
+    arg6_cageid: u64,
 ) -> i32 {
     // would sometimes check, sometimes be a no-op depending on the compiler settings
     if !(sc_unusedarg(arg2, arg2_cageid)
@@ -361,10 +375,25 @@ pub fn wait_syscall(
         return syscall_error(Errno::EFAULT, "waitpid", "Invalid Arguments");
     }
     // left type conversion done inside waitpid_syscall
-    waitpid_syscall(cageid, 0, 0, status_arg, status_cageid, 0, 0, 0, 0, 0, 0, 0, 0)
+    waitpid_syscall(
+        cageid,
+        0,
+        0,
+        status_arg,
+        status_cageid,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+    )
 }
 
-pub fn getpid_syscall(cageid: u64,
+pub fn getpid_syscall(
+    cageid: u64,
     arg1: u64,
     arg1_cageid: u64,
     arg2: u64,
@@ -394,7 +423,8 @@ pub fn getpid_syscall(cageid: u64,
     return cage.cageid as i32;
 }
 
-pub fn getppid_syscall(cageid: u64,
+pub fn getppid_syscall(
+    cageid: u64,
     arg1: u64,
     arg1_cageid: u64,
     arg2: u64,
@@ -420,7 +450,7 @@ pub fn getppid_syscall(cageid: u64,
     }
 
     let cage = get_cage(cageid).unwrap();
-    
+
     return cage.parent as i32;
 }
 
@@ -429,11 +459,7 @@ pub fn getppid_syscall(cageid: u64,
 pub fn lindrustinit(verbosity: isize) {
     let _ = VERBOSE.set(verbosity); //assigned to suppress unused result warning
 
-    fdtables::register_close_handlers(
-        FDKIND_KERNEL,
-        fdtables::NULL_FUNC,
-        kernel_close,
-    );
+    fdtables::register_close_handlers(FDKIND_KERNEL, fdtables::NULL_FUNC, kernel_close);
 
     let utilcage = Cage {
         cageid: 0,
@@ -561,9 +587,9 @@ pub fn lindrustfinalize() {
 
     for cageid in exitvec {
         exit_syscall(
-            cageid as u64,  // target cageid
-            EXIT_SUCCESS as u64,  // status arg
-            cageid as u64, // status arg's cageid 
+            cageid as u64,       // target cageid
+            EXIT_SUCCESS as u64, // status arg
+            cageid as u64,       // status arg's cageid
             0,
             0,
             0,
@@ -576,5 +602,4 @@ pub fn lindrustfinalize() {
             0,
         );
     }
-
 }
