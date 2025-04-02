@@ -6,6 +6,7 @@ use cage::memory::mem_helper::*;
 use cage::memory::vmmap::{VmmapOps, *};
 use cage::{add_cage, cagetable_clear, get_cage, remove_cage, Cage, Zombie};
 use fdtables;
+use libc::sched_yield;
 use parking_lot::RwLock;
 use std::ffi::CString;
 use std::path::PathBuf;
@@ -15,6 +16,7 @@ use std::sync::Arc;
 use sysdefs::constants::err_const::{get_errno, handle_errno, syscall_error, Errno};
 use sysdefs::constants::fs_const::*;
 use sysdefs::constants::{EXIT_SUCCESS, VERBOSE};
+use typemap::syscall_conv::*;
 use typemap::syscall_conv::*;
 
 /// Reference to Linux: https://man7.org/linux/man-pages/man2/fork.2.html
@@ -45,7 +47,7 @@ pub fn fork_syscall(
         && sc_unusedarg(arg5, arg5_cageid)
         && sc_unusedarg(arg6, arg6_cageid))
     {
-        return syscall_error(Errno::EFAULT, "fork", "Invalide Cage ID");
+        return syscall_error(Errno::EFAULT, "fork", "Invalide Arguments");
     }
 
     // Modify the fdtable manually
@@ -106,7 +108,7 @@ pub fn exit_syscall(
         && sc_unusedarg(arg5, arg5_cageid)
         && sc_unusedarg(arg6, arg6_cageid))
     {
-        return syscall_error(Errno::EFAULT, "exit", "Invalide Cage ID");
+        return syscall_error(Errno::EFAULT, "exit", "Invalide Arguments");
     }
 
     let _ = fdtables::remove_cage_from_fdtable(status_cageid);
@@ -189,7 +191,7 @@ pub fn exec_syscall(
         euid: AtomicI32::new(-1),
         main_threadid: AtomicU64::new(0),
         zombies: RwLock::new(cloned_zombies), // When a process exec-ed, its child relationship should be perserved
-        child_num: AtomicU64::new(0),
+        child_num: AtomicU64::new(child_num),
         vmmap: RwLock::new(Vmmap::new()), // Memory is cleared after exec
     };
 
@@ -198,6 +200,196 @@ pub fn exec_syscall(
     // Insert the new cage with same cageid
     add_cage(cageid, newcage);
     0
+}
+
+/// Reference to Linux: https://man7.org/linux/man-pages/man3/waitpid.3p.html
+///
+/// waitpid() will return the cageid of waited cage, or 0 when WNOHANG is set and there is no cage already exited
+/// waitpid_syscall utilizes the zombie list stored in cage struct. When a cage exited, a zombie entry will be inserted
+/// into the end of its parent's zombie list. Then when parent wants to wait for any of child, it could just check its
+/// zombie list and retrieve the first entry from it (first in, first out).
+pub fn waitpid_syscall(
+    cageid: u64,
+    cageid_arg: u64,
+    cageid_arg_cageid: u64,
+    status_arg: u64,
+    status_cageid: u64,
+    options_arg: u64,
+    options_cageid: u64,
+    arg4: u64,
+    arg4_cageid: u64,
+    arg5: u64,
+    arg5_cageid: u64,
+    arg6: u64,
+    arg6_cageid: u64,
+) -> i32 {
+    let status = sc_convert_sysarg_to_i32_ref(status_arg, status_cageid, cageid);
+    let options = sc_convert_sysarg_to_i32(options_arg, options_cageid, cageid);
+    // would sometimes check, sometimes be a no-op depending on the compiler settings
+    if !(sc_unusedarg(arg4, arg4_cageid)
+        && sc_unusedarg(arg5, arg5_cageid)
+        && sc_unusedarg(arg6, arg6_cageid))
+    {
+        return syscall_error(Errno::EFAULT, "waitpid", "Invalid Arguments");
+    }
+
+    // get the cage instance
+    let cage = get_cage(cageid).unwrap();
+
+    let mut zombies = cage.zombies.write();
+    let child_num = cage.child_num.load(Relaxed);
+
+    // if there is no pending zombies to wait, and there is no active child, return ECHILD
+    if zombies.len() == 0 && child_num == 0 {
+        return syscall_error(
+            Errno::ECHILD,
+            "waitpid",
+            "no existing unwaited-for child processes",
+        );
+    }
+
+    let mut zombie_opt: Option<Zombie> = None;
+
+    // cageid <= 0 means wait for ANY child
+    // cageid < 0 actually refers to wait for any child process whose process group ID equals -pid
+    // but we do not have the concept of process group in lind, so let's just treat it as cageid == 0
+    if cageid_arg <= 0 {
+        loop {
+            if zombies.len() == 0 && (options & libc::WNOHANG > 0) {
+                // if there is no pending zombies and WNOHANG is set
+                // return immediately
+                return 0;
+            } else if zombies.len() == 0 {
+                // if there is no pending zombies and WNOHANG is not set
+                // then we need to wait for children to exit
+                // drop the zombies list before sleep to avoid deadlock
+                drop(zombies);
+                // TODO: replace busy waiting with more efficient mechanism
+                unsafe {
+                    sched_yield();
+                }
+                // after sleep, get the write access of zombies list back
+                zombies = cage.zombies.write();
+                continue;
+            } else {
+                // there are zombies avaliable
+                // let's retrieve the first zombie
+                zombie_opt = Some(zombies.remove(0));
+                break;
+            }
+        }
+    }
+    // if cageid is specified, then we need to look up the zombie list for the id
+    else {
+        // first let's check if the cageid is in the zombie list
+        if let Some(index) = zombies
+            .iter()
+            .position(|zombie| zombie.cageid == cageid_arg as u64)
+        {
+            // find the cage in zombie list, remove it from the list and break
+            zombie_opt = Some(zombies.remove(index));
+        } else {
+            // if the cageid is not in the zombie list, then we know either
+            // 1. the child is still running, or
+            // 2. the cage has exited, but it is not the child of this cage, or
+            // 3. the cage does not exist
+            // we need to make sure the child is still running, and it is the child of this cage
+            let child = get_cage(cageid_arg as u64);
+            if let Some(child_cage) = child {
+                // make sure the child's parent is correct
+                if child_cage.parent != cage.cageid {
+                    return syscall_error(
+                        Errno::ECHILD,
+                        "waitpid",
+                        "waited cage is not the child of the cage",
+                    );
+                }
+            } else {
+                // cage does not exist
+                return syscall_error(Errno::ECHILD, "waitpid", "cage does not exist");
+            }
+
+            // now we have verified that the cage exists and is the child of the cage
+            loop {
+                // the cage is not in the zombie list
+                // we need to wait for the cage to actually exit
+
+                // drop the zombies list before sleep to avoid deadlock
+                drop(zombies);
+                // TODO: replace busy waiting with more efficient mechanism
+                unsafe {
+                    sched_yield();
+                }
+                // after sleep, get the write access of zombies list back
+                zombies = cage.zombies.write();
+
+                // let's check if the zombie list contains the cage
+                if let Some(index) = zombies
+                    .iter()
+                    .position(|zombie| zombie.cageid == cageid_arg as u64)
+                {
+                    // find the cage in zombie list, remove it from the list and break
+                    zombie_opt = Some(zombies.remove(index));
+                    break;
+                }
+
+                continue;
+            }
+        }
+    }
+
+    // reach here means we already found the desired exited child
+    let zombie = zombie_opt.unwrap();
+    // update the status
+    *status = zombie.exit_code;
+    println!("[rawposix|waitpid] cp-3");
+    // return child's cageid
+    zombie.cageid as i32
+}
+
+/// Reference to Linux: https://man7.org/linux/man-pages/man2/wait.2.html
+///
+/// See comments of waitpid_syscall
+pub fn wait_syscall(
+    cageid: u64,
+    status_arg: u64,
+    status_cageid: u64,
+    arg2: u64,
+    arg2_cageid: u64,
+    arg3: u64,
+    arg3_cageid: u64,
+    arg4: u64,
+    arg4_cageid: u64,
+    arg5: u64,
+    arg5_cageid: u64,
+    arg6: u64,
+    arg6_cageid: u64,
+) -> i32 {
+    // would sometimes check, sometimes be a no-op depending on the compiler settings
+    if !(sc_unusedarg(arg2, arg2_cageid)
+        && sc_unusedarg(arg3, arg3_cageid)
+        && sc_unusedarg(arg4, arg4_cageid)
+        && sc_unusedarg(arg5, arg5_cageid)
+        && sc_unusedarg(arg6, arg6_cageid))
+    {
+        return syscall_error(Errno::EFAULT, "waitpid", "Invalid Arguments");
+    }
+    // left type conversion done inside waitpid_syscall
+    waitpid_syscall(
+        cageid,
+        0,
+        0,
+        status_arg,
+        status_cageid,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+    )
 }
 
 pub fn getpid_syscall(
