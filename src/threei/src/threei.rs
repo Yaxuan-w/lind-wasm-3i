@@ -443,10 +443,11 @@ pub fn make_syscall(
     arg6: u64,
     arg6_cageid: u64,
 ) -> i32 {
-    println!(
-        "[3i|make_syscall] syscallnum: {}, self_cageid: {}, target_cageid: {}",
-        syscall_num, self_cageid, target_cageid
-    );
+
+    // println!(
+    //     "[make_syscall] syscallnum: {}, self_cageid: {}, target_cageid: {}",
+    //     syscall_num, self_cageid, target_cageid
+    // );
     // Return error if the target cage/grate is exiting. We need to add this check beforehead, because make_syscall will also
     // contain cases that can directly redirect a syscall when self_cageid == target_id, which will bypass the handlertable check
     if EXITING_TABLE.contains(&target_cageid) && syscall_num != exit_syscallnum {
@@ -476,7 +477,6 @@ pub fn make_syscall(
                 arg5,
                 arg5_cageid,
                 arg6,
-                arg6_cageid,
             ) {
                 return ret;
             } else {
