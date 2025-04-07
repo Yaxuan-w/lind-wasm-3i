@@ -21,7 +21,8 @@ pub(crate) mod types;
 pub(crate) mod uninhabited;
 pub(crate) mod v128;
 pub(crate) mod values;
-pub(crate) mod vm;
+// pub(crate) mod vm;
+pub mod vm;
 
 #[cfg(feature = "component-model")]
 pub mod component;
@@ -58,6 +59,7 @@ pub use trap::*;
 pub use types::*;
 pub use v128::V128;
 pub use values::*;
+pub use vm::VMContext;
 
 pub(crate) use uninhabited::*;
 

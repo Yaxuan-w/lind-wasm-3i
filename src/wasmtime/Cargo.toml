@@ -161,7 +161,7 @@ members = [
   "crates/fdtables",
   "crates/sysdefs",
   "crates/cage",
-  "crates/typemap",
+  "crates/typemap", 
 ]
 exclude = [
   'docs/rust_wasi_markdown_parser',

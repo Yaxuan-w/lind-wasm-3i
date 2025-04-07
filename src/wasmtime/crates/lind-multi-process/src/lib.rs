@@ -329,7 +329,7 @@ impl<T: Clone + Send + 'static + std::marker::Sync, U: Clone + Send + 'static + 
                 }
 
                 // instantiate the module
-                let instance = instance_pre.instantiate_with_lind(&mut store,
+                let (instance, _) = instance_pre.instantiate_with_lind(&mut store,
                     InstantiateType::InstantiateChild {
                         parent_pid: parent_pid as u64, child_pid: child_cageid
                     }).unwrap();

@@ -5,25 +5,26 @@
     allow(irrefutable_let_patterns, unreachable_patterns)
 )]
 
-use std::sync::Barrier;
-
 use crate::common::{Profile, RunCommon, RunTarget};
 use anyhow::{anyhow, bail, Context as _, Error, Result};
 use clap::Parser;
-use sysdefs::constants::fs_const::{MAP_ANONYMOUS, MAP_FIXED, MAP_PRIVATE, PAGESHIFT, PROT_READ, PROT_WRITE};
+// use sysdefs::constants::fs_const::{MAP_ANONYMOUS, MAP_FIXED, MAP_PRIVATE, PAGESHIFT, PROT_READ, PROT_WRITE};
 use threei::threei::{make_syscall, threei_test_func};
-use rawposix::{lindrustinit, lindrustfinalize};
+use wasmtime::vm::InstanceHandle;
+// use rawposix::{lindrustinit, lindrustfinalize};
 use wasmtime_lind_multi_process::{LindCtx, LindHost};
 use wasmtime_lind_common::LindCommonCtx;
 use wasmtime_lind_utils::lind_syscall_numbers::EXIT_SYSCALL;
 use std::ffi::OsString;
 use std::path::{Path, PathBuf};
 use std::sync::atomic::AtomicU64;
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc, Mutex,RwLock};
 use std::thread;
 use wasi_common::sync::{ambient_authority, Dir, TcpListener, WasiCtxBuilder};
-use wasmtime::{AsContext, AsContextMut, Engine, Func, InstantiateType, Module, Store, StoreLimits, Val, ValType};
+use wasmtime::{AsContext, AsContextMut, Caller, Engine, Extern, Func, InstantiateType, Module, Store, StoreLimits, Val, ValType, Instance};
 use wasmtime_wasi::WasiView;
+
+use once_cell::sync::Lazy;
 
 use wasmtime_lind_utils::LindCageManager;
 
@@ -78,6 +79,28 @@ enum CliLinker {
     #[cfg(feature = "component-model")]
     Component(wasmtime::component::Linker<Host>),
 }
+
+// -------------- AW --------------
+static VM_TABLE: Lazy<RwLock<Vec<Option<InstanceHandle>>>> = Lazy::new(|| {
+    RwLock::new(Vec::new())
+});
+
+fn insert_ctx(pid: usize, ctx: InstanceHandle) {
+    let mut table = VM_TABLE.write().unwrap();
+    if pid >= table.len() {
+        table.resize(pid + 1, None);
+    }
+    table[pid] = Some(ctx);
+}
+
+fn get_ctx(pid: usize) -> InstanceHandle {
+    let table = VM_TABLE.read().unwrap();
+    let ctx = table[pid].as_ref().unwrap();
+    unsafe {
+        ctx.clone()
+    }
+}
+// -------------- AW --------------
 
 impl RunCommand {
     /// Executes the command.
@@ -560,17 +583,11 @@ impl RunCommand {
             CliLinker::Core(linker) => {
                 let module = module.unwrap_core();
                 // -------------- AW --------------
-                // let instance = linker.instantiate_with_lind(&mut *store, &module, InstantiateType::InstantiateFirst(pid)).context(format!(
-                //     "failed to instantiate {:?}",
-                //     self.module_and_args[0]
-                // ))?;
-                // todo: 1. get info from 3i. 2. execute on wasmtime
-                let (instance_pre, instance) = linker.instantiate_with_lind(&mut *store, &module, InstantiateType::InstantiateFirst(pid)).context(format!(
+                let (instance, grate_instanceid) = linker.instantiate_with_lind(&mut *store, &module, InstantiateType::InstantiateFirst(pid)).context(format!(
                     "failed to instantiate {:?}",
                     self.module_and_args[0]
                 ))?;
-                
-                // println!("[wasmtime|run] instantiate cp-1");
+                // -------------- AW --------------
 
                 // If `_initialize` is present, meaning a reactor, then invoke
                 // the function.
@@ -600,45 +617,48 @@ impl RunCommand {
                 store.as_context_mut().set_stack_top(stack_low as u64);
 
                 // -------------- AW --------------
-                // todo: 1. get info from 3i. 2. execute on wasmtime
-                // println!("[wasmtime|run] load_main_module");
-                let instance_pre = instance_pre.clone(); 
+                // 1. get StoreOpaque
+                let grate_storeopaque = store.inner_mut();
+                // 2. get InstanceHandler
+                let grate_instancehandler = grate_storeopaque.instance(grate_instanceid);
+                // 3. store InstanceHandler to global table, because we need the ptr to have Send+Sync, we need to 
+                // store the wrapper of vmctx ptr
                 let current_pid = pid;
-                // store.data() will return &T, which is a borrowed value, but we will need to have ownership of this..
-                // and T doesn't implement Clone method... we need to manually to do that
-                // todo: create a new instance to store the data 
-                let grate_store = store.data().clone();
+                unsafe {
+                    insert_ctx(current_pid as usize, grate_instancehandler.clone());
+                }
+                
                 let res = threei_test_func(current_pid, Box::new(move |index: u64, cageid: u64, arg1: u64, arg1cageid: u64, arg2: u64, arg2cageid: u64, arg3: u64, arg3cageid: u64, arg4: u64, arg4cageid: u64, arg5: u64, arg5cageid: u64, arg6: u64, arg6cageid: u64| -> i32 {
-                    // let grate_store = Host::default();
-                    // println!("[wasmtime|run] inside closure: pid {}", pid);
-                    let mut gstore = Store::new(instance_pre.module().engine(), grate_store.clone());
-                    let instance = instance_pre.instantiate_with_lind(&mut gstore, InstantiateType::InstantiateFirst(pid)).unwrap();
-                    // println!("[wasmtime|run] executing 'pass_fptr_to_wt'");
-                    // if let Some(table) =  {
-                    //     println!("Table size: {:?}", table.size(&gstore));
-                    // }   
-                    let table = instance.get_export(&mut gstore, "__indirect_function_table").and_then(|e| e.into_table()).unwrap();                 
-                    if let Some(grate_entry_func) = instance.get_func(&mut gstore, "pass_fptr_to_wt") {
-                        // println!("[wasmtime|run] get 'pass_fptr_to_wt'");
-                        let grate_entry_point = match grate_entry_func.typed::<(u64, u64, u64, u64, u64, u64, u64, u64, u64, u64, u64, u64, u64, u64), i32>(&mut gstore) {
-                            Ok(typed_func) => typed_func,
-                            Err(e) => {
-                                // println!("[wasmtime|run] Failed to find function 'pass_fptr_to_wt': {:?}", e);
-                                return -1; 
-                            }
-                        };
-                        let result = match grate_entry_point.call(&mut gstore, (index, cageid, arg1, arg1cageid, arg2, arg2cageid, arg3, arg3cageid, arg4, arg4cageid, arg5, arg5cageid, arg6, arg6cageid)) {
-                            Ok(value) => value,
-                            Err(e) => {
-                                eprintln!("Error calling pass_fptr_to_wt: {:?}", e);
-                                return -1; 
-                            }
-                        };
-                        // println!("[wasmtime|run] result of 'pass_fptr_to_wt': {}", result);
-                        result
-                    } else {
-                        panic!("[wasmtime|run] not found!");
+                    let grate_handler = get_ctx(current_pid as usize);
+                    let ctx = grate_handler.vmctx();
+                    unsafe {
+                        Caller::with(ctx, |mut caller: Caller<'_, Host>| {
+                            let Caller { mut store, caller: instance } = caller;
+                            // let gstore = &mut caller.store;
+                            
+                            let grate_entry_func = instance.host_state()
+                                    .downcast_ref::<Instance>().unwrap()
+                                    .get_export(&mut store, "pass_fptr_to_wt").and_then(|f| f.into_func())
+                                                    .ok_or_else(|| anyhow!("failed to find function export `{}`", "pass_fptr_to_wt")).unwrap();
+                            // println!("[wasmtime|run] get 'pass_fptr_to_wt'");
+                            let grate_entry_point = match grate_entry_func.typed::<(u64, u64, u64, u64, u64, u64, u64, u64, u64, u64, u64, u64, u64, u64), i32>(&mut store) {
+                                Ok(typed_func) => typed_func,
+                                Err(e) => {
+                                    // println!("[wasmtime|run] Failed to find function 'pass_fptr_to_wt': {:?}", e);
+                                    return -1; 
+                                }
+                            };
+                            let result = match grate_entry_point.call(&mut store, (index, cageid, arg1, arg1cageid, arg2, arg2cageid, arg3, arg3cageid, arg4, arg4cageid, arg5, arg5cageid, arg6, arg6cageid)) {
+                                Ok(value) => value,
+                                Err(e) => {
+                                    eprintln!("Error calling pass_fptr_to_wt: {:?}", e);
+                                    return -1; 
+                                }
+                            };
+                            result
+                        })
                     }
+                    
                     
                 }));
                 if res < 0 {

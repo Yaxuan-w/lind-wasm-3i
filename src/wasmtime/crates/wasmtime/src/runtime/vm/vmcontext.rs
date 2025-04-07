@@ -939,6 +939,9 @@ pub struct VMContext {
     pub _marker: marker::PhantomPinned,
 }
 
+unsafe impl Send for VMContext {}
+unsafe impl Sync for VMContext {}
+
 impl VMContext {
     /// Helper function to cast between context types using a debug assertion to
     /// protect against some mistakes.

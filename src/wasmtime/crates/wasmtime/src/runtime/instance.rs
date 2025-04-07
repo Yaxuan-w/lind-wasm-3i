@@ -217,7 +217,7 @@ impl Instance {
         module: &Module,
         imports: Imports<'_>,
     ) -> Result<Instance> {
-        let (instance, start) = Instance::new_raw(store.0, module, imports)?;
+        let (instance, start, _instanceid) = Instance::new_raw(store.0, module, imports)?;
 
         if let Some(start) = start {
             instance.start_raw(store, start)?;
@@ -230,8 +230,8 @@ impl Instance {
         module: &Module,
         imports: Imports<'_>,
         instantiate_type: InstantiateType,
-    ) -> Result<Instance> {
-        let (instance, start) = Instance::new_raw(store.0, module, imports)?;
+    ) -> Result<(Instance, InstanceId)> {
+        let (instance, start, instanceid) = Instance::new_raw(store.0, module, imports)?;
         // retrieve the initial memory size
         let plans = module.compiled_module().module().memory_plans.clone();
         let plan = plans.get(MemoryIndex::from_u32(0)).unwrap();
@@ -292,7 +292,8 @@ impl Instance {
         if let Some(start) = start {
             instance.start_raw(store, start)?;
         }
-        Ok(instance)
+
+        Ok((instance, instanceid))
     }
 
     /// Internal function to create an instance and run the start function.
@@ -336,7 +337,7 @@ impl Instance {
         store: &mut StoreOpaque,
         module: &Module,
         imports: Imports<'_>,
-    ) -> Result<(Instance, Option<FuncIndex>)> {
+    ) -> Result<(Instance, Option<FuncIndex>, InstanceId)> {
         if !Engine::same(store.engine(), module.engine()) {
             bail!("cross-`Engine` instantiation is not currently supported");
         }
@@ -431,7 +432,7 @@ impl Instance {
                 .contains(WasmFeatures::BULK_MEMORY),
         )?;
 
-        Ok((instance, compiled_module.module().start_func))
+        Ok((instance, compiled_module.module().start_func, id))
     }
 
     pub(crate) fn from_wasmtime(handle: InstanceData, store: &mut StoreOpaque) -> Instance {
@@ -1007,7 +1008,7 @@ impl<T> InstancePre<T> {
         unsafe { Instance::new_started(&mut store, &self.module, imports.as_ref()) }
     }
 
-    pub fn instantiate_with_lind(&self, mut store: impl AsContextMut<Data = T>, instantiate_type: InstantiateType) -> Result<Instance> {
+    pub fn instantiate_with_lind(&self, mut store: impl AsContextMut<Data = T>, instantiate_type: InstantiateType) -> Result<(Instance, InstanceId)> {
         let mut store = store.as_context_mut();
         let imports = pre_instantiate_raw(
             &mut store.0,

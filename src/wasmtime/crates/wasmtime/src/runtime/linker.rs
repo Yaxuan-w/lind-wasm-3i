@@ -1,12 +1,13 @@
 use crate::func::HostFunc;
 use crate::instance::InstancePre;
-use crate::store::StoreOpaque;
+use crate::store::{StoreOpaque, InstanceId};
 use crate::{prelude::*, IntoFunc};
 use crate::{
     AsContext, AsContextMut, Caller, Engine, Extern, ExternType, Func, FuncType, ImportType,
     Instance, Module, StoreContextMut, Val, ValRaw, ValType, WasmTyList,
 };
 use alloc::sync::Arc;
+// use wasmtime_environ::component::dfg::InstanceId;
 use core::fmt;
 #[cfg(feature = "async")]
 use core::future::Future;
@@ -16,7 +17,7 @@ use core::pin::Pin;
 use hashbrown::hash_map::{Entry, HashMap};
 use log::warn;
 
-use super::store::StoreInner;
+// use super::store::StoreInner;
 use super::InstantiateType;
 
 /// Structure used to link wasm modules/instances together.
@@ -1133,12 +1134,9 @@ impl<T> Linker<T> {
         mut store: impl AsContextMut<Data = T>,
         module: &Module,
         instantiate_type: InstantiateType,
-    ) -> Result<(InstancePre<T>, Instance)> {
-        let instance_pre = self._instantiate_pre(&module.clone(), Some(store.as_context_mut().0))?;
-
-        let instance = instance_pre.instantiate_with_lind(store, instantiate_type)?;
-    
-        Ok((instance_pre, instance))
+    ) -> Result<(Instance, InstanceId)> {
+        self._instantiate_pre(module, Some(store.as_context_mut().0))?
+            .instantiate_with_lind(store, instantiate_type)
     }
     // pub fn instantiate_with_lind(
     //     &self,
