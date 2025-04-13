@@ -927,16 +927,16 @@ pub fn clock_gettime_syscall(
 ///
 /// Input:
 ///     - cageid: current cageid
-///     - uaddr_arg: Pointer to the futex word in user memory
-///     - futex_op_arg: Operation code indicating futex command type
-///     - val_arg: Value expected at uaddr or the number of threads to wake
-///     - val2_arg: Timeout or other auxiliary parameter depending on operation
-///     - uaddr2_arg: Second address used for requeueing operations
-///     - val3_arg: Additional value for some futex operations
+///     - uaddr_arg: pointer to the futex word in user memory
+///     - futex_op_arg: operation code indicating futex command type
+///     - val_arg: value expected at uaddr or the number of threads to wake
+///     - val2_arg: timeout or other auxiliary parameter depending on operation
+///     - uaddr2_arg: second address used for requeueing operations
+///     - val3_arg: additional value for some futex operations
 ///
 /// Return:
 ///     - On success: 0 or number of woken threads depending on futex operation
-///     - On failure: A negative errno value indicating the syscall error
+///     - On failure: a negative errno value indicating the syscall error
 pub fn futex_syscall(
     cageid: u64,
     uaddr_arg: u64,

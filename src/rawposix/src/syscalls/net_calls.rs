@@ -4,6 +4,7 @@ use sysdefs::constants::net_const;
 use sysdefs::constants::sys_const;
 use typemap::path_conv::LIND_ROOT;
 use typemap::syscall_conv::*;
+use typemap::type_conv::*;
 use fdtables;
 use sysdefs::constants::err_const::{get_errno, handle_errno, syscall_error, Errno};
 
@@ -24,20 +25,10 @@ use cage::memory::mem_helper::*;
 
 // use crate::safeposix::filesystem::normpath;
 
-use libc::*;
 use std::{os::fd::RawFd, ptr};
 // use bit_set::BitSet;
 
 const FDKIND_KERNEL: u32 = 0;
-const FDKIND_IMPIPE: u32 = 1;
-const FDKIND_IMSOCK: u32 = 2;
-
-lazy_static! {
-    // A hashmap used to store epoll mapping relationships 
-    // <virtual_epfd <kernel_fd, virtual_fd>> 
-    static ref REAL_EPOLL_MAP: Mutex<HashMap<u64, HashMap<i32, u64>>> = Mutex::new(HashMap::new());
-}
-
 
 /// Reference to Linux: https://man7.org/linux/man-pages/man2/socket.2.html
 ///
@@ -45,14 +36,13 @@ lazy_static! {
 /// for the newly created socket. This implementation wraps the syscall and registers the resulting
 /// file descriptor in our virtual file descriptor table (`fdtables`) under the current cage.
 ///
-/// The `fdtables` system manages per-cage file descriptors and tracks their lifecycle. No special flags
-/// such as `O_CLOEXEC` are applied at this stage.
+/// The `fdtables` system manages per-cage file descriptors and tracks their lifecycle.
 ///
 /// Input:
 ///     - cageid: current cageid
-///     - domain_arg: Communication domain (e.g., AF_INET, AF_UNIX)
-///     - socktype_arg: Socket type (e.g., SOCK_STREAM, SOCK_DGRAM)
-///     - protocol_arg: Protocol to be used (usually 0)
+///     - domain_arg: communication domain (e.g., AF_INET, AF_UNIX)
+///     - socktype_arg: socket type (e.g., SOCK_STREAM, SOCK_DGRAM)
+///     - protocol_arg: protocol to be used (usually 0)
 ///
 /// Return:
 ///     - On success: a newly allocated virtual file descriptor within the current cage
@@ -104,8 +94,8 @@ pub fn socket_syscall(
 ///
 /// Input:
 ///     - cageid: current cageid
-///     - fd_arg: Virtual file descriptor for the socket to be connected
-///     - addr_arg: Pointer to a `sockaddr_un` structure containing the target address
+///     - fd_arg: virtual file descriptor for the socket to be connected
+///     - addr_arg: pointer to a `sockaddr_un` structure containing the target address
 ///
 /// Return:
 ///     - On success: 0
@@ -137,56 +127,9 @@ pub fn connect_syscall(
         return syscall_error(Errno::EFAULT, "connect_syscall", "Invalide Cage ID");
     }
     
-    // Handle sockaddr conversion; if NULL, use empty pointer
-    let (finalsockaddr, addrlen) = if addr.is_null() {
-        (std::ptr::null::<libc::sockaddr_un>() as *mut libc::sockaddr_un, 0)
-    } else {
-        let mut sockaddr_un: sockaddr_un = sockaddr_un {
-            sun_family: 0 as u16,
-            sun_path: [0; 108],
-        };
+    let (finalsockaddr, addrlen) = get_sockaddr(addr);
 
-        let sockaddr_un_ptr: *mut sockaddr_un = &mut sockaddr_un;
-
-        unsafe {
-            // Copy user's sockaddr to local buffer
-            std::ptr::copy_nonoverlapping(addr as *mut libc::sockaddr_un, sockaddr_un_ptr, 1);
-
-            // If AF_UNIX socket, rewrite sun_path with LIND_ROOT prefix
-            if (*sockaddr_un_ptr).sun_family as i32 == AF_UNIX {
-                let sun_path_ptr = (*sockaddr_un_ptr).sun_path.as_mut_ptr();
-                let path_len = strlen(sun_path_ptr);
-                const LIND_ROOT_LEN: usize = LIND_ROOT.len();
-        
-                let new_path_len = path_len + LIND_ROOT_LEN;
-        
-                if new_path_len < 108 {
-                    memmove(
-                        sun_path_ptr.add(LIND_ROOT_LEN) as *mut libc::c_void,
-                        sun_path_ptr as *const libc::c_void,
-                        path_len,
-                    );
-        
-                    libc::memcpy(
-                        sun_path_ptr as *mut libc::c_void,
-                        LIND_ROOT.as_ptr() as *const libc::c_void,
-                        LIND_ROOT_LEN,
-                    );
-
-                    libc::memset(
-                        sun_path_ptr.add(new_path_len) as *mut libc::c_void,
-                        0,
-                        108 - new_path_len,
-                    );
-                }
-            }
-        }
-        (sockaddr_un_ptr, size_of::<libc::sockaddr_un>() as u32)            
-    };
-    
-    let finalsockaddr = finalsockaddr as *mut libc::sockaddr;
-
-    let ret = unsafe { libc::connect(fd as i32, finalsockaddr, addrlen as u32) };
+    let ret = unsafe { libc::connect(fd, finalsockaddr, addrlen) };
     if ret < 0 {
         let errno = get_errno();
         return handle_errno(errno, "connect");
@@ -204,8 +147,8 @@ pub fn connect_syscall(
 ///
 /// Input:
 ///     - cageid: current cageid
-///     - fd_arg: Virtual file descriptor to be bound
-///     - addr_arg: Pointer to a `sockaddr_un` structure containing the local address
+///     - fd_arg: virtual file descriptor to be bound
+///     - addr_arg: pointer to a `sockaddr_un` structure containing the local address
 ///
 /// Return:
 ///     - On success: 0
@@ -236,56 +179,9 @@ pub fn bind_syscall(
         return syscall_error(Errno::EFAULT, "bind_syscall", "Invalide Cage ID");
     }
 
-    // Handle sockaddr conversion; if NULL, use empty pointerv
-    let (finalsockaddr, addrlen) = if addr.is_null() {
-        (std::ptr::null::<libc::sockaddr_un>() as *mut libc::sockaddr_un, 0)
-    } else {
-        let mut sockaddr_un: sockaddr_un = sockaddr_un {
-            sun_family: 0 as u16,
-            sun_path: [0; 108],
-        };
+    let (finalsockaddr, addrlen) = get_sockaddr(addr);
 
-        let sockaddr_un_ptr: *mut sockaddr_un = &mut sockaddr_un;
-
-        unsafe {
-            // Copy user's sockaddr to local buffer
-            std::ptr::copy_nonoverlapping(addr as *mut libc::sockaddr_un, sockaddr_un_ptr, 1);
-
-            // If AF_UNIX socket, rewrite sun_path with LIND_ROOT prefix
-            if (*sockaddr_un_ptr).sun_family as i32 == AF_UNIX {
-                let sun_path_ptr = (*sockaddr_un_ptr).sun_path.as_mut_ptr();
-                let path_len = strlen(sun_path_ptr);
-                const LIND_ROOT_LEN: usize = LIND_ROOT.len();
-        
-                let new_path_len = path_len + LIND_ROOT_LEN;
-        
-                if new_path_len < 108 {
-                    memmove(
-                        sun_path_ptr.add(LIND_ROOT_LEN) as *mut libc::c_void,
-                        sun_path_ptr as *const libc::c_void,
-                        path_len,
-                    );
-        
-                    libc::memcpy(
-                        sun_path_ptr as *mut libc::c_void,
-                        LIND_ROOT.as_ptr() as *const libc::c_void,
-                        LIND_ROOT_LEN,
-                    );
-
-                    libc::memset(
-                        sun_path_ptr.add(new_path_len) as *mut libc::c_void,
-                        0,
-                        108 - new_path_len,
-                    );
-                }
-            }
-        }
-        (sockaddr_un_ptr, size_of::<libc::sockaddr_un>() as u32)
-    };
-
-    let finalsockaddr = finalsockaddr as *mut libc::sockaddr;
-
-    let ret = unsafe { libc::bind(fd as i32, finalsockaddr, addrlen as u32) };
+    let ret = unsafe { libc::bind(fd, finalsockaddr, addrlen) };
     if ret < 0 {
         let errno = get_errno();
         return handle_errno(errno, "bind");
@@ -301,8 +197,8 @@ pub fn bind_syscall(
 ///
 /// Input:
 ///     - cageid: current cageid
-///     - fd_arg: Virtual file descriptor referring to the socket
-///     - backlog_arg: Maximum number of pending connections in the socket’s listen queue
+///     - fd_arg: virtual file descriptor referring to the socket
+///     - backlog_arg: maximum number of pending connections in the socket’s listen queue
 ///
 /// Return:
 ///     - On success: 0
@@ -353,13 +249,13 @@ pub fn listen_syscall(
 ///
 /// Input:
 ///     - cageid: current cageid
-///     - fd_arg: Virtual file descriptor referring to the listening socket
-///     - addr_arg: Optional pointer to a buffer that will receive the address of the connecting entity
+///     - fd_arg: virtual file descriptor referring to the listening socket
+///     - addr_arg: optional pointer to a buffer that will receive the address of the connecting entity
 ///     - len_arg: not used in this implementation
 ///
 /// Return:
-///     - On success: New virtual file descriptor associated with the accepted socket
-///     - On failure: A negative errno value indicating the syscall error
+///     - On success: new virtual file descriptor associated with the accepted socket
+///     - On failure: a negative errno value indicating the syscall error
 pub fn accept_syscall(
     cageid: u64,
     fd_arg: u64,
@@ -385,54 +281,7 @@ pub fn accept_syscall(
         return syscall_error(Errno::EFAULT, "accept_syscall", "Invalide Cage ID");
     }
 
-    // Handle sockaddr conversion; if NULL, use empty pointer
-    let (finalsockaddr, mut addrlen) = if addr.is_null() {
-        (std::ptr::null::<libc::sockaddr_un>() as *mut libc::sockaddr_un, 0)
-    } else {
-        let mut sockaddr_un: sockaddr_un = sockaddr_un {
-            sun_family: 0 as u16,
-            sun_path: [0; 108],
-        };
-
-        let sockaddr_un_ptr: *mut sockaddr_un = &mut sockaddr_un;
-        
-        unsafe {
-            // Copy user's sockaddr to local buffer
-            std::ptr::copy_nonoverlapping(addr as *mut libc::sockaddr_un, sockaddr_un_ptr, 1);
-            
-            // If AF_UNIX socket, rewrite sun_path with LIND_ROOT prefix
-            if (*sockaddr_un_ptr).sun_family as i32 == AF_UNIX {
-                let sun_path_ptr = (*sockaddr_un_ptr).sun_path.as_mut_ptr();
-                let path_len = strlen(sun_path_ptr);
-                const LIND_ROOT_LEN: usize = LIND_ROOT.len();
-        
-                let new_path_len = path_len + LIND_ROOT_LEN;
-        
-                if new_path_len < 108 {
-                    memmove(
-                        sun_path_ptr.add(LIND_ROOT_LEN) as *mut libc::c_void,
-                        sun_path_ptr as *const libc::c_void,
-                        path_len,
-                    );
-        
-                    libc::memcpy(
-                        sun_path_ptr as *mut libc::c_void,
-                        LIND_ROOT.as_ptr() as *const libc::c_void,
-                        LIND_ROOT_LEN,
-                    );
-
-                    libc::memset(
-                        sun_path_ptr.add(new_path_len) as *mut libc::c_void,
-                        0,
-                        108 - new_path_len,
-                    );
-                }
-            }
-        }
-        (sockaddr_un_ptr, size_of::<libc::sockaddr_un>() as u32)
-    };
-
-    let finalsockaddr = finalsockaddr as *mut libc::sockaddr;
+    let (finalsockaddr, mut addrlen) = get_sockaddr(addr);
 
     let ret_kernelfd = unsafe { libc::accept(fd, finalsockaddr, &mut addrlen as *mut u32) };
 
@@ -456,15 +305,15 @@ pub fn accept_syscall(
 ///
 /// Input:
 ///     - cageid: current cageid
-///     - fd_arg: Virtual file descriptor representing the socket
-///     - level_arg: Specifies the protocol level at which the option resides (e.g., SOL_SOCKET)
-///     - optname_arg: Option name to be set (e.g., SO_REUSEADDR)
-///     - optval_arg: Pointer to the option value
-///     - optlen_arg: Size of the option value
+///     - fd_arg: virtual file descriptor representing the socket
+///     - level_arg: specifies the protocol level at which the option resides (e.g., SOL_SOCKET)
+///     - optname_arg: option name to be set (e.g., SO_REUSEADDR)
+///     - optval_arg: pointer to the option value
+///     - optlen_arg: size of the option value
 ///
 /// Return:
 ///     - On success: 0
-///     - On failure: A negative errno value indicating the syscall error
+///     - On failure: a negative errno value indicating the syscall error
 pub fn setsockopt_syscall(
     cageid: u64,
     fd_arg: u64,
@@ -508,14 +357,14 @@ pub fn setsockopt_syscall(
 ///
 /// Input:
 ///     - cageid: current cageid
-///     - fd_arg: Virtual file descriptor indicating the socket to send data on
-///     - buf_arg: Pointer to the message buffer in user memory
-///     - buflen_arg: Length of the message to be sent
-///     - flags_arg: Bitmask of flags influencing message transmission behavior
+///     - fd_arg: virtual file descriptor indicating the socket to send data on
+///     - buf_arg: pointer to the message buffer in user memory
+///     - buflen_arg: length of the message to be sent
+///     - flags_arg: bitmask of flags influencing message transmission behavior
 ///
 /// Return:
-///     - On success: Number of bytes sent
-///     - On failure: A negative errno value indicating the syscall error
+///     - On success: number of bytes sent
+///     - On failure: a negative errno value indicating the syscall error
 pub fn send_syscall(
     cageid: u64,
     fd_arg: u64,
@@ -558,14 +407,14 @@ pub fn send_syscall(
 ///
 /// Input:
 ///     - cageid: current cageid
-///     - fd_arg: Virtual file descriptor from which to receive data
-///     - buf_arg: Pointer to the buffer in user memory to store received data
-///     - buflen_arg: Size of the buffer to receive data into
-///     - flags_arg: Flags controlling message reception behavior
+///     - fd_arg: virtual file descriptor from which to receive data
+///     - buf_arg: pointer to the buffer in user memory to store received data
+///     - buflen_arg: size of the buffer to receive data into
+///     - flags_arg: flags controlling message reception behavior
 ///
 /// Return:
-///     - On success: Number of bytes received
-///     - On failure: A negative errno value indicating the syscall error
+///     - On success: number of bytes received
+///     - On failure: a negative errno value indicating the syscall error
 pub fn recv_syscall(
     cageid: u64,
     fd_arg: u64,
