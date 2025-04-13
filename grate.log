@@ -1,6 +1,115 @@
-[32m/home/lind/lind-wasm/src/wasmtime/target/debug/wasmtime run --allow-precompiled --wasi threads=y --wasi preview2=n getuid_grate.cwasm getuid.cwasm geteuid_grate.cwasm geteuid.cwasm[0m
-[Cage | getuid] getuid ret = 20
-[Grate | getuid] terminated, status: 0
-[Grate | geteuid] current grateid: 3, geteuid: 30[Cage | geteuid] geteuid ret = 30
-[Grate | geteuid] terminated, status: 0
-[Grate | getuid] terminated, status: 0
+[32m/home/lind/lind-wasm/src/wasmtime/target/debug/wasmtime run --allow-precompiled --wasi threads=y --wasi preview2=n getuid_grate.cwasm getuid.cwasm[0m
+Cageid: 1
+[3i|make_syscall] syscallnum: 21, self_cageid: 1, target_cageid: 1
+[mmap_syscall] selfcageid: 1, FD Cageid: 1
+[mmap_inner] cageid: 1, vfd: -1
+[3i|threei_test_func] Callback replaced with grateid 1
+[3i|threei_test_func] Added grate entry func to global table
+[wasmtime|common] callnum: 191, call_name:7514
+[3i|make_syscall] syscallnum: 191, self_cageid: 1, target_cageid: 1
+[wasmtime|common] callnum: 191, ret:-14
+[wasmtime|common] callnum: 176, call_name:6052
+[3i|make_syscall] syscallnum: 176, self_cageid: 1, target_cageid: 1
+[sbrk_syscall] cageid: 1
+[sbrk_syscall] cp 1
+[sbrk_syscall] cp 2
+[sbrk_syscall] cp 3
+[sbrk_syscall] cp 4
+[sbrk_syscall] cp 4.5
+[sbrk_syscall] cp 5
+[mmap_inner] cageid: 1, vfd: -1
+[wasmtime|common] callnum: 176, ret:196608
+[wasmtime|common] callnum: 176, call_name:6052
+[3i|make_syscall] syscallnum: 176, self_cageid: 1, target_cageid: 1
+[sbrk_syscall] cageid: 1
+[sbrk_syscall] cp 1
+[sbrk_syscall] cp 2
+[sbrk_syscall] cp 3
+[sbrk_syscall] cp 4
+[sbrk_syscall] cp 4.5
+[sbrk_syscall] cp 5
+[mmap_inner] cageid: 1, vfd: -1
+[wasmtime|common] callnum: 176, ret:331776
+[wasmtime|common] callnum: 31, call_name:9332
+[3i|make_syscall] syscallnum: 31, self_cageid: 1, target_cageid: 1
+[wasmtime|common] callnum: 31, ret:1
+[wasmtime|common] callnum: 13, call_name:7014
+[3i|make_syscall] syscallnum: 13, self_cageid: 1, target_cageid: 1
+[grate] val=2169 | memory addr=0x10000
+[wasmtime|common] callnum: 13, ret:39
+[wasmtime|common] callnum: 171, call_name:13431
+[3i|make_syscall] syscallnum: 68, self_cageid: 1, target_cageid: 1
+[wasmtime|common] callnum: 171, ret:0
+Cageid: 2
+[wasmtime|common] callnum: 171, call_name:13431
+[wasmtime|common] callnum: 171, call_name:13431
+[wasmtime|common] callnum: 171, ret:0
+[wasmtime|common] callnum: 31, call_name:9332
+[3i|make_syscall] syscallnum: 31, self_cageid: 2, target_cageid: 2
+[wasmtime|common] callnum: 31, ret:2
+[wasmtime|common] callnum: 171, ret:2
+[wasmtime|common] callnum: 400, call_name:5110
+[wasmtime|common] callnum: 400, ret:0
+[wasmtime|common] callnum: 69, call_name:6982
+[wasmtime|common] callnum: 172, call_name:3259
+[3i|make_syscall] syscallnum: 172, self_cageid: 1, target_cageid: 1
+[wasmtime|common] callnum: 69, ret:0
+[3i|make_syscall] syscallnum: 69, self_cageid: 2, target_cageid: 2
+Cageid: 2
+[3i|make_syscall] syscallnum: 21, self_cageid: 2, target_cageid: 2
+[mmap_syscall] selfcageid: 2, FD Cageid: 2
+[mmap_inner] cageid: 2, vfd: -1
+[3i|threei_test_func] Callback replaced with grateid 2
+[3i|threei_test_func] Added grate entry func to global table
+[wasmtime|common] callnum: 191, call_name:7647
+[3i|make_syscall] syscallnum: 191, self_cageid: 2, target_cageid: 2
+[wasmtime|common] callnum: 191, ret:-14
+[wasmtime|common] callnum: 176, call_name:6122
+[3i|make_syscall] syscallnum: 176, self_cageid: 2, target_cageid: 2
+[sbrk_syscall] cageid: 2
+[sbrk_syscall] cp 1
+[sbrk_syscall] cp 2
+[sbrk_syscall] cp 3
+[sbrk_syscall] cp 4
+[sbrk_syscall] cp 4.5
+[sbrk_syscall] cp 5
+[mmap_inner] cageid: 2, vfd: -1
+[wasmtime|common] callnum: 176, ret:196608
+[wasmtime|common] callnum: 176, call_name:6122
+[3i|make_syscall] syscallnum: 176, self_cageid: 2, target_cageid: 2
+[sbrk_syscall] cageid: 2
+[sbrk_syscall] cp 1
+[sbrk_syscall] cp 2
+[sbrk_syscall] cp 3
+[sbrk_syscall] cp 4
+[sbrk_syscall] cp 4.5
+[sbrk_syscall] cp 5
+[mmap_inner] cageid: 2, vfd: -1
+[wasmtime|common] callnum: 176, ret:331776
+[wasmtime|common] callnum: 21, call_name:5366
+[3i|make_syscall] syscallnum: 21, self_cageid: 2, target_cageid: 2
+[mmap_syscall] selfcageid: 2, FD Cageid: 2
+[mmap_inner] cageid: 2, vfd: -1
+[wasmtime|common] callnum: 21, ret:-135168
+[wasmtime|common] callnum: 171, call_name:13631
+[wasmtime|common] callnum: 171, ret:0
+[wasmtime|common] callnum: 171, call_name:13631
+[wasmtime|common] callnum: 171, ret:2
+[wasmtime|common] callnum: 21, call_name:5366
+[3i|make_syscall] syscallnum: 21, self_cageid: 2, target_cageid: 2
+[mmap_syscall] selfcageid: 2, FD Cageid: 2
+[mmap_inner] cageid: 2, vfd: -1
+[wasmtime|common] callnum: 21, ret:-270336
+[wasmtime|common] callnum: 171, call_name:13631
+[wasmtime|common] callnum: 171, ret:0
+[wasmtime|common] callnum: 171, call_name:13631
+[wasmtime|common] callnum: 171, ret:3
+[wasmtime|common] callnum: 98, call_name:2716
+[3i|make_syscall] syscallnum: 98, self_cageid: 2, target_cageid: 2
+[3i|make_syscall] Syscall number 98 not found!
+[wasmtime|common] callnum: 98, ret:-1
+[wasmtime|common] callnum: 21, call_name:5366
+[3i|make_syscall] syscallnum: 21, self_cageid: 2, target_cageid: 2
+[mmap_syscall] selfcageid: 2, FD Cageid: 2
+[mmap_inner] cageid: 2, vfd: -1
+[wasmtime|common] callnum: 21, ret:-278528

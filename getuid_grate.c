@@ -37,9 +37,14 @@ int pass_fptr_to_wt(uint64_t index, uint64_t cageid, uint64_t arg1, uint64_t arg
     return func_array[index](cageid, arg1, arg1cage, arg2, arg2cage, arg3, arg3cage, arg4, arg4cage, arg5, arg5cage, arg6, arg6cage);
 }
 
+// static int val;
+int* val = (int*)0x10000; 
 // Grate function implementation
 int getuid_grate(uint64_t cageid, uint64_t arg1, uint64_t arg1cage, uint64_t arg2, uint64_t arg2cage, uint64_t arg3, uint64_t arg3cage, uint64_t arg4, uint64_t arg4cage, uint64_t arg5, uint64_t arg5cage, uint64_t arg6, uint64_t arg6cage) {
-    return UID_GRATE_VAL;
+    // val++;
+    (*val)++;
+    printf("[grate] val=%d | memory addr=%p\n", *val, (void*)val);
+    return *val;
 }
 
 // Main function will always be same in all grates
@@ -51,6 +56,8 @@ int main(int argc, char *argv[]) {
     }
 
     int grateid = getpid();
+
+    getuid_grate(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
     
     // Because we assume that all cages are unaware of the existence of grate, cages will not handle the logic of `exec`ing 
     // grate, so we need to handle these two situations separately in grate. 
