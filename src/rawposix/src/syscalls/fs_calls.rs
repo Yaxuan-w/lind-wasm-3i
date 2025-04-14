@@ -172,6 +172,8 @@ pub fn close_syscall(
     cageid: u64,
     virtual_fd: u64,
     vfd_cageid: u64,
+    arg2: u64,
+    arg2_cageid: u64,
     arg3: u64,
     arg3_cageid: u64,
     arg4: u64,
@@ -181,7 +183,8 @@ pub fn close_syscall(
     arg6: u64,
     arg6_cageid: u64,
 ) -> i32 {
-    if !(sc_unusedarg(arg3, arg3_cageid)
+    if !(sc_unusedarg(arg2, arg2_cageid)
+        && sc_unusedarg(arg3, arg3_cageid)
         && sc_unusedarg(arg4, arg4_cageid)
         && sc_unusedarg(arg5, arg5_cageid)
         && sc_unusedarg(arg6, arg6_cageid))
@@ -216,6 +219,8 @@ pub fn pipe_syscall(
     cageid: u64,
     pipefd_arg: u64,
     pipefd_cageid: u64,
+    arg2: u64,
+    arg2_cageid: u64,
     arg3: u64,
     arg3_cageid: u64,
     arg4: u64,
@@ -1216,6 +1221,9 @@ pub fn futex_syscall(
     if ret < 0 {
         let errno = get_errno();
         return handle_errno(errno, "futex");
+    }
+    ret
+}
 
 pub fn nanosleep_time64_syscall(
     cageid: u64,

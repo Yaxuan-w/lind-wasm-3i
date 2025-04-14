@@ -1,4 +1,4 @@
-//! Regular RawPOSIX will call through
+//! Regular RawPOSIX will call through 
 use crate::syscall_table::SYSCALL_TABLE;
 use core::panic;
 use dashmap::DashSet;
@@ -7,22 +7,20 @@ use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 
 /// ------------------------------------------------------------
-/// `call_back` function is the dispatcher function for grate, so it's per grate bias (each grate will have same callback function, and
-/// threei calling different functions by different indexes).
-///
-/// In this function, threei will add the mapping (grateid -> entry dispatcher function) in the
+/// `call_back` function is the dispatcher function for grate, so it's per grate bias (each grate will have same callback function, and 
+/// threei calling different functions by different indexes). 
+/// 
+/// In this function, threei will add the mapping (grateid -> entry dispatcher function) in the 
 /// ## Arguments:
 /// - callback: <index, grateid, arg, argid ,...>
-///
+/// 
 /// todo: currently all cage/grate will store a closure in global_grate table, we distinguish whether a cage is cage or grate
 /// by using register_handler table
-pub fn threei_test_func(
-    grateid: u64,
-    mut callback: Box<
-        dyn FnMut(u64, u64, u64, u64, u64, u64, u64, u64, u64, u64, u64, u64, u64, u64) -> i32
-            + 'static,
-    >,
-) -> i32 {
+pub fn threei_test_func(grateid: u64, mut callback: Box<dyn FnMut(
+    u64, u64, u64, u64, u64,
+    u64, u64, u64, u64, u64,
+    u64, u64, u64, u64
+) -> i32 + 'static>) -> i32 {
     let index = grateid as usize;
     unsafe {
         if GLOBAL_GRATE.is_none() {
@@ -32,10 +30,7 @@ pub fn threei_test_func(
         if let Some(ref mut vec) = GLOBAL_GRATE {
             if index < vec.len() {
                 vec[index] = Some(callback);
-                println!(
-                    "[3i|threei_test_func] Callback replaced with grateid {}",
-                    index
-                );
+                println!("[3i|threei_test_func] Callback replaced with grateid {}", index);
             } else {
                 println!("[3i|threei_test_func] Index out of bounds: {}", index);
             }
@@ -45,11 +40,11 @@ pub fn threei_test_func(
     println!("[3i|threei_test_func] Added grate entry func to global table");
     0
 }
-use sysdefs::constants::threei_const;
 /// ------------------------------------------------------------
+
 // use cage::cage::get_cage;
 // use cage::memory::mem_helper::*;
-use typemap::syscall_conv::*;
+use sysdefs::constants::threei_const;
 // use sysdefs::constants::{PROT_READ, PROT_WRITE}; // might be used on memcp, so keep them for now
 
 const exit_syscallnum: u64 = 30; // Develop purpose only
@@ -59,18 +54,18 @@ const exit_syscallnum: u64 = 30; // Develop purpose only
 /// 1. callnum is the call that have access to execute syscall in addr -- acheive per syscall filter
 /// 2. callnum is mapped to addr (callnum=addr) -- achieve per cage filter
 ///
-///
+/// 
 /// ** Attempt1: Send+Sync + mutex
 /// Use Send to send it to another thread.
 /// Use Sync to share between threads (T is Sync if and only if &T is Send).
 /// NOT WORK! because wasmtime has entries doesnt support send+sync (*const u8 usage)
-///
-/// ** Attempt2: rc<refcell<>>
-/// NOT WORK! lifetime
-///
+/// 
+/// ** Attempt2: rc<refcell<>> 
+/// NOT WORK! lifetime 
+/// 
 /// ** Attempt3: store directly as Vec
-/// NOT WORK! required to be static. all lifetime in vec needs to be same
-///
+/// NOT WORK! required to be static. all lifetime in vec needs to be same 
+/// 
 /// TODO: do we need lock here...? we should allow multiple access to same logic at same time??
 pub type Raw_CallFunc = fn(
     target_cageid: u64,
@@ -91,60 +86,26 @@ pub type Raw_CallFunc = fn(
 /// GrateEntryTable is to map entry dispatcher function per grateid.
 const MAX_GRATEID: usize = 1024;
 
-static mut GLOBAL_GRATE: Option<
-    Vec<
-        Option<
-            Box<
-                dyn FnMut(
-                    u64,
-                    u64,
-                    u64,
-                    u64,
-                    u64,
-                    u64,
-                    u64,
-                    u64,
-                    u64,
-                    u64,
-                    u64,
-                    u64,
-                    u64,
-                    u64,
-                ) -> i32,
-            >,
-        >,
-    >,
-> = None;
+static mut GLOBAL_GRATE: Option<Vec<Option<Box<dyn FnMut(
+    u64, u64, u64, u64, u64,
+    u64, u64, u64, u64, u64,
+    u64, u64, u64, u64
+) -> i32 >>>> = None;
 
 fn init_global_grate() {
     unsafe {
         if GLOBAL_GRATE.is_none() {
-            GLOBAL_GRATE = Some(Vec::new());
+            GLOBAL_GRATE = Some(Vec::new()); 
         }
 
         // todo: now only initialize 10 entries for usage
         for _ in 0..10 {
-            let f: Option<
-                Box<
-                    dyn FnMut(
-                        u64,
-                        u64,
-                        u64,
-                        u64,
-                        u64,
-                        u64,
-                        u64,
-                        u64,
-                        u64,
-                        u64,
-                        u64,
-                        u64,
-                        u64,
-                        u64,
-                    ) -> i32,
-                >,
-            > = None;
-
+            let f: Option<Box<dyn FnMut(
+                u64, u64, u64, u64, u64,
+                u64, u64, u64, u64, u64,
+                u64, u64, u64, u64
+            ) -> i32>> = None;
+            
             if let Some(ref mut vec) = GLOBAL_GRATE {
                 vec.push(f);
             }
@@ -168,11 +129,11 @@ fn rm_from_global_grate(grateid: u64) {
 //         if let Some(ref global_grate) = GLOBAL_GRATE {
 //             if grateid < global_grate.len() as u64 {
 //                 // grateid is the index of GLOBAL_GRATE. If the id is a grate
-//                 // then the related
+//                 // then the related 
 //                 return global_grate[grateid as usize].is_some();
 //             }
 //         }
-//         // Return false is either GLOBAL_GRATE is uninitialized or grateid exceed
+//         // Return false is either GLOBAL_GRATE is uninitialized or grateid exceed 
 //         // range
 //         false
 //     }
@@ -180,56 +141,39 @@ fn rm_from_global_grate(grateid: u64) {
 
 fn call_grate_func(
     grateid: u64,
-    call_name: u64,
-    self_cageid: u64,
-    arg1: u64,
-    arg1_cageid: u64,
-    arg2: u64,
-    arg2_cageid: u64,
-    arg3: u64,
-    arg3_cageid: u64,
-    arg4: u64,
-    arg4_cageid: u64,
-    arg5: u64,
-    arg5_cageid: u64,
-    arg6: u64,
-    arg6_cageid: u64,
+    call_index: u64, 
+    self_cageid: u64, 
+    arg1: u64, arg1_cageid: u64,
+    arg2: u64, arg2_cageid: u64,
+    arg3: u64, arg3_cageid: u64,
+    arg4: u64, arg4_cageid: u64,
+    arg5: u64, arg5_cageid: u64,
+    arg6: u64, arg6_cageid: u64,
 ) -> Option<i32> {
     println!("[3i|call_grate_func] grateid (aka index): {}", grateid);
-    // syscall_name from glibc is an address ptr inside wasm linear memory, so we need to manually extract the string content
-    // from the address
-    let call_ptr = sc_convert_buf(call_name, self_cageid, self_cageid);
-
     unsafe {
         if let Some(ref mut vec) = GLOBAL_GRATE {
             if (grateid as usize) < vec.len() {
                 if let Some(ref mut func) = vec[grateid as usize] {
                     return Some(func(
-                        call_ptr as u64,
-                        self_cageid,
-                        arg1,
-                        arg1_cageid,
-                        arg2,
-                        arg2_cageid,
-                        arg3,
-                        arg3_cageid,
-                        arg4,
-                        arg4_cageid,
-                        arg5,
-                        arg5_cageid,
-                        arg6,
-                        arg6_cageid,
+                        call_index, self_cageid,
+                        arg1, arg1_cageid,
+                        arg2, arg2_cageid,
+                        arg3, arg3_cageid,
+                        arg4, arg4_cageid,
+                        arg5, arg5_cageid,
+                        arg6, arg6_cageid,
                     ));
                 } else {
-                    println!("[3i|call_grate_func] Function at index {} is None", grateid);
+                    println!("Function at index {} is None", grateid);
                     return None;
                 }
             } else {
-                println!("[3i|call_grate_func] Index {} out of bounds", grateid);
+                println!("Index {} out of bounds", grateid);
                 return None;
             }
         } else {
-            println!("[3i|call_grate_func] GLOBAL_GRATE is not initialized");
+            println!("GLOBAL_GRATE is not initialized");
             return None;
         }
     }
@@ -254,7 +198,7 @@ fn check_cage_handler_exist(cageid: u64) -> bool {
 /// Return value: <call_index_inside_grate, grateid>
 fn get_handler(self_cageid: u64, syscall_num: u64) -> Option<(u64, u64)> {
     let handler_table = HANDLERTABLE.lock().unwrap();
-
+    
     handler_table
         .get(&self_cageid) // Get the first HashMap<u64, HashMap<u64, u64>>
         .and_then(|sub_table| sub_table.get(&syscall_num)) // Get the second HashMap<u64, u64>
@@ -272,6 +216,7 @@ fn rm_grate_from_handler(grateid: u64) {
     }
 }
 
+
 /// EXITING_TABLE
 /// A grate/cage does not need to know the upper-level grate/cage information, but only needs to manage where the call goes.
 /// I use a global variable table to represent the cage/grate that is exiting. This table will be removed after the corresponding
@@ -283,24 +228,24 @@ static EXITING_TABLE: Lazy<DashSet<u64>> = Lazy::new(|| DashSet::new());
 /// This function is used to register a syscall with what permissions it will have to call other system calls.
 ///
 /// For example:
-/// I want cage 7 to have system call 34 call into my cage's function foo
-///
+/// I want cage 7 to have system call 34 call into my cage's function foo 
+/// 
 /// ```
 /// register_handler(
 ///     NOTUSED, 7,  34, NOTUSED,
 ///    foo, mycagenum,
 ///    ...)
 /// ```
-///
-/// TODO:
-/// 1. match-all / deregister cases
+/// 
+/// TODO: 
+/// 1. match-all / deregister cases 
 /// 2. handle treat as function ptr not index (data structure will change)
 pub fn register_handler(
     _callnum: u64,
     targetcage: u64,    // Cage to modify
     targetcallnum: u64, // Syscall number or match-all indicator
     _arg1cage: u64,
-    handlefunc: u64, // Function index to register (for grate, also called destination call) _or_ 0 for deregister
+    handlefunc: u64,     // Function index to register (for grate, also called destination call) _or_ 0 for deregister 
     handlefunccage: u64, // Grate cage id _or_ Deregister flag or additional information
     _arg3: u64,
     _arg3cage: u64,
@@ -323,22 +268,20 @@ pub fn register_handler(
         if let Some(callnum_entry) = cage_entry.get(&targetcallnum) {
             // Check if handlefunc exists
             match callnum_entry.get(&handlefunc) {
-                Some(existing_dest_grateid) if *existing_dest_grateid == handlefunccage => {
-                    return 0
-                } // Do nothing
+                Some(existing_dest_grateid) if *existing_dest_grateid == handlefunccage => return 0, // Do nothing
                 Some(_) => panic!("Already exists"),
                 None => {} // If `handlefunc` not exists, execute insertion
             }
         }
     }
-
+    
     handler_table
         .entry(targetcage)
         .or_insert_with(HashMap::new)
         .entry(targetcallnum)
         .or_insert_with(HashMap::new)
         .insert(handlefunc, handlefunccage);
-    println!("[3i|register_handler] handler_table: {:?}", handler_table);
+    // println!("[3i|register_handler] handler_table: {:?}", handler_table);
     0
 }
 
@@ -426,9 +369,8 @@ pub fn register_handler(
 /// - confirm the return type
 /// - Do we need to pass self_syscallnum?? -if not how to perform permission check? -only perform syscall filter per cage
 pub fn make_syscall(
-    self_cageid: u64, // is required to get the cage instance
+    self_cageid: u64, // is required to get the cage instance 
     syscall_num: u64,
-    syscall_name: u64,
     target_cageid: u64,
     arg1: u64,
     arg1_cageid: u64,
@@ -443,10 +385,7 @@ pub fn make_syscall(
     arg6: u64,
     arg6_cageid: u64,
 ) -> i32 {
-    println!(
-        "[3i|make_syscall] syscallnum: {}, self_cageid: {}, target_cageid: {}",
-        syscall_num, self_cageid, target_cageid
-    );
+    println!("[3i|make_syscall] syscallnum: {}, self_cageid: {}, target_cageid: {}", syscall_num, self_cageid, target_cageid);
     // Return error if the target cage/grate is exiting. We need to add this check beforehead, because make_syscall will also
     // contain cases that can directly redirect a syscall when self_cageid == target_id, which will bypass the handlertable check
     if EXITING_TABLE.contains(&target_cageid) && syscall_num != exit_syscallnum {
@@ -463,42 +402,34 @@ pub fn make_syscall(
             // Theoretically, the complexity is O(1), shouldn't affect performance a lot
             if let Some(ret) = call_grate_func(
                 grateid,
-                syscall_name,
-                self_cageid,
-                arg1,
-                arg1_cageid,
-                arg2,
-                arg2_cageid,
-                arg3,
-                arg3_cageid,
-                arg4,
-                arg4_cageid,
-                arg5,
-                arg5_cageid,
-                arg6,
-                arg6_cageid,
+                call_index, 
+                self_cageid, 
+                arg1, arg1_cageid,
+                arg2, arg2_cageid,
+                arg3, arg3_cageid,
+                arg4, arg4_cageid,
+                arg5, arg5_cageid,
+                arg6, arg6_cageid,
             ) {
                 return ret;
             } else {
                 // syscall has been registered to register_handler but grate's entry function
                 // doesn't provide
-                panic!(
-                    "[3i|make_syscall] grate call not found! grateid: {}",
-                    grateid
-                );
+                panic!("[3i|make_syscall] grate call not found! grateid: {}", grateid);
             }
         }
-    }
+        
+    } 
 
     // TODO: need to move to harsh_cage_exit...??
     // Cleanup two global tables for exit syscall
     if syscall_num == exit_syscallnum {
-        println!("[3i|exit] exit cageid: {:?}", self_cageid);
+        // println!("[3i|exit] exit cageid: {:?}", self_cageid);
         // todo: potential refinement here
         // since `rm_grate_from_handler` searches all entries and remove desired entries..
         // to make things work as fast as possible, I use brute force here to perform cleanup
         rm_grate_from_handler(self_cageid);
-        // currently all cages/grates will store closures in global_grate table, so we need to
+        // currently all cages/grates will store closures in global_grate table, so we need to 
         // cleanup whatever its actually a cage/grate
         rm_from_global_grate(self_cageid);
     }
@@ -520,18 +451,13 @@ pub fn make_syscall(
             arg6,
             arg6_cageid,
         );
-        eprintln!(
-            "[3i|make_syscall] regular syscallnum: {}, ret: {}, self_cageid: {}, target_cageid: {}",
-            syscall_num, ret, self_cageid, target_cageid
-        );
+        // println!("[3i|make_syscall] regular syscallnum: {}, ret: {}, self_cageid: {}, target_cageid: {}", syscall_num, ret, self_cageid, target_cageid);
         return ret;
     } else {
-        eprintln!(
-            "[3i|make_syscall] Syscall number {} not found!",
-            syscall_num
-        );
+        println!("[3i|make_syscall] Syscall number {} not found!", syscall_num);
         return threei_const::ELINDAPIABORTED as i32;
     }
+    
 }
 
 /***************************** trigger_harsh_cage_exit & harsh_cage_exit *****************************/
