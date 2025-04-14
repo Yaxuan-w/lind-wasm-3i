@@ -16,6 +16,7 @@ use sysdefs::constants::fs_const::{
     PAGESHIFT, PAGESIZE, PROT_EXEC, PROT_NONE, PROT_READ, PROT_WRITE,
 };
 use typemap::syscall_conv::*;
+use typemap::type_conv::get_pipearray;
 
 /// Helper function for close_syscall
 ///
@@ -90,6 +91,258 @@ pub fn open_syscall(
         Ok(virtual_fd) => virtual_fd as i32,
         Err(_) => syscall_error(Errno::EMFILE, "open_syscall", "Too many files opened"),
     }
+}
+
+/// Reference to Linux: https://man7.org/linux/man-pages/man2/read.2.html
+///
+/// Linux `read()` syscall attempts to read up to a specified number of bytes from a file descriptor into a buffer.
+/// Since we implement a file descriptor management subsystem (called `fdtables`), we first translate the virtual file
+/// descriptor into the corresponding kernel file descriptor before invoking the kernel's `libc::read()` function.
+///
+/// Input:
+///     This call will have one cageid indicating the current cage, and several regular arguments similar to Linux:
+///     - cageid: current cage identifier.
+///     - virtual_fd: the virtual file descriptor from the RawPOSIX environment.
+///     - buf_arg: pointer to a buffer where the read data will be stored (user's perspective).
+///     - count_arg: the maximum number of bytes to read from the file descriptor.
+pub fn read_syscall(
+    cageid: u64,
+    virtual_fd: u64,
+    vfd_cageid: u64,
+    buf_arg: u64,
+    buf_cageid: u64,
+    count_arg: u64,
+    count_cageid: u64,
+    arg4: u64,
+    arg4_cageid: u64,
+    arg5: u64,
+    arg5_cageid: u64,
+    arg6: u64,
+    arg6_cageid: u64,
+) -> i32 {
+    // Convert the virtual fd to the underlying kernel file descriptor.
+    let kernel_fd = convert_fd_to_host(virtual_fd, vfd_cageid, cageid);
+    if kernel_fd == -1 {
+        return syscall_error(Errno::EFAULT, "read", "Invalid Cage ID");
+    } else if kernel_fd == -9 {
+        return syscall_error(Errno::EBADF, "read", "Bad File Descriptor");
+    }
+
+    // Convert the user buffer and count.
+    let buf = sc_convert_buf(buf_arg, buf_cageid, cageid);
+    if buf.is_null() {
+        return syscall_error(Errno::EFAULT, "read", "Buffer is null");
+    }
+
+    let count = sc_convert_sysarg_to_usize(count_arg, count_cageid, cageid);
+
+    if !(sc_unusedarg(arg4, arg4_cageid)
+        && sc_unusedarg(arg5, arg5_cageid)
+        && sc_unusedarg(arg6, arg6_cageid))
+    {
+        return syscall_error(Errno::EFAULT, "read", "Invalid Cage ID");
+    }
+
+    // Early return if count is zero.
+    if count == 0 {
+        return 0;
+    }
+
+    // Call the underlying libc read.
+    let ret = unsafe { libc::read(kernel_fd, buf as *mut c_void, count) as i32 };
+    if ret < 0 {
+        let errno = get_errno();
+        return handle_errno(errno, "read");
+    }
+    ret
+}
+
+/// Reference to Linux: https://man7.org/linux/man-pages/man2/close.2.html
+///
+/// Linux `close()` syscall closes a file descriptor. In our implementation, we use a file descriptor management
+/// subsystem (called `fdtables`) to handle virtual file descriptors. This syscall removes the virtual file
+/// descriptor from the subsystem, and if necessary, closes the underlying kernel file descriptor.
+///
+/// Input:
+///     This call will have one cageid indicating the current cage, and several regular arguments similar to Linux:
+///     - cageid: current cage identifier.
+///     - virtual_fd: the virtual file descriptor from the RawPOSIX environment to be closed.
+///     - arg3, arg4, arg5, arg6: additional arguments which are expected to be unused.
+pub fn close_syscall(
+    cageid: u64,
+    virtual_fd: u64,
+    vfd_cageid: u64,
+    arg3: u64,
+    arg3_cageid: u64,
+    arg4: u64,
+    arg4_cageid: u64,
+    arg5: u64,
+    arg5_cageid: u64,
+    arg6: u64,
+    arg6_cageid: u64,
+) -> i32 {
+    if !(sc_unusedarg(arg3, arg3_cageid)
+        && sc_unusedarg(arg4, arg4_cageid)
+        && sc_unusedarg(arg5, arg5_cageid)
+        && sc_unusedarg(arg6, arg6_cageid))
+    {
+        return syscall_error(Errno::EFAULT, "close", "Invalid Cage ID");
+    }
+
+    match fdtables::close_virtualfd(cageid, virtual_fd) {
+        Ok(()) => 0,
+        Err(e) => {
+            if e == Errno::EBADFD as u64 {
+                syscall_error(Errno::EBADF, "close", "Bad File Descriptor")
+            } else if e == Errno::EINTR as u64 {
+                syscall_error(Errno::EINTR, "close", "Interrupted system call")
+            } else {
+                syscall_error(Errno::EIO, "close", "I/O error")
+            }
+        }
+    }
+}
+
+/// Reference to Linux: https://man7.org/linux/man-pages/man2/pipe.2.html
+///
+/// Linux `pipe()` syscall is equivalent to calling `pipe2()` with flags set to zero.
+/// Therefore, our implementation simply delegates to pipe2_syscall with flags = 0.
+///
+/// Input:
+///     - cageid: current cage identifier.
+///     - pipefd_arg: a u64 representing the pointer to the PipeArray (user's perspective).
+///     - pipefd_cageid: cage identifier for the pointer argument.
+pub fn pipe_syscall(
+    cageid: u64,
+    pipefd_arg: u64,
+    pipefd_cageid: u64,
+    arg3: u64,
+    arg3_cageid: u64,
+    arg4: u64,
+    arg4_cageid: u64,
+    arg5: u64,
+    arg5_cageid: u64,
+    arg6: u64,
+    arg6_cageid: u64,
+) -> i32 {
+    // Delegate to pipe2_syscall with flags set to 0.
+    pipe2_syscall(
+        cageid,
+        pipefd_arg,
+        pipefd_cageid,
+        0,
+        0,
+        arg3,
+        arg3_cageid,
+        arg4,
+        arg4_cageid,
+        arg5,
+        arg5_cageid,
+        arg6,
+        arg6_cageid,
+    )
+}
+
+/// Reference to Linux: https://man7.org/linux/man-pages/man2/pipe2.2.html
+///
+/// Linux `pipe2()` syscall creates a unidirectional data channel and returns two file descriptors,
+/// one for reading and one for writing. In our implementation, we first convert the user-supplied
+/// pointer to a mutable reference to a PipeArray. Then, we call libc::pipe2() with the provided flags.
+/// Finally, we obtain new virtual file descriptors for both ends of the pipe using our fd management
+/// subsystem (`fdtables`).
+///
+/// Input:
+///     - cageid: current cage identifier.
+///     - pipefd_arg: a u64 representing the pointer to the PipeArray (user's perspective).
+///     - pipefd_cageid: cage identifier for the pointer argument.
+///     - flags_arg: this argument contains flags (e.g., O_CLOEXEC) to be passed to pipe2.
+///     - flags_cageid: cage identifier for the flags argument.
+pub fn pipe2_syscall(
+    cageid: u64,
+    pipefd_arg: u64,
+    pipefd_cageid: u64,
+    flags_arg: u64,
+    flags_cageid: u64,
+    arg3: u64,
+    arg3_cageid: u64,
+    arg4: u64,
+    arg4_cageid: u64,
+    arg5: u64,
+    arg5_cageid: u64,
+    arg6: u64,
+    arg6_cageid: u64,
+) -> i32 {
+    // Convert the flags argument.
+    let flags = sc_convert_sysarg_to_i32(flags_arg, flags_cageid, cageid);
+
+    // Validate flags - only O_NONBLOCK and O_CLOEXEC are allowed
+    let allowed_flags = fs_const::O_NONBLOCK | fs_const::O_CLOEXEC;
+    if flags & !allowed_flags != 0 {
+        return syscall_error(Errno::EINVAL, "pipe2_syscall", "Invalid flags");
+    }
+
+    // Ensure unused arguments are truly unused.
+    if !(sc_unusedarg(arg3, arg3_cageid)
+        && sc_unusedarg(arg4, arg4_cageid)
+        && sc_unusedarg(arg5, arg5_cageid)
+        && sc_unusedarg(arg6, arg6_cageid))
+    {
+        return syscall_error(Errno::EFAULT, "pipe2_syscall", "Invalid Cage ID");
+    }
+    // Convert the u64 pointer into a mutable reference to PipeArray.
+    let pipefd = match get_pipearray(pipefd_arg) {
+        Ok(p) => p,
+        Err(e) => return e,
+    };
+    // Create an array to hold the two kernel file descriptors.
+    let mut kernel_fds: [i32; 2] = [0; 2];
+    let ret = unsafe { libc::pipe2(kernel_fds.as_mut_ptr(), flags) };
+    if ret < 0 {
+        return handle_errno(get_errno(), "pipe2_syscall");
+    }
+
+    // Check whether O_CLOEXEC is set.
+    let should_cloexec = (flags & fs_const::O_CLOEXEC) != 0;
+
+    // Get virtual fd for read end
+    let read_vfd = match fdtables::get_unused_virtual_fd(
+        cageid,
+        fs_const::FDKIND_KERNEL,
+        kernel_fds[0] as u64,
+        should_cloexec,
+        0,
+    ) {
+        Ok(fd) => fd as i32,
+        Err(_) => {
+            unsafe {
+                libc::close(kernel_fds[0]);
+                libc::close(kernel_fds[1]);
+            }
+            return syscall_error(Errno::EMFILE, "pipe2_syscall", "Too many files opened");
+        }
+    };
+
+    // Get virtual fd for write end
+    let write_vfd = match fdtables::get_unused_virtual_fd(
+        cageid,
+        fs_const::FDKIND_KERNEL,
+        kernel_fds[1] as u64,
+        should_cloexec,
+        0,
+    ) {
+        Ok(fd) => fd as i32,
+        Err(_) => {
+            unsafe {
+                libc::close(kernel_fds[0]);
+                libc::close(kernel_fds[1]);
+            }
+            return syscall_error(Errno::EMFILE, "pipe2_syscall", "Too many files opened");
+        }
+    };
+
+    pipefd.readfd = read_vfd;
+    pipefd.writefd = write_vfd;
+    ret
 }
 
 /// Reference to Linux: https://man7.org/linux/man-pages/man2/mkdir.2.html
@@ -963,6 +1216,35 @@ pub fn futex_syscall(
     if ret < 0 {
         let errno = get_errno();
         return handle_errno(errno, "futex");
+
+pub fn nanosleep_time64_syscall(
+    cageid: u64,
+    clockid_arg: u64,
+    clockid_cageid: u64,
+    flags_arg: u64,
+    flags_cageid: u64,
+    req_arg: u64,
+    req_cageid: u64,
+    rem_arg: u64,
+    rem_cageid: u64,
+    arg5: u64,
+    arg5_cageid: u64,
+    arg6: u64,
+    arg6_cageid: u64,
+) -> i32 {
+    // Type conversion
+    let clockid = sc_convert_sysarg_to_u32(clockid_arg, clockid_cageid, cageid);
+    let flags = sc_convert_sysarg_to_i32(flags_arg, flags_cageid, cageid);
+    let req = sc_convert_buf(req_arg, req_cageid, cageid);
+    let rem = sc_convert_buf(rem_arg, rem_cageid, cageid);
+    // would sometimes check, sometimes be a no-op depending on the compiler settings
+    if !(sc_unusedarg(arg5, arg5_cageid) && sc_unusedarg(arg6, arg6_cageid)) {
+        return syscall_error(Errno::EFAULT, "nanosleep", "Invalide Cage ID");
+    }
+    let ret = unsafe { syscall(SYS_clock_nanosleep, clockid, flags, req, rem) as i32 };
+    if ret < 0 {
+        let errno = get_errno();
+        return handle_errno(errno, "nanosleep");
     }
     ret
 }
