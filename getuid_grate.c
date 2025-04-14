@@ -16,9 +16,10 @@
 *   line requires executing main function and then modifying context info). So I let the user modify this constant through the 
 *   clang compilation flag `-DUID_GRATE_VAL=$val`
 */
-#ifndef UID_GRATE_VAL
-#define UID_GRATE_VAL 10
-#endif
+// #ifndef UID_GRATE_VAL
+// #define UID_GRATE_VAL 10
+// #endif
+int UID_GRATE_VAL;
 
 // Function ptr and signatures of this grate
 typedef int (*func_ptr_t)(uint64_t, uint64_t, uint64_t, uint64_t, uint64_t, uint64_t, uint64_t, uint64_t, uint64_t, uint64_t, uint64_t, uint64_t, uint64_t);
@@ -42,13 +43,18 @@ int* val = (int*)0x10000;
 // Grate function implementation
 int getuid_grate(uint64_t cageid, uint64_t arg1, uint64_t arg1cage, uint64_t arg2, uint64_t arg2cage, uint64_t arg3, uint64_t arg3cage, uint64_t arg4, uint64_t arg4cage, uint64_t arg5, uint64_t arg5cage, uint64_t arg6, uint64_t arg6cage) {
     // val++;
-    (*val)++;
-    printf("[grate] val=%d | memory addr=%p\n", *val, (void*)val);
-    return *val;
+    // (*val)++;
+    // printf("[grate] val=%d | memory addr=%p\n", *val, (void*)val);
+    // return *val;
+    
+    UID_GRATE_VAL++;
+    printf("[grate] val=%d | memory addr=%p\n", UID_GRATE_VAL, (void*)&UID_GRATE_VAL);
+    return UID_GRATE_VAL;
 }
 
 // Main function will always be same in all grates
 int main(int argc, char *argv[]) {
+    UID_GRATE_VAL = 10;
     // Should be at least two inputs (at least one grate file and one cage file)
     if (argc < 2) {
         fprintf(stderr, "Usage: %s <cage_file> <grate_file> <cage_file> [...]\n", argv[0]);
@@ -56,8 +62,6 @@ int main(int argc, char *argv[]) {
     }
 
     int grateid = getpid();
-
-    getuid_grate(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
     
     // Because we assume that all cages are unaware of the existence of grate, cages will not handle the logic of `exec`ing 
     // grate, so we need to handle these two situations separately in grate. 
