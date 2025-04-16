@@ -111,10 +111,11 @@ pub fn exit_syscall(
         return syscall_error(Errno::EFAULT, "exit", "Invalide Arguments");
     }
 
-    let _ = fdtables::remove_cage_from_fdtable(status_cageid);
+    let _ = fdtables::remove_cage_from_fdtable(cageid);
 
     // Get the self cage
-    let selfcage = get_cage(status_cageid).unwrap();
+    let selfcage = get_cage(cageid).unwrap();
+    let _ = remove_cage(cageid);
     if selfcage.parent != cageid {
         let parent_cage = get_cage(selfcage.parent);
         if let Some(parent) = parent_cage {
@@ -584,22 +585,4 @@ pub fn lindrustinit(verbosity: isize) {
 
 pub fn lindrustfinalize() {
     let exitvec = cagetable_clear();
-
-    for cageid in exitvec {
-        exit_syscall(
-            cageid as u64,       // target cageid
-            EXIT_SUCCESS as u64, // status arg
-            cageid as u64,       // status arg's cageid
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-        );
-    }
 }
