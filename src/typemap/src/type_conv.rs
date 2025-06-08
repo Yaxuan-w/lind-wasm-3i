@@ -13,72 +13,171 @@ use crate::path_conv::LIND_ROOT;
 use libc::*;
 use std::ptr;
 use sysdefs::*;
+use std::mem::{size_of, zeroed};
 
 /// converts a provided sockaddr pointer to a local `libc::sockaddr` pointer,
 /// and returns the pointer and its length(for ipv4, ipv6). If the socket is UNIX, the path
 /// is modified to include a LIND_ROOT prefix.
-pub fn get_sockaddr(addr: *mut u8) -> (*mut libc::sockaddr, u32) {
-    let (finalsockaddr, addrlen) = if addr.is_null() {
-        // handle sockaddr conversion; if NULL, use empty pointer
-        (ptr::null::<libc::sockaddr_un>() as *const libc::sockaddr_un as *mut libc::sockaddr, 0)
-    } else {
-        // create a new sockaddr_un structure to hold the copied data
-        let mut new_sockaddr_struct = create_sockaddr_un();
+// pub fn sc_convert_sockaddr(addr: *mut u8, arg_cageid: u64, cageid: u64) -> (*mut libc::sockaddr, u32) {
+//     #[cfg(feature = "secure")]
+//     {
+//         if !validate_cageid(arg_cageid, cageid) {
+//             return -1;
+//         }
+//     }
 
-        // get a mutable pointer to that structure
-        let sockaddr_un_ptr: *mut sockaddr_un = &mut new_sockaddr_struct;
+//     let (finalsockaddr, addrlen) = if addr.is_null() {
+//         // handle sockaddr conversion; if NULL, use empty pointer
+//         (ptr::null::<libc::sockaddr_un>() as *const libc::sockaddr_un as *mut libc::sockaddr, 0)
+//     } else {
+//         // create a new sockaddr_un structure to hold the copied data
+//         let mut new_sockaddr_struct = create_sockaddr_un();
 
-        unsafe {
-            // copy user's sockaddr to local buffer
-            ptr::copy_nonoverlapping(addr as *mut libc::sockaddr_un, sockaddr_un_ptr, 1);
+//         // get a mutable pointer to that structure
+//         let sockaddr_un_ptr: *mut sockaddr_un = &mut new_sockaddr_struct;
 
-            // if AF_UNIX socket, rewrite sun_path with LIND_ROOT prefix
-            if (*sockaddr_un_ptr).sun_family as i32 == AF_UNIX {
-                // get a mutable pointer to the beginning of the sun_path array
-                let sun_path_ptr = (*sockaddr_un_ptr).sun_path.as_mut_ptr();
+//         unsafe {
+//             // copy user's sockaddr to local buffer
+//             ptr::copy_nonoverlapping(addr as *mut libc::sockaddr_un, sockaddr_un_ptr, 1);
 
-                // compute the original path length
-                let path_len = libc::strlen(sun_path_ptr);
+//             // if AF_UNIX socket, rewrite sun_path with LIND_ROOT prefix
+//             if (*sockaddr_un_ptr).sun_family as i32 == AF_UNIX {
+//                 // get a mutable pointer to the beginning of the sun_path array
+//                 let sun_path_ptr = (*sockaddr_un_ptr).sun_path.as_mut_ptr();
 
-                // get the length of LIND_ROOT prefix we want to insert
-                let lind_root_len: usize = LIND_ROOT.len();
+//                 // compute the original path length
+//                 let path_len = libc::strlen(sun_path_ptr);
 
-                // total new path length = LIND_ROOT + original path
-                let new_path_len = path_len + lind_root_len;
+//                 // get the length of LIND_ROOT prefix we want to insert
+//                 let lind_root_len: usize = LIND_ROOT.len();
+
+//                 // total new path length = LIND_ROOT + original path
+//                 let new_path_len = path_len + lind_root_len;
             
-                // check if new path still fits within the 108-byte sun_path limit
-                if new_path_len < 108 {
-                    // move the original path forward in memory by lind_root_len bytes
-                    // make space for LIND_ROOT
-                    libc::memmove(
-                        sun_path_ptr.add(lind_root_len) as *mut libc::c_void,
-                        sun_path_ptr as *const libc::c_void,
-                        path_len,
-                    );
-                    // copy the LIND_ROOT prefix into the beginning of sun_path
-                    libc::memcpy(
-                        sun_path_ptr as *mut libc::c_void,
-                        LIND_ROOT.as_ptr() as *const libc::c_void,
-                        lind_root_len,
-                    );
-                    // clean the rest of sun_path after the new content
-                    libc::memset(
-                        sun_path_ptr.add(new_path_len) as *mut libc::c_void,
-                        0,
-                        108 - new_path_len,
-                    );
-                }
+//                 // check if new path still fits within the 108-byte sun_path limit
+//                 if new_path_len < 108 {
+//                     // move the original path forward in memory by lind_root_len bytes
+//                     // make space for LIND_ROOT
+//                     libc::memmove(
+//                         sun_path_ptr.add(lind_root_len) as *mut libc::c_void,
+//                         sun_path_ptr as *const libc::c_void,
+//                         path_len,
+//                     );
+//                     // copy the LIND_ROOT prefix into the beginning of sun_path
+//                     libc::memcpy(
+//                         sun_path_ptr as *mut libc::c_void,
+//                         LIND_ROOT.as_ptr() as *const libc::c_void,
+//                         lind_root_len,
+//                     );
+//                     // clean the rest of sun_path after the new content
+//                     libc::memset(
+//                         sun_path_ptr.add(new_path_len) as *mut libc::c_void,
+//                         0,
+//                         108 - new_path_len,
+//                     );
+//                 }
+//             }
+//         }
+//         // return the pointer to our local sockaddr_un, cast to generic sockaddr,
+//         // along with its size
+//         (sockaddr_un_ptr as *mut libc::sockaddr, size_of::<libc::sockaddr_un>() as u32)
+//     };
+
+//     (finalsockaddr, addrlen)
+// }
+
+pub fn sc_convert_host_sockaddr(arg: *mut u8, arg_cageid: u64, cageid: u64) -> (*mut sockaddr, u32) {
+    #[cfg(feature = "secure")]
+    {
+        if !validate_cageid(arg_cageid, cageid) {
+            return -1;
+        }
+    }
+
+    let mut saddr = SockAddr::clone_to_sockaddr(arg);
+
+    if (saddr.sun_family as i32) == AF_UNIX {
+        unsafe {
+            let sun_path_ptr = saddr.sun_path.as_mut_ptr();
+            let path_len = strlen(sun_path_ptr);
+            let lind_root_len = LIND_ROOT.len();
+            let new_path_len = path_len + lind_root_len;
+
+            if new_path_len < 108 {
+                memmove(
+                    sun_path_ptr.add(lind_root_len) as *mut c_void,
+                    sun_path_ptr as *const c_void,
+                    path_len,
+                );
+                memcpy(
+                    sun_path_ptr as *mut c_void,
+                    LIND_ROOT.as_ptr() as *const c_void,
+                    lind_root_len,
+                );
+                memset(
+                    sun_path_ptr.add(new_path_len) as *mut c_void,
+                    0,
+                    108 - new_path_len,
+                );
             }
         }
-        // return the pointer to our local sockaddr_un, cast to generic sockaddr,
-        // along with its size
-        (sockaddr_un_ptr as *mut libc::sockaddr, size_of::<libc::sockaddr_un>() as u32)
-    };
+    }
+    let boxed = Box::new(saddr);
+    let ptr = Box::into_raw(boxed) as *mut sockaddr_un;
+    let ptr = ptr.cast::<sockaddr>();
+    let len = unsafe { (*(ptr as *mut SockAddr)).get_len() };
+    // println!("addrlen = {}", len);
 
-    (finalsockaddr, addrlen)
+    // unsafe {
+    //     println!("sa_family = {}", (*ptr).sa_family as i32);
+    // }
+    (ptr, len)
 }
 
+pub fn sc_convert_copy_out_sockaddr(
+    addr_arg: u64,    
+    addr_arg1: u64,   
+    family: u16,
+) {
+    let copyoutaddr = addr_arg as *mut u8;
+    let addrlen = addr_arg1 as *mut u32;
 
+    assert!(!copyoutaddr.is_null());
+    assert!(!addrlen.is_null());
+
+    let initaddrlen = unsafe { *addrlen };
+
+    let (src_ptr, actual_len): (*const u8, u32) = match family as i32 {
+        AF_INET => {
+            let v4 = SockAddr::new_ipv4();
+            (
+                &v4 as *const _ as *const u8,
+                size_of::<sockaddr_in>() as u32,
+            )
+        }
+        AF_INET6 => {
+            let v6 = SockAddr::new_ipv6();
+            (
+                &v6 as *const _ as *const u8,
+                size_of::<sockaddr_in6>() as u32,
+            )
+        }
+        AF_UNIX => {
+            let un = SockAddr::new_unix();
+            (
+                &un as *const _ as *const u8,
+                size_of::<sockaddr_un>() as u32,
+            )
+        }
+        _ => return, 
+    };
+
+    let copy_len = initaddrlen.min(actual_len);
+    unsafe {
+        ptr::copy(src_ptr, copyoutaddr, copy_len as usize); //是不是要从SockAddr转回去
+        *addrlen = actual_len.max(copy_len);
+    }
+}
 
 // pub unsafe fn charstar_to_ruststr<'a>(cstr: *const i8) -> Result<&'a str, Utf8Error> {
 //     std::ffi::CStr::from_ptr(cstr as *const _).to_str() //returns a result to be unwrapped later

@@ -7,6 +7,7 @@ use cage::memory::vmmap::{VmmapOps, *};
 use cage::{add_cage, cagetable_clear, get_cage, remove_cage, Cage, Zombie};
 use fdtables;
 use libc::sched_yield;
+use libc::c_void;
 use parking_lot::RwLock;
 use std::ffi::CString;
 use std::path::PathBuf;
@@ -454,6 +455,40 @@ pub fn getppid_syscall(
     return cage.parent as i32;
 }
 
+pub fn ioctl_syscall(
+    cageid: u64,
+    fd_arg: u64,
+    fd_cageid: u64,
+    request_arg: u64,
+    request_cageid: u64,
+    ptrunion_arg: u64,
+    ptrunion_cageid: u64,
+    arg4: u64,
+    arg4_cageid: u64,
+    arg5: u64,
+    arg5_cageid: u64,
+    arg6: u64,
+    arg6_cageid: u64, 
+) -> i32{
+    let fd = convert_fd_to_host(fd_arg, fd_cageid, cageid);
+    let request = request_arg; //how to deal with this problem
+    let ptrunion = sc_convert_addr_to_host(ptrunion_arg, ptrunion_cageid, cageid);
+
+    if !(sc_unusedarg(arg4, arg4_cageid)
+    && sc_unusedarg(arg5, arg5_cageid)
+    && sc_unusedarg(arg6, arg6_cageid))
+    {
+        return syscall_error(Errno::EFAULT, "ioctl_syscall", "Invalide Cage ID");
+    }
+    
+    let ret = unsafe { libc::ioctl(fd, request, ptrunion as *mut c_void) };
+        if ret < 0 {
+            let errno = get_errno();
+            return handle_errno(errno, "ioctl");
+        }
+        return ret;
+}
+
 /// Those functions are required by wasmtime to create the first cage. `verbosity` indicates whether
 /// detailed error messages will be printed if set
 pub fn lindrustinit(verbosity: isize) {
@@ -603,3 +638,5 @@ pub fn lindrustfinalize() {
         );
     }
 }
+
+

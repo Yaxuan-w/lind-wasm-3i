@@ -2,18 +2,25 @@ use super::threei::Raw_CallFunc;
 use rawposix::syscalls::fs_calls::{
     brk_syscall, clock_gettime_syscall, close_syscall, dup2_syscall, dup_syscall, fcntl_syscall,
     mkdir_syscall, mmap_syscall, munmap_syscall, nanosleep_time64_syscall, open_syscall,
-    pipe2_syscall, pipe_syscall, sbrk_syscall, write_syscall, futex_syscall,
+    pipe2_syscall, pipe_syscall, sbrk_syscall, write_syscall, futex_syscall, read_syscall, unlink_syscall, access_syscall
 };
 use rawposix::syscalls::sys_calls::{
-    exec_syscall, exit_syscall, fork_syscall, getpid_syscall, wait_syscall, waitpid_syscall,
+    exec_syscall, exit_syscall, fork_syscall, getpid_syscall, wait_syscall, waitpid_syscall, ioctl_syscall
 };
-use rawposix::syscalls::net_calls::{socket_syscall,accept_syscall,bind_syscall,connect_syscall,listen_syscall,setsockopt_syscall,send_syscall,recv_syscall};
+use rawposix::syscalls::net_calls::{socket_syscall,accept_syscall,bind_syscall,connect_syscall,listen_syscall,
+    setsockopt_syscall,send_syscall,recv_syscall, sendto_syscall, recvfrom_syscall, shutdown_syscall, gethostname_syscall, 
+    getsockopt_syscall, getsockname_syscall, getpeername_syscall, select_syscall, poll_syscall, epoll_create_syscall, 
+    epoll_ctl_syscall, epoll_wait_syscall, socketpair_syscall, getifaddrs_syscall};
 
 /// Will replace syscall number with Linux Standard after confirming the refactoring details
 pub const SYSCALL_TABLE: &[(u64, Raw_CallFunc)] = &[
+    (2, access_syscall),
+    (4, unlink_syscall),
     (10, open_syscall),
     (11, close_syscall),
+    (12, read_syscall),
     (13, write_syscall),
+    (15, ioctl_syscall),
     (21, mmap_syscall),
     (22, munmap_syscall),
     (24, dup_syscall),
@@ -23,18 +30,32 @@ pub const SYSCALL_TABLE: &[(u64, Raw_CallFunc)] = &[
     (31, getpid_syscall),
     (33, bind_syscall),
     (34, send_syscall),
+    (35, sendto_syscall),
     (36, recv_syscall),
+    (37, recvfrom_syscall),
     (38, connect_syscall),
     (39, listen_syscall),
     (40, accept_syscall),
+    (43, getsockopt_syscall),
     (44, setsockopt_syscall),
+    (45, shutdown_syscall),
+    (46, select_syscall),
+    (48, poll_syscall),
+    (49, socketpair_syscall),
+    (56, epoll_create_syscall),
+    (57, epoll_ctl_syscall),
+    (58, epoll_wait_syscall),
     (66, pipe_syscall),
     (67, pipe2_syscall),
     (68, fork_syscall),
     (69, exec_syscall),
     (98, futex_syscall),
+    (125, gethostname_syscall),
     (131, mkdir_syscall),
     (136, socket_syscall),
+    (144, getsockname_syscall),
+    (145, getpeername_syscall),
+    (146, getifaddrs_syscall),
     (172, wait_syscall),
     (173, waitpid_syscall),
     (175, brk_syscall),

@@ -13,10 +13,13 @@ use sysdefs::constants::err_const::{get_errno, handle_errno, syscall_error, Errn
 use sysdefs::constants::fs_const;
 use sysdefs::constants::fs_const::{
     F_GETFL, F_GETOWN, F_SETOWN, MAP_ANONYMOUS, MAP_FAILED, MAP_FIXED, MAP_PRIVATE, MAP_SHARED,
-    PAGESHIFT, PAGESIZE, PROT_EXEC, PROT_NONE, PROT_READ, PROT_WRITE,
+    PAGESHIFT, PAGESIZE, PROT_EXEC, PROT_NONE, PROT_READ, PROT_WRITE, MAXFD,
 };
 use typemap::syscall_conv::*;
 use typemap::type_conv::get_pipearray;
+use typemap::path_conv::*;
+use std::ffi::CString;
+// use crate::path_conv::LIND_ROOT;
 
 /// Helper function for close_syscall
 ///
@@ -190,6 +193,11 @@ pub fn close_syscall(
         && sc_unusedarg(arg6, arg6_cageid))
     {
         return syscall_error(Errno::EFAULT, "close", "Invalid Cage ID");
+    }
+    
+    // Since `virtual_fd` is unsigned value, so we don't need to compare negative case here
+    if virtual_fd > MAXFD as u64 {
+        return syscall_error(Errno::EBADF, "close", "Bad File Descriptor");
     }
 
     match fdtables::close_virtualfd(cageid, virtual_fd) {
@@ -1222,6 +1230,75 @@ pub fn futex_syscall(
         let errno = get_errno();
         return handle_errno(errno, "futex");
     }
+    ret
+}
+
+pub fn unlink_syscall(
+    cageid: u64,
+    path_arg: u64,
+    path_cageid: u64,
+    arg2: u64,
+    arg2_cageid: u64,
+    arg3: u64,
+    arg3_cageid: u64,
+    arg4: u64,
+    arg4_cageid: u64,
+    arg5: u64,
+    arg5_cageid: u64,
+    arg6: u64,
+    arg6_cageid: u64,
+) -> i32 {
+    let path = sc_convert_path_to_host(path_arg, path_cageid, cageid);
+    
+    if !(sc_unusedarg(arg2, arg2_cageid)
+    && sc_unusedarg(arg3, arg3_cageid)
+    && sc_unusedarg(arg4, arg4_cageid)
+    && sc_unusedarg(arg5, arg5_cageid)
+    && sc_unusedarg(arg6, arg6_cageid))
+    {
+        return syscall_error(Errno::EFAULT, "unlink_syscall", "Invalide Cage ID");
+    }
+
+    let ret = unsafe { libc::unlink(path.as_ptr()) };
+
+    if ret < 0 {
+        let errno = get_errno();
+        return handle_errno(errno, "unlink");
+    }
+    ret
+}
+
+pub fn access_syscall(
+    cageid: u64,
+    path_arg: u64,
+    path_cageid: u64,
+    amode_arg: u64,
+    amode_cageid: u64,
+    arg3: u64,
+    arg3_cageid: u64,
+    arg4: u64,
+    arg4_cageid: u64,
+    arg5: u64,
+    arg5_cageid: u64,
+    arg6: u64,
+    arg6_cageid: u64,
+) -> i32 {
+    let path = sc_convert_path_to_host(path_arg, path_cageid, cageid);
+    let amode = sc_convert_sysarg_to_i32(amode_arg, amode_cageid, cageid);
+
+    if !(sc_unusedarg(arg3, arg3_cageid)
+    && sc_unusedarg(arg4, arg4_cageid)
+    && sc_unusedarg(arg5, arg5_cageid)
+    && sc_unusedarg(arg6, arg6_cageid))
+    {
+        return syscall_error(Errno::EFAULT, "access_syscall", "Invalide Cage ID");
+    }
+
+    let ret = unsafe { libc::access(path.as_ptr(), amode) };
+        if ret < 0 {
+            let errno = get_errno();
+            return handle_errno(errno, "access");
+        }
     ret
 }
 
