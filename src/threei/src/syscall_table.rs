@@ -9,8 +9,8 @@ use rawposix::syscalls::sys_calls::{
 };
 use rawposix::syscalls::net_calls::{socket_syscall,accept_syscall,bind_syscall,connect_syscall,listen_syscall,
     setsockopt_syscall,send_syscall,recv_syscall, sendto_syscall, recvfrom_syscall, shutdown_syscall, gethostname_syscall, 
-    getsockopt_syscall, getsockname_syscall, getpeername_syscall, select_syscall, poll_syscall, epoll_create_syscall, 
-    epoll_ctl_syscall, epoll_wait_syscall, socketpair_syscall, getifaddrs_syscall};
+    getsockopt_syscall, getpeername_syscall, poll_syscall, epoll_create_syscall, 
+    epoll_ctl_syscall, epoll_wait_syscall, socketpair_syscall};
 
 /// Will replace syscall number with Linux Standard after confirming the refactoring details
 pub const SYSCALL_TABLE: &[(u64, Raw_CallFunc)] = &[
@@ -39,7 +39,6 @@ pub const SYSCALL_TABLE: &[(u64, Raw_CallFunc)] = &[
     (43, getsockopt_syscall),
     (44, setsockopt_syscall),
     (45, shutdown_syscall),
-    (46, select_syscall),
     (48, poll_syscall),
     (49, socketpair_syscall),
     (56, epoll_create_syscall),
@@ -53,9 +52,7 @@ pub const SYSCALL_TABLE: &[(u64, Raw_CallFunc)] = &[
     (125, gethostname_syscall),
     (131, mkdir_syscall),
     (136, socket_syscall),
-    (144, getsockname_syscall),
     (145, getpeername_syscall),
-    (146, getifaddrs_syscall),
     (172, wait_syscall),
     (173, waitpid_syscall),
     (175, brk_syscall),
