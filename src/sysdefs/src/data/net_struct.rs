@@ -1,17 +1,12 @@
 use libc::{sa_family_t, sockaddr_un, sockaddr_in, sockaddr_in6, AF_UNIX, AF_INET, AF_INET6};
 use libc::sockaddr;
-use std::ffi::CString;
 use std::mem;
 use std::ptr;
 use std::os::raw::c_char;
 
-// // create a sockaddr_un struct
-// pub fn create_sockaddr_un() -> sockaddr_un{
-//     sockaddr_un {
-//         sun_family: 0,            
-//         sun_path: [0; 108],     
-//     }
-// }
+/// A simplified socket address structure supporting AF_UNIX, AF_INET, and AF_INET6.
+/// This abstraction stores the address family and a 108-byte path or address buffer,
+/// reused for all supported types.
 #[repr(C)]
 pub struct SockAddr {
     pub sun_family: u16,
@@ -19,6 +14,7 @@ pub struct SockAddr {
 }
 
 impl SockAddr {
+    /// Initializes a new UNIX domain socket address.
     pub fn new_unix() -> Self {
         SockAddr {
             sun_family: AF_UNIX as u16,
@@ -26,6 +22,7 @@ impl SockAddr {
         }
     }
 
+    /// Initializes a new IPv4 socket address placeholder.
     pub fn new_ipv4() -> Self {
         SockAddr {
             sun_family: AF_INET as u16,
@@ -33,6 +30,7 @@ impl SockAddr {
         }
     }
 
+    /// Initializes a new IPv6 socket address placeholder.
     pub fn new_ipv6() -> Self {
         SockAddr {
             sun_family: AF_INET6 as u16,
@@ -40,6 +38,8 @@ impl SockAddr {
         }
     }
 
+    /// Returns the expected length of the address structure 
+    /// based on the current address family.
     pub fn get_len(&self) -> u32 {
         match self.sun_family as i32 {
             AF_INET => mem::size_of::<libc::sockaddr_in>() as u32,
@@ -49,6 +49,9 @@ impl SockAddr {
         }
     }
 
+    /// Creates a `SockAddr` from a raw pointer to a `sockaddr`.
+    /// This function safely copies the address content based on its family,
+    /// skipping the sa_family_t field and storing the rest into `sun_path`.
     pub fn clone_to_sockaddr(addr: *mut u8) -> Self {
         let mut out = SockAddr {
             sun_family: 0,
@@ -104,17 +107,4 @@ pub struct SockPair {
     pub sock1: i32,
     pub sock2: i32,
 }
-
-// Call different functions according to different needs in rawposix. But those calls should be 
-// placed into net_conv.rs
-// net_conv.rs:
-// pub fn sc_convert_rawposix_sockaddr(arg: u64, arg_cageid: u64, cageid: u64) -> SockAddr {
-    
-    
-    
-//     // transfer addr
-//     // create new SockAddr::new()
-//     // memcpy contents in addr to the one created by SockAddr::new()
-//     // return SockAddr
-// }
 

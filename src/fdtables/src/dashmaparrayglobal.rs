@@ -357,8 +357,8 @@ pub fn close_virtualfd(cageid:u64, virtfd:u64) -> Result<(),threei::RetVal> {
 
     // derefing this so I don't hold a lock and deadlock close handlers
     let mut myfdrow = *FDTABLE.get_mut(&cageid).unwrap();
-    
-    
+
+
     if myfdrow[virtfd as usize].is_some() {
         let entry = myfdrow[virtfd as usize];
 

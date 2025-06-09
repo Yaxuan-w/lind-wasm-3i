@@ -455,6 +455,22 @@ pub fn getppid_syscall(
     return cage.parent as i32;
 }
 
+/// Reference to Linux: https://man7.org/linux/man-pages/man2/ioctl.2.html
+///
+/// The Linux `ioctl()` syscall performs device-specific input/output operations on file descriptors.
+/// This implementation retrieves the virtual file descriptor, request code, and optional argument pointer
+/// from the current cage, then invokes the host kernel's `ioctl()` call.
+///
+/// Parameters:
+///     - cageid: identifier of the current cage
+///     - fd_arg: virtual file descriptor on which to perform the operation
+///     - request_arg: request code specifying the operation
+///     - ptrunion_arg: optional pointer argument for certain request codes
+///
+/// Returns:
+///     - On success: result of the operation
+///     - On failure: negative errno indicating the error
+
 pub fn ioctl_syscall(
     cageid: u64,
     fd_arg: u64,
@@ -471,7 +487,7 @@ pub fn ioctl_syscall(
     arg6_cageid: u64, 
 ) -> i32{
     let fd = convert_fd_to_host(fd_arg, fd_cageid, cageid);
-    let request = request_arg; //how to deal with this problem
+    let request = request_arg;
     let ptrunion = sc_convert_addr_to_host(ptrunion_arg, ptrunion_cageid, cageid);
 
     if !(sc_unusedarg(arg4, arg4_cageid)
@@ -638,5 +654,3 @@ pub fn lindrustfinalize() {
         );
     }
 }
-
-

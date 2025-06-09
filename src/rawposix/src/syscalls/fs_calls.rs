@@ -1233,6 +1233,18 @@ pub fn futex_syscall(
     ret
 }
 
+/// Reference to Linux: https://man7.org/linux/man-pages/man2/unlink.2.html
+///
+/// Implements the Linux `unlink()` syscall to remove a file from the filesystem.
+/// This function resolves the file path from the specified cage and invokes the host kernel's `unlink()` call.
+///
+/// Parameters:
+///     - cageid: identifier of the current cage
+///     - path_arg: pointer to the path string in user space
+///
+/// Returns:
+///     - On success: 0  
+///     - On failure: negative errno indicating the error
 pub fn unlink_syscall(
     cageid: u64,
     path_arg: u64,
@@ -1268,6 +1280,20 @@ pub fn unlink_syscall(
     ret
 }
 
+/// Reference to Linux: https://man7.org/linux/man-pages/man2/access.2.html
+///
+/// The Linux `access()` syscall is used to check a file's accessibility according to the calling process's real UID and GID.
+/// This implementation resolves the file path and access mode from the specified cage,
+/// then invokes the host kernel's `access()` call.
+///
+/// Parameters:
+///     - cageid: identifier of the current cage
+///     - path_arg: pointer to the path string in user space
+///     - amode_arg: access mode bitmask (e.g., R_OK, W_OK, X_OK, or F_OK)
+///
+/// Returns:
+///     - On success: 0  
+///     - On failure: negative errno indicating the error
 pub fn access_syscall(
     cageid: u64,
     path_arg: u64,

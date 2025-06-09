@@ -440,9 +440,24 @@ pub fn recv_syscall(
     ret
 }
 
-
-/////////////////////////
-
+/// Reference to Linux: https://man7.org/linux/man-pages/man2/sendto.2.html
+///
+/// The Linux `sendto()` syscall is used to transmit a message to a specific address using a socket.
+/// This implementation retrieves the virtual file descriptor, buffer, and target socket address
+/// from the current cage, then invokes the host kernel's `sendto()` call.
+///
+/// Parameters:
+///     - cageid: identifier of the current cage
+///     - fd_arg: virtual file descriptor representing the socket
+///     - buf_arg: pointer to the message buffer in user space
+///     - buflen_arg: length of the message to send
+///     - flag_arg: flags influencing message transmission behavior
+///     - sockaddr_arg: pointer to the destination socket address
+///     - addrlen_arg: size of the destination address structure
+///
+/// Returns:
+///     - On success: number of bytes sent
+///     - On failure: negative errno indicating the error
 pub fn sendto_syscall(
     cageid: u64,
     fd_arg: u64,
@@ -486,6 +501,25 @@ pub fn sendto_syscall(
     ret
 }
 
+/// Reference to Linux: https://man7.org/linux/man-pages/man2/recvfrom.2.html
+///
+/// The Linux `recvfrom()` syscall is used to receive a message from a socket,
+/// optionally storing the source address of the sender.
+/// This implementation retrieves the virtual file descriptor and buffer from the current cage,
+/// and optionally copies back the source address to user space.
+///
+/// Parameters:
+///     - cageid: identifier of the current cage
+///     - fd_arg: virtual file descriptor representing the socket
+///     - buf_arg: pointer to the buffer in user space to store received data
+///     - buflen_arg: size of the buffer
+///     - flag_arg: Flags controlling message reception behavior
+///     - nullity1_arg: pointer to the source address structure or null
+///     - nullity2_arg: pointer to the source address length or null
+///
+/// Returns:
+///     - On success: number of bytes received
+///     - On failure: negative errno indicating the error
 pub fn recvfrom_syscall(
     cageid: u64,
     fd_arg: u64,
@@ -531,7 +565,7 @@ pub fn recvfrom_syscall(
         }
 
         if ret >= 0 {
-            sc_convert_copy_out_sockaddr( // need to implement the copy function
+            sc_convert_copy_out_sockaddr(
                 sc_convert_uaddr_to_host(nullity1_arg, nullity1_cageid, cageid),
                 sc_convert_uaddr_to_host(nullity2_arg, nullity2_cageid, cageid) as u64,
                 newsockaddr.sun_family,
@@ -542,6 +576,7 @@ pub fn recvfrom_syscall(
     0
 }
 
+//?????
 pub fn shutdown_syscall(
     cageid: u64,
     fd_arg: u64,
@@ -578,6 +613,20 @@ pub fn shutdown_syscall(
     ret
 }
 
+/// Reference to Linux: https://man7.org/linux/man-pages/man2/gethostname.2.html
+///
+/// The Linux `gethostname()` syscall returns the current host name of the system.
+/// This implementation retrieves the destination buffer and length from the current cage,
+/// and stores the host name into user space.
+///
+/// Parameters:
+///     - cageid: identifier of the current cage
+///     - name_arg: pointer to the buffer in user space to store the hostname
+///     - len_arg: size of the buffer
+///
+/// Returns:
+///     - On success: 0  
+///     - On failure: negative errno indicating the error
 pub fn gethostname_syscall(
     cageid: u64,
     name_arg: u64,
@@ -613,6 +662,22 @@ pub fn gethostname_syscall(
     ret
 }
 
+/// Reference to Linux: https://man7.org/linux/man-pages/man2/getsockopt.2.html
+///
+/// The Linux `getsockopt()` syscall retrieves the value of a socket option.
+/// This implementation retrieves the virtual file descriptor, option level, and option name
+/// from the current cage, and writes the result to the provided user-space buffer.
+///
+/// Parameters:
+///     - cageid: identifier of the current cage
+///     - fd_arg: virtual file descriptor of the socket
+///     - level_arg: protocol level at which the option resides
+///     - optname_arg: name of the option to retrieve
+///     - optval_arg: pointer to a buffer to store the option value
+///
+/// Returns:
+///     - On success: 0  
+///     - On failure: negative errno indicating the error
 pub fn getsockopt_syscall(
     cageid: u64,
     fd_arg: u64,
@@ -658,6 +723,7 @@ pub fn getsockopt_syscall(
     ret
 }
 
+//XXXXX
 pub fn getsockname_syscall(
     cageid: u64,
     fd_arg: u64,
@@ -695,6 +761,20 @@ pub fn getsockname_syscall(
     ret
 }
 
+/// Reference to Linux: https://man7.org/linux/man-pages/man2/getpeername.2.html
+///
+/// The Linux `getpeername()` syscall retrieves the address of the peer connected to a socket.
+/// This implementation obtains the socket file descriptor and address buffer from the current cage,
+/// then invokes the host kernel's `getpeername()` and writes the result to user space.
+///
+/// Parameters:
+///     - cageid: identifier of the current cage
+///     - fd_arg: virtual file descriptor of the connected socket
+///     - addr_arg: pointer to a buffer in user space to store the peer address
+///
+/// Returns:
+///     - On success: 0  
+///     - On failure: negative errno indicating the error
 pub fn getpeername_syscall(
     cageid: u64,
     fd_arg: u64,
@@ -745,7 +825,7 @@ pub fn getpeername_syscall(
     ret
 }
 
-//not from JustinCappos/rawposix
+//XXXXX
 pub fn select_syscall(
     cageid: u64,
     nfds_arg: u64,
@@ -891,7 +971,21 @@ pub fn select_syscall(
     (read_flags + write_flags + error_flags) as i32
 }
 
-//OK
+/// Reference to Linux: https://man7.org/linux/man-pages/man2/poll.2.html
+///
+/// The Linux `poll()` syscall waits for events on multiple file descriptors.
+/// This implementation converts a slice of user-space poll structures from the current cage,
+/// invokes the host kernel's `poll()` call, and copies the result back to user space.
+///
+/// Parameters:
+///     - cageid: identifier of the current cage
+///     - addr_arg: pointer to the array of `PollStruct` in user space
+///     - nfds_arg: number of file descriptors in the array
+///     - timeout_arg: timeout in milliseconds, or -1 to block indefinitely
+///
+/// Returns:
+///     - On success: number of file descriptors with events
+///     - On failure: negative errno indicating the error
 pub fn poll_syscall(
     cageid: u64,
     addr_arg: u64,
@@ -934,6 +1028,18 @@ pub fn poll_syscall(
     ret
 }
 
+/// Reference to Linux: https://man7.org/linux/man-pages/man2/epoll_create.2.html
+///
+/// The Linux `epoll_create()` syscall creates a new epoll instance and returns a file descriptor referring to it.
+/// This implementation retrieves the size hint from the current cage and allocates a virtual file descriptor for the epoll instance.
+///
+/// Parameters:
+///     - cageid: identifier of the current cage
+///     - size_arg: size hint for the number of file descriptors to be monitored (ignored in modern kernels)
+///
+/// Returns:
+///     - On success: virtual file descriptor for the new epoll instance
+///     - On failure: negative errno indicating the error
 pub fn epoll_create_syscall(
     cageid: u64,
     size_arg: u64,
@@ -958,9 +1064,7 @@ pub fn epoll_create_syscall(
     && sc_unusedarg(arg6, arg6_cageid))
     {
         return syscall_error(Errno::EFAULT, "epoll_create_syscall", "Invalide Cage ID");
-    }
-    
-    //cagetable_getref()
+    } 
 
     let kernel_fd = unsafe { libc::epoll_create(size) };
         
@@ -974,6 +1078,23 @@ pub fn epoll_create_syscall(
         virtual_epfd as i32
 }
 
+/// Reference to Linux: https://man7.org/linux/man-pages/man2/epoll_ctl.2.html
+///
+/// The Linux `epoll_ctl()` syscall performs control operations on an epoll instance,
+/// such as adding, modifying, or removing file descriptors.
+/// This implementation retrieves the epoll instance, target file descriptor,
+/// and event configuration from the current cage, and synchronizes the internal mapping.
+///
+/// Parameters:
+///     - cageid: identifier of the current cage
+///     - epfd_arg: virtual file descriptor of the epoll instance
+///     - op_arg: operation to be performed (e.g., EPOLL_CTL_ADD, EPOLL_CTL_MOD, EPOLL_CTL_DEL)
+///     - fd_arg: virtual file descriptor to operate on
+///     - epollevent_arg: pointer to an `EpollEvent` structure in user space
+///
+/// Returns:
+///     - On success: 0  
+///     - On failure: negative errno indicating the error
 pub fn epoll_ctl_syscall(
     cageid: u64,
     epfd_arg: u64,
@@ -993,7 +1114,6 @@ pub fn epoll_ctl_syscall(
     let op = sc_convert_sysarg_to_i32(op_arg, op_cageid, cageid);
     let vfd = sc_convert_sysarg_to_i32(fd_arg, fd_cageid, cageid);
     let fd = convert_fd_to_host(fd_arg, fd_cageid, cageid);
-    // addr trans
     let epollevent = sc_convert_epollevent(epollevent_arg, epollevent_cageid, cageid).unwrap();
 
     println!{}
@@ -1036,6 +1156,22 @@ pub fn epoll_ctl_syscall(
     -1
 }
 
+/// Reference to Linux: https://man7.org/linux/man-pages/man2/epoll_wait.2.html
+///
+/// The Linux `epoll_wait()` syscall waits for events on the epoll instance referred to by a file descriptor.
+/// This implementation retrieves the virtual epoll descriptor, result buffer, and timeout from the current cage,
+/// then invokes the host kernel's `epoll_wait()` and maps the results back to virtual file descriptors.
+///
+/// Parameters:
+///     - cageid: identifier of the current cage
+///     - epfd_arg: virtual file descriptor of the epoll instance
+///     - events_arg: pointer to a buffer to receive triggered events
+///     - maxevents_arg: maximum number of events to retrieve
+///     - timeout_arg: timeout in milliseconds, or -1 to block indefinitely
+///
+/// Returns:
+///     - On success: number of file descriptors with events
+///     - On failure: negative errno indicating the error
 pub fn epoll_wait_syscall(
     cageid: u64,
     epfd_arg: u64,
@@ -1098,7 +1234,22 @@ pub fn epoll_wait_syscall(
     ret
 }
 
-//OK
+/// Reference to Linux: https://man7.org/linux/man-pages/man2/socketpair.2.html
+///
+/// The Linux `socketpair()` syscall creates a pair of connected sockets.
+/// This implementation creates the socket pair in the host kernel and assigns virtual file descriptors
+/// to the resulting sockets within the current cage.
+///
+/// Parameters:
+///     - cageid: identifier of the current cage
+///     - domain_arg: communication domain (e.g., AF_UNIX)
+///     - type_arg: communication semantics (e.g., SOCK_STREAM)
+///     - protocol_arg: protocol to be used
+///     - virtual_socket_vector_arg: pointer to a `SockPair` structure in user space to receive the result
+///
+/// Returns:
+///     - On success: 0  
+///     - On failure: negative errno indicating the error
 pub fn socketpair_syscall(
     cageid: u64,
     domain_arg: u64,
@@ -1117,9 +1268,8 @@ pub fn socketpair_syscall(
     let domain = sc_convert_sysarg_to_i32(domain_arg, domain_cageid, cageid);
     let type_ = sc_convert_sysarg_to_i32(type_arg, type_cageid, cageid);
     let protocol = sc_convert_sysarg_to_i32(protocol_arg, protocol_cageid, cageid);
-    // let virtual_socket_vector = sc_convert_sockpair(convert_fd_to_host(virtual_socket_vector_arg, 
-        // virtual_socket_vector_cageid, cageid) as u64, virtual_socket_vector_cageid, cageid).unwrap();
     let virtual_socket_vector = sc_convert_sockpair(virtual_socket_vector_arg, virtual_socket_vector_cageid, cageid).unwrap();
+    
     if !(sc_unusedarg(arg5, arg5_cageid)
     && sc_unusedarg(arg6, arg6_cageid))
     {
