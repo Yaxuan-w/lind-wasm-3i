@@ -576,43 +576,6 @@ pub fn recvfrom_syscall(
     0
 }
 
-//?????
-pub fn shutdown_syscall(
-    cageid: u64,
-    fd_arg: u64,
-    fd_cageid: u64,
-    how_arg: u64,
-    how_cageid: u64,
-    arg3: u64,
-    arg3_cageid: u64,
-    arg4: u64,
-    arg4_cageid: u64,
-    arg5: u64,
-    arg5_cageid: u64,
-    arg6: u64,
-    arg6_cageid: u64,
-) -> i32 {
-    let fd = convert_fd_to_host(fd_arg, fd_cageid, cageid);
-    let how = sc_convert_sysarg_to_i32(how_arg, how_cageid, cageid);
-    
-    if !(sc_unusedarg(arg3, arg3_cageid)
-    &&sc_unusedarg(arg4, arg4_cageid)
-    && sc_unusedarg(arg5, arg5_cageid)
-    && sc_unusedarg(arg6, arg6_cageid))
-    {
-        return syscall_error(Errno::EFAULT, "shutdown_syscall", "Invalide Cage ID");
-    }
-
-    let ret = unsafe { libc::shutdown(fd, how) };
-
-    if ret < 0 {
-        let errno = get_errno();
-        return handle_errno(errno, "shutdown");
-    }
-
-    ret
-}
-
 /// Reference to Linux: https://man7.org/linux/man-pages/man2/gethostname.2.html
 ///
 /// The Linux `gethostname()` syscall returns the current host name of the system.
@@ -718,44 +681,6 @@ pub fn getsockopt_syscall(
     if ret < 0 {
         let errno = get_errno();
         return handle_errno(errno, "getsockopt");
-    }
-
-    ret
-}
-
-//XXXXX
-pub fn getsockname_syscall(
-    cageid: u64,
-    fd_arg: u64,
-    fd_cageid: u64,
-    addr_arg: u64,
-    addr_cageid: u64,
-    arg3: u64,
-    arg3_cageid: u64,
-    arg4: u64,
-    arg4_cageid: u64,
-    arg5: u64,
-    arg5_cageid: u64,
-    arg6: u64,
-    arg6_cageid: u64,
-) -> i32 {
-    let fd = convert_fd_to_host(fd_arg, fd_cageid, cageid);
-    let addr = sc_convert_addr_to_host(addr_arg, addr_cageid, cageid);
-
-    if !(sc_unusedarg(arg3, arg3_cageid)
-    &&sc_unusedarg(arg4, arg4_cageid)
-    && sc_unusedarg(arg5, arg5_cageid)
-    && sc_unusedarg(arg6, arg6_cageid))
-    {
-        return syscall_error(Errno::EFAULT, "getsockname_syscall", "Invalide Cage ID");
-    }
-    let (finalsockaddr, mut addrlen) = sc_convert_host_sockaddr(addr, addr_cageid, cageid);
-    let mut testlen = 128 as u32;
-    let ret = unsafe { libc::getsockname(fd, finalsockaddr, &mut testlen as *mut u32) };
-
-    if ret < 0  {
-        let errno = get_errno();
-        return handle_errno(errno, "getsockname");
     }
 
     ret

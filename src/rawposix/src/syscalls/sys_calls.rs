@@ -470,7 +470,6 @@ pub fn getppid_syscall(
 /// Returns:
 ///     - On success: result of the operation
 ///     - On failure: negative errno indicating the error
-
 pub fn ioctl_syscall(
     cageid: u64,
     fd_arg: u64,
