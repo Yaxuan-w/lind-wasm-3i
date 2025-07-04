@@ -95,6 +95,46 @@ pub fn translate_virtual_fd(cageid: u64, virtualfd: u64) -> Result<FDTableEntry,
     };
 }
 
+/// This is used to request an unused fd from specific starting position. This is 
+/// similar to `get_unused_virtual_fd` except this function starts from a specific 
+/// starting position mentioned by `arg` arguments. This will be used for `fcntl`.
+#[doc = include_str!("../docs/get_unused_virtual_fd_from_startfd.md")]
+pub fn get_unused_virtual_fd_from_startfd(
+    cageid: u64,
+    fdkind: u32,
+    underfd: u64,
+    should_cloexec: bool,
+    perfdinfo: u64,
+    arg: u64,
+) -> Result<u64, threei::RetVal> {
+
+    assert!(FDTABLE.contains_key(&cageid),"Unknown cageid in fdtable access");
+    // Set up the entry so it has the right info...
+    // Note, a HashMap stores its data on the heap!  No need to box it...
+    // https://doc.rust-lang.org/book/ch08-03-hash-maps.html#creating-a-new-hash-map
+    let myentry = FDTableEntry {
+        fdkind,
+        underfd,
+        should_cloexec,
+        perfdinfo,
+    };
+
+    let mut myfdrow = FDTABLE.get_mut(&cageid).unwrap();
+
+    // Check the fds in order.
+    for fdcandidate in arg..FD_PER_PROCESS_MAX {
+        // FIXME: This is likely very slow.  Should do something smarter...
+        if myfdrow[fdcandidate as usize].is_none() {
+            // I just checked.  Should not be there...
+            myfdrow[fdcandidate as usize] = Some(myentry);
+            _increment_fdcount(myentry);
+            return Ok(fdcandidate);
+        }
+    }
+
+    // I must have checked all fds and failed to find one open.  Fail!
+    Err(threei::Errno::EMFILE as u64)
+}
 
 // This is fairly slow if I just iterate sequentially through numbers.
 // However there are not that many to choose from.  I could pop from a list
